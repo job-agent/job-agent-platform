@@ -7,7 +7,7 @@ Each node performs a specific task in the job processing pipeline.
 from .state import AgentState
 
 
-def process_jobs_node(state: AgentState) -> AgentState:
+def print_jobs_node(state: AgentState) -> AgentState:
     """
     Process and print the list of jobs.
 

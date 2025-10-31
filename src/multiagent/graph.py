@@ -7,7 +7,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
 from .state import AgentState
-from .nodes import process_jobs_node
+from .nodes import print_jobs_node
 
 
 def create_workflow() -> CompiledStateGraph:
@@ -25,7 +25,7 @@ def create_workflow() -> CompiledStateGraph:
     workflow = StateGraph(AgentState)
 
     # Add the processing node
-    workflow.add_node("process_jobs", process_jobs_node)
+    workflow.add_node("process_jobs", print_jobs_node)
 
     # Set the entry point
     workflow.set_entry_point("process_jobs")

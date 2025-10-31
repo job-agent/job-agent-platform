@@ -4,8 +4,13 @@ This module connects the scrapper service output with the multiagent system inpu
 serving as the main application entry point.
 """
 
+from dotenv import load_dotenv
+
 from scrapper_service import ScrapperManager
 from multiagent import run_multiagent_system
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def run_application(
