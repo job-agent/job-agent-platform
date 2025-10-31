@@ -13,7 +13,7 @@ dependencies = [
     "langchain>=1.0.3",
     "python-dotenv>=1.2.1",
     "job-scrapper-contracts @ git+ssh://git@github.com/job-agent/job-scrapper-contracts.git@main",
-    "djinni-scrapper @ git+ssh://git@github.com/job-agent/djinni-scrapper.git@main",
+    "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@main#subdirectory=packages/scrapper-service",
 ]
 
 [project.optional-dependencies]

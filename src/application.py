@@ -5,8 +5,8 @@ serving as the main application entry point.
 """
 
 from dotenv import load_dotenv
-
 from scrapper_service import ScrapperManager
+
 from multiagent import run_multiagent_system
 
 # Load environment variables from .env file
