@@ -4,12 +4,13 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from langgraph.graph import StateGraph, END
+from langgraph.graph.state import CompiledStateGraph
 
 from .state import AgentState
 from .nodes import process_jobs_node
 
 
-def create_workflow() -> StateGraph:
+def create_workflow() -> CompiledStateGraph:
     """
     Create and configure the multiagent workflow graph.
 
