@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,17 +9,18 @@ description = "Monorepo containing multiagent system and integration services"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "langgraph>=0.0.1",
-    "langchain>=0.1.0",
-    "python-dotenv>=1.0.0",
-    "job-scrapper-contracts @ git+https://github.com/job-agent/job-scrapper-contracts.git@main",
+    "langgraph>=1.0.2",
+    "langchain>=1.0.3",
+    "python-dotenv>=1.2.1",
+    "job-scrapper-contracts @ git+ssh://git@github.com/job-agent/job-scrapper-contracts.git@main",
+    "djinni-scrapper @ git+ssh://git@github.com/job-agent/djinni-scrapper.git@main",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
+    "pytest>=8.4.2",
+    "black>=25.9.0",
+    "ruff>=0.14.3",
 ]
 
 [tool.setuptools.packages.find]
