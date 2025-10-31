@@ -10,12 +10,14 @@ from typing import List
 from djinni_scrapper.scrapper import DjinniScrapper
 from job_scrapper_contracts import JobScrapperInterface, Job, JobDict
 
+from contracts import ScrapperServiceInterface
 
-class ScrapperManager(JobScrapperInterface):
+
+class ScrapperManager(ScrapperServiceInterface):
     """
     Unified job scraping service that aggregates results from multiple sources.
 
-    This class implements JobScrapperInterface and hides the complexity of managing
+    This class implements ScrapperServiceInterface and hides the complexity of managing
     multiple scrapper implementations. Users interact with a single, simple interface
     without needing to know about individual scrapper sources.
 
