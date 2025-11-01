@@ -1,6 +1,6 @@
-"""Application connector - wires scrapper service to multiagent system.
+"""Application connector - wires scrapper service to workflows system.
 
-This module connects the scrapper service output with the multiagent system input,
+This module connects the scrapper service output with the workflows system input,
 serving as the main application entry point.
 """
 
@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from scrapper_service import ScrapperManager
 
 from filter_service import FilterConfig, filter_jobs
-from multiagent import run_job_processing, run_pii_removal
+from workflows import run_job_processing, run_pii_removal
 from utils import load_cv_from_pdf
 
 # Load environment variables from .env file
@@ -27,8 +27,8 @@ def run_application(
     Run the complete application: scrape jobs and process them with agents.
 
     This is the main entry point that connects the scrapper service with
-    the multiagent system. It scrapes jobs using ScrapperManager and passes
-    them to the multiagent workflow for processing.
+    the workflows system. It scrapes jobs using ScrapperManager and passes
+    them to the workflows workflow for processing.
 
     Args:
         salary: Minimum salary filter (default: 4000)
@@ -82,8 +82,8 @@ def run_application(
     cleaned_cv = run_pii_removal(cv_content)
     print("✓ PII removed from CV\n")
 
-    # Step 5: Process jobs with multiagent system
-    print("Step 5: Processing jobs with multiagent system...")
+    # Step 5: Process jobs with workflows system
+    print("Step 5: Processing jobs with workflows system...")
     print(f"Processing {len(filtered_jobs)} jobs sequentially\n")
 
     for idx, job in enumerate(filtered_jobs, 1):

@@ -1,4 +1,4 @@
-"""Utility functions for the multiagent system."""
+"""Utility functions for the workflows system."""
 
 from pathlib import Path
 from typing import Optional

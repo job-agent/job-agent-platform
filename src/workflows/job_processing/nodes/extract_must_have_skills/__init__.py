@@ -1,4 +1,4 @@
-"""Extract skills node for the multiagent workflow.
+"""Extract skills node for the workflows workflow.
 
 This node extracts must-have skills from a single job description using OpenAI.
 """

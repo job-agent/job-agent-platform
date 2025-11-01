@@ -1,4 +1,4 @@
-"""Check job relevance node for the multiagent workflow.
+"""Check job relevance node for the workflows workflow.
 
 This node determines if a job is relevant to the candidate based on their CV.
 """

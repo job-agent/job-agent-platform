@@ -1,6 +1,6 @@
-"""Main multiagent system interface.
+"""Main workflows system interface.
 
-This module provides the public API for running the multiagent system.
+This module provides the public API for running the workflows system.
 """
 
 import os
@@ -13,9 +13,9 @@ from .state import AgentState
 
 def run_job_processing(job: JobDict, cv_content: str) -> None:
     """
-    Run the multiagent system on a single job.
+    Run the workflows system on a single job.
 
-    This is the main entry point for the multiagent system. It accepts a single
+    This is the main entry point for the workflows system. It accepts a single
     job dictionary and processes it through the langgraph workflow.
 
     Args:

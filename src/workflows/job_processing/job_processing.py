@@ -1,4 +1,4 @@
-"""Langgraph workflow definition for the multiagent system.
+"""Langgraph workflow definition for the workflows system.
 
 This module defines the graph structure and builds the complete workflow.
 """
@@ -6,13 +6,13 @@ This module defines the graph structure and builds the complete workflow.
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
-from multiagent.job_processing.nodes import check_job_relevance_node, extract_must_have_skills_node, print_jobs_node
-from multiagent.job_processing.state import AgentState
+from workflows.job_processing.nodes import check_job_relevance_node, extract_must_have_skills_node, print_jobs_node
+from workflows.job_processing.state import AgentState
 
 
 def create_workflow() -> CompiledStateGraph:
     """
-    Create and configure the multiagent workflow graph.
+    Create and configure the workflows workflow graph.
 
     The workflow processes a single job at a time and consists of:
     1. check_job_relevance - Checks if the job is relevant to the candidate's CV

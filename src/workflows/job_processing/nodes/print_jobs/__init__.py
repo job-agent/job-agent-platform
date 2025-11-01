@@ -1,4 +1,4 @@
-"""Print jobs node for the multiagent workflow.
+"""Print jobs node for the workflows workflow.
 
 This node processes and prints a single job.
 """

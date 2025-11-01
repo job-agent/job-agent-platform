@@ -1,4 +1,4 @@
-"""State definition for the multiagent system.
+"""State definition for the workflows system.
 
 This module defines the state schema that flows through the langgraph workflow.
 """
@@ -11,7 +11,7 @@ from job_scrapper_contracts import JobDict
 
 class AgentState(TypedDict):
     """
-    State schema for the multiagent workflow.
+    State schema for the workflows workflow.
 
     Attributes:
         job: Single job dictionary to process

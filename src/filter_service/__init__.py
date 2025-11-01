@@ -1,7 +1,7 @@
 """Filter service for job posts.
 
 This service filters unsuitable job posts from the scrapper service
-before passing them to the multiagent system.
+before passing them to the workflows system.
 """
 
 from .filter import FilterConfig, filter_jobs

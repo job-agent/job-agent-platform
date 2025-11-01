@@ -1,7 +1,7 @@
 """Job filter service for filtering unsuitable job posts.
 
 This module provides filtering capabilities for job posts coming from the
-scrapper service before they are passed to the multiagent system.
+scrapper service before they are passed to the workflows system.
 """
 
 from typing import List, Optional
