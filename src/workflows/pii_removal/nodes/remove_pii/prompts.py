@@ -41,7 +41,11 @@ What to EXTRACT:
    - List professional certifications (e.g., "AWS Certified Solutions Architect", "PMP", "Google Cloud Professional")
    - Include certifying body if it’s not sensitive (e.g., “AWS”, “Google”, “PMI”)
 
-6. **Years of Experience**:
+6. **Languages**:
+   - List all languages the person speaks or writes
+   - Include proficiency level if mentioned (e.g., "Fluent", "Intermediate", "Native", "B2")
+
+7. **Years of Experience**:
    - Estimate total years of professional experience
 
 What to EXCLUDE (PII):

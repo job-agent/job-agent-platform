@@ -46,4 +46,4 @@ def create_workflow() -> CompiledStateGraph:
     workflow.add_edge("extract_skills", "process_jobs")
     workflow.add_edge("process_jobs", END)
 
-    return workflow.compile()
+    return workflow.compile(name="JobProcessingWorkflow")

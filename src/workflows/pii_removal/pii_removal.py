@@ -31,4 +31,4 @@ def create_pii_removal_workflow() -> CompiledStateGraph:
 
     workflow.add_edge("remove_pii", END)
 
-    return workflow.compile()
+    return workflow.compile(name="PIIRemovalWorkflow")
