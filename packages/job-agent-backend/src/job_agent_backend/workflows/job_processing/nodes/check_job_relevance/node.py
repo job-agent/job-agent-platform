@@ -62,12 +62,14 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         structured_llm = base_llm.with_structured_output(JobRelevance)
 
         # Prepare and invoke the prompt
-        messages = CHECK_JOB_RELEVANCE_PROMPT.invoke({
-            "cv_content": cv_context,
-            "job_title": job_title,
-            "job_company": job_company,
-            "job_description": job_description
-        })
+        messages = CHECK_JOB_RELEVANCE_PROMPT.invoke(
+            {
+                "cv_content": cv_context,
+                "job_title": job_title,
+                "job_company": job_company,
+                "job_description": job_description,
+            }
+        )
 
         result: JobRelevance = structured_llm.invoke(messages)
 
@@ -82,7 +84,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
 
     except Exception as e:
         print(f"  Job (ID: {job_id}): Error checking relevance - {e}")
-        print(f"    Assuming relevant by default\n")
+        print("    Assuming relevant by default\n")
         new_status = state.get("status", "in_progress")
 
     print("=" * 60)

@@ -3,7 +3,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 
-
 SYSTEM_MESSAGE = """You are an expert at analyzing job postings and matching them with candidate profiles.
 
 Your job:
@@ -131,7 +130,6 @@ Description: {job_description}
 Is this job relevant to the candidate? Remember: be LENIENT and default to RELEVANT unless clearly mismatched."""
 
 
-CHECK_JOB_RELEVANCE_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_MESSAGE),
-    ("human", HUMAN_MESSAGE)
-])
+CHECK_JOB_RELEVANCE_PROMPT = ChatPromptTemplate.from_messages(
+    [("system", SYSTEM_MESSAGE), ("human", HUMAN_MESSAGE)]
+)

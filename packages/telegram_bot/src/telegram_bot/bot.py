@@ -8,7 +8,7 @@ import os
 from typing import Optional
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler
 
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from telegram_bot.handlers import (
@@ -16,7 +16,7 @@ from telegram_bot.handlers import (
     help_handler,
     search_jobs_handler,
     status_handler,
-    cancel_handler
+    cancel_handler,
 )
 
 
@@ -52,13 +52,15 @@ class JobAgentBot:
     async def post_init(self, application: Application) -> None:
         """Called after bot initialization."""
         bot = application.bot
-        await bot.set_my_commands([
-            ("start", "Start the bot and see welcome message"),
-            ("help", "Show help message with available commands"),
-            ("search", "Search for jobs (e.g., /search salary=5000)"),
-            ("status", "Check current search status"),
-            ("cancel", "Cancel current job search")
-        ])
+        await bot.set_my_commands(
+            [
+                ("start", "Start the bot and see welcome message"),
+                ("help", "Show help message with available commands"),
+                ("search", "Search for jobs (e.g., /search salary=5000)"),
+                ("status", "Check current search status"),
+                ("cancel", "Cancel current job search"),
+            ]
+        )
 
     def build_application(self) -> Application:
         """Build and configure the telegram application.
@@ -66,12 +68,7 @@ class JobAgentBot:
         Returns:
             Configured Application instance
         """
-        self.application = (
-            Application.builder()
-            .token(self.token)
-            .post_init(self.post_init)
-            .build()
-        )
+        self.application = Application.builder().token(self.token).post_init(self.post_init).build()
 
         self.setup_handlers()
         return self.application

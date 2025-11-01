@@ -19,6 +19,7 @@ class AgentState(TypedDict):
         cv_context: CV/resume content for context
         extracted_skills: List of extracted must-have skills (optional)
     """
+
     job: JobDict
     status: str
     cv_context: str

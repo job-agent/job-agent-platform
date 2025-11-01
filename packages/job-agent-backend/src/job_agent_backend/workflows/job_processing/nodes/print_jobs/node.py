@@ -20,7 +20,7 @@ def print_jobs_node(state: AgentState) -> AgentState:
     job = state["job"]
 
     print(f"\n{'='*60}")
-    print(f"Processing job:")
+    print("Processing job:")
     print(f"{'='*60}\n")
 
     for key, value in job.items():
@@ -28,9 +28,7 @@ def print_jobs_node(state: AgentState) -> AgentState:
     print()
 
     print(f"{'='*60}")
-    print(f"Finished processing job")
+    print("Finished processing job")
     print(f"{'='*60}\n")
 
-    return {
-        "status": "completed"
-    }
+    return {"status": "completed"}

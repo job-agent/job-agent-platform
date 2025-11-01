@@ -7,4 +7,5 @@ class PIIRemovalState(TypedDict):
     Attributes:
         cv_context: CV/resume content to process
     """
+
     cv_context: str

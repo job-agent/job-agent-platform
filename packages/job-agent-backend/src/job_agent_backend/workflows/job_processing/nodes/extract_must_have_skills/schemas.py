@@ -15,7 +15,8 @@ class SkillsExtraction(BaseModel):
     Attributes:
         skills: List of extracted skill names
     """
+
     skills: List[str] = Field(
         description="List of skills extracted from the job description. Each skill should be concise and specific.",
-        default_factory=list
+        default_factory=list,
     )

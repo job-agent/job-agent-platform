@@ -36,7 +36,7 @@ def run_job_processing(job: JobDict, cv_content: str) -> None:
 
     if tracing_enabled:
         print(f"🔍 LangSmith tracing enabled - Project: {project_name}")
-        print(f"   View traces at: https://smith.langchain.com/\n")
+        print("   View traces at: https://smith.langchain.com/\n")
 
     # Validate CV content
     if not cv_content:
@@ -46,11 +46,7 @@ def run_job_processing(job: JobDict, cv_content: str) -> None:
     workflow = create_workflow()
 
     # Initialize state for this job
-    initial_state: AgentState = {
-        "job": job,
-        "status": "started",
-        "cv_context": cv_content
-    }
+    initial_state: AgentState = {"job": job, "status": "started", "cv_context": cv_content}
 
     # Run the workflow
     final_state = workflow.invoke(initial_state)

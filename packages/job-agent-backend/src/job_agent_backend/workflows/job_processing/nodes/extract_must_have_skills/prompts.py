@@ -38,7 +38,6 @@ HUMAN_MESSAGE = """<Job Description>
 </Job Description>"""
 
 
-EXTRACT_MUST_HAVE_SKILLS_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_MESSAGE),
-    ("human", HUMAN_MESSAGE)
-])
+EXTRACT_MUST_HAVE_SKILLS_PROMPT = ChatPromptTemplate.from_messages(
+    [("system", SYSTEM_MESSAGE), ("human", HUMAN_MESSAGE)]
+)

@@ -37,7 +37,7 @@ def run_pii_removal(cv_content: str) -> str:
 
     if tracing_enabled:
         print(f"🔍 LangSmith tracing enabled - Project: {project_name}")
-        print(f"   View traces at: https://smith.langchain.com/\n")
+        print("   View traces at: https://smith.langchain.com/\n")
 
     # Validate CV content
     if not cv_content:
@@ -47,9 +47,7 @@ def run_pii_removal(cv_content: str) -> str:
     workflow = create_pii_removal_workflow()
 
     # Initialize state
-    initial_state: PIIRemovalState = {
-        "cv_context": cv_content
-    }
+    initial_state: PIIRemovalState = {"cv_context": cv_content}
 
     # Run the workflow
     final_state = workflow.invoke(initial_state)

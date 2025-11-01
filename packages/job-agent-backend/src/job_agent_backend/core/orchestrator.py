@@ -58,11 +58,7 @@ class JobAgentOrchestrator:
         return filter_config
 
     def scrape_jobs(
-        self,
-        salary: int = 4000,
-        employment: str = "remote",
-        page: int = 1,
-        timeout: int = 30
+        self, salary: int = 4000, employment: str = "remote", page: int = 1, timeout: int = 30
     ) -> List[Dict[str, Any]]:
         """Scrape jobs using the scrapper service.
 
@@ -77,10 +73,7 @@ class JobAgentOrchestrator:
         """
         self.logger("Scraping jobs...")
         jobs = self.scrapper_manager.scrape_jobs_as_dicts(
-            salary=salary,
-            employment=employment,
-            page=page,
-            timeout=timeout
+            salary=salary, employment=employment, page=page, timeout=timeout
         )
         self.logger(f"Scraped {len(jobs)} jobs")
         return jobs
@@ -134,11 +127,7 @@ class JobAgentOrchestrator:
         run_job_processing(job, cv_content)
 
     def run_complete_pipeline(
-        self,
-        salary: int = 4000,
-        employment: str = "remote",
-        page: int = 1,
-        timeout: int = 30
+        self, salary: int = 4000, employment: str = "remote", page: int = 1, timeout: int = 30
     ) -> Dict[str, Any]:
         """Run the complete job processing pipeline.
 
@@ -176,7 +165,7 @@ class JobAgentOrchestrator:
         results = {
             "total_scraped": len(jobs),
             "total_filtered": len(filtered_jobs),
-            "total_processed": len(filtered_jobs)
+            "total_processed": len(filtered_jobs),
         }
 
         self.logger(f"\nPipeline completed - Processed {len(filtered_jobs)} jobs")

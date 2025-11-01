@@ -9,6 +9,7 @@ class ProfessionalInfo(BaseModel):
     Attributes:
         professional_content: All professional information from CV with PII removed
     """
+
     professional_content: str = Field(
         description="All professional information extracted from the CV, including skills, experience, education, and qualifications. All personally identifiable information has been removed or generalized."
     )

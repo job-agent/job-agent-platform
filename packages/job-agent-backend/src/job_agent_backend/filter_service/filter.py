@@ -18,6 +18,7 @@ class FilterConfig(TypedDict, total=False):
         max_months_of_experience: Maximum months of experience allowed (optional)
         location_allows_to_apply: Whether location allows to apply (optional)
     """
+
     max_months_of_experience: int
     location_allows_to_apply: bool
 

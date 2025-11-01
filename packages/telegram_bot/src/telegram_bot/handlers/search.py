@@ -1,74 +1,13 @@
-"""Command handlers for Telegram bot.
-
-This module contains all the command handlers that respond to user commands
-in the Telegram bot.
-"""
+"""Search command handler for Telegram bot."""
 
 import asyncio
-from typing import Dict, Any
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 
-
-# Store active searches per user
-active_searches: Dict[int, bool] = {}
-
-
-async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /start command.
-
-    Args:
-        update: Telegram update object
-        context: Callback context
-    """
-    user = update.effective_user
-    await update.message.reply_text(
-        f"👋 Hello {user.first_name}!\n\n"
-        "I'm the Job Agent Bot. I help you find and analyze job opportunities "
-        "that match your profile.\n\n"
-        "Use /help to see available commands."
-    )
-
-
-async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /help command.
-
-    Args:
-        update: Telegram update object
-        context: Callback context
-    """
-    help_text = """
-📚 Available Commands:
-
-/start - Start the bot and see welcome message
-/help - Show this help message
-/search - Search for jobs with optional parameters
-/status - Check if a search is currently running
-/cancel - Cancel the current job search
-
-🔍 Search Examples:
-
-/search
-  → Search with default parameters (salary=4000, remote)
-
-/search salary=5000
-  → Search for jobs with minimum salary of 5000
-
-/search salary=6000 employment=remote page=1
-  → Custom search with multiple parameters
-
-⚙️ Available Parameters:
-- salary: Minimum salary (default: 4000)
-- employment: Employment type (default: "remote")
-- page: Page number (default: 1)
-- timeout: Request timeout in seconds (default: 30)
-
-📝 Note: Job results are processed using your CV and sent back to you automatically.
-"""
-    await update.message.reply_text(help_text)
+from .state import active_searches
 
 
 async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -95,12 +34,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Parse arguments
     args = context.args or []
-    params = {
-        "salary": 4000,
-        "employment": "remote",
-        "page": 1,
-        "timeout": 30
-    }
+    params = {"salary": 4000, "employment": "remote", "page": 1, "timeout": 30}
 
     # Parse key=value arguments
     for arg in args:
@@ -156,26 +90,19 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             params["salary"],
             params["employment"],
             params["page"],
-            params["timeout"]
+            params["timeout"],
         )
 
         await update.message.reply_text(
             f"✅ Found {len(jobs)} jobs\n\n📊 Step 2/4: Filtering jobs..."
         )
-        filtered_jobs = await loop.run_in_executor(
-            None,
-            orchestrator.filter_jobs_list,
-            jobs
-        )
+        filtered_jobs = await loop.run_in_executor(None, orchestrator.filter_jobs_list, jobs)
 
         await update.message.reply_text(
             f"✅ {len(filtered_jobs)}/{len(jobs)} jobs passed filters\n\n"
             f"📊 Step 3/4: Loading and cleaning your CV..."
         )
-        cleaned_cv = await loop.run_in_executor(
-            None,
-            orchestrator.load_and_clean_cv
-        )
+        cleaned_cv = await loop.run_in_executor(None, orchestrator.load_and_clean_cv)
 
         await update.message.reply_text(
             f"✅ CV ready\n\n📊 Step 4/4: Processing {len(filtered_jobs)} jobs...\n"
@@ -189,12 +116,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_text("🛑 Search cancelled by user.")
                 return
 
-            await loop.run_in_executor(
-                None,
-                orchestrator.process_job,
-                job,
-                cleaned_cv
-            )
+            await loop.run_in_executor(None, orchestrator.process_job, job, cleaned_cv)
 
             # Send progress update every 3 jobs
             if idx % 3 == 0 or idx == len(filtered_jobs):
@@ -217,53 +139,9 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         print(f"Error in search: {e}")
         import traceback
+
         traceback.print_exc()
 
     finally:
         # Mark search as inactive
         active_searches[user_id] = False
-
-
-async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /status command.
-
-    Args:
-        update: Telegram update object
-        context: Callback context
-    """
-    user_id = update.effective_user.id
-    is_active = active_searches.get(user_id, False)
-
-    if is_active:
-        await update.message.reply_text(
-            "⏳ You have an active job search running.\n\n"
-            "Use /cancel to stop it."
-        )
-    else:
-        await update.message.reply_text(
-            "✅ No active searches.\n\n"
-            "Use /search to start a new job search."
-        )
-
-
-async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /cancel command.
-
-    Args:
-        update: Telegram update object
-        context: Callback context
-    """
-    user_id = update.effective_user.id
-    is_active = active_searches.get(user_id, False)
-
-    if is_active:
-        active_searches[user_id] = False
-        await update.message.reply_text(
-            "🛑 Cancelling your job search...\n\n"
-            "The search will stop after the current job finishes processing."
-        )
-    else:
-        await update.message.reply_text(
-            "ℹ️ No active search to cancel.\n\n"
-            "Use /search to start a new job search."
-        )

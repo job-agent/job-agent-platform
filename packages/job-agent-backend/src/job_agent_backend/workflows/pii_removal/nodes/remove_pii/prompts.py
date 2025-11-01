@@ -101,7 +101,6 @@ HUMAN_MESSAGE = """<CV Content>
 
 Please extract the professional information from this CV. Include only job-relevant details and exclude personal contact data or identifiers, but keep company and university names."""
 
-REMOVE_PII_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_MESSAGE),
-    ("human", HUMAN_MESSAGE)
-])
+REMOVE_PII_PROMPT = ChatPromptTemplate.from_messages(
+    [("system", SYSTEM_MESSAGE), ("human", HUMAN_MESSAGE)]
+)

@@ -47,7 +47,9 @@ def load_cv_from_pdf(cv_path: Optional[str] = None) -> Optional[str]:
                 text_parts.append(text)
 
         cv_content = "\n\n".join(text_parts)
-        print(f"✓ Loaded CV from {cv_path} ({len(reader.pages)} pages, {len(cv_content)} characters)")
+        print(
+            f"✓ Loaded CV from {cv_path} ({len(reader.pages)} pages, {len(cv_content)} characters)"
+        )
         return cv_content
 
     except Exception as e:

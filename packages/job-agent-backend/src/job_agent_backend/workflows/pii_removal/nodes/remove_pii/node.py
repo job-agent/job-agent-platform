@@ -50,9 +50,7 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
         structured_llm = base_llm.with_structured_output(ProfessionalInfo)
 
         # Prepare and invoke the prompt
-        messages = REMOVE_PII_PROMPT.invoke({
-            "cv_content": cv_context
-        })
+        messages = REMOVE_PII_PROMPT.invoke({"cv_content": cv_context})
 
         result: ProfessionalInfo = structured_llm.invoke(messages)
 
@@ -70,7 +68,7 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
 
     except Exception as e:
         print(f"  Error extracting professional info - {e}")
-        print(f"  Continuing with original CV content\n")
+        print("  Continuing with original CV content\n")
         print("=" * 60)
         print(f"Failed to extract professional info for job ID {job_id}")
         print("=" * 60 + "\n")
