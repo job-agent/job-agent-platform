@@ -16,6 +16,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "python-dotenv>=1.2.1",
     "pypdf>=5.1.0",
+    "python-telegram-bot>=21.0",
     "job-scrapper-contracts @ git+ssh://git@github.com/job-agent/job-scrapper-contracts.git@main",
     "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@main#subdirectory=packages/scrapper-service",
 #    Mocked public scrapper-service
