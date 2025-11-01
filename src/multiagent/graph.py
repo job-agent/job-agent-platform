@@ -14,9 +14,9 @@ def create_workflow() -> CompiledStateGraph:
     """
     Create and configure the multiagent workflow graph.
 
-    The workflow consists of:
-    1. extract_skills - Extracts must-have skills from job descriptions using OpenAI
-    2. process_jobs - Receives and prints the job list with extracted skills
+    The workflow processes a single job at a time and consists of:
+    1. extract_skills - Extracts must-have skills from a job description using OpenAI
+    2. process_jobs - Receives and prints the single job with extracted skills
     3. END - Terminates the workflow
 
     Returns:

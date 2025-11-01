@@ -71,10 +71,17 @@ def run_application(
 
     # Step 3: Process jobs with multiagent system
     print("Step 3: Processing jobs with multiagent system...")
-    run_multiagent_system(filtered_jobs)
+    print(f"Processing {len(filtered_jobs)} jobs sequentially\n")
+
+    for idx, job in enumerate(filtered_jobs, 1):
+        print(f"\n{'='*60}")
+        print(f"Job {idx}/{len(filtered_jobs)}")
+        print(f"{'='*60}\n")
+
+        run_multiagent_system(job)
 
     print("\n" + "=" * 60)
-    print("Application completed successfully")
+    print(f"Application completed successfully - Processed {len(filtered_jobs)} jobs")
     print("=" * 60)
 
 run_application()

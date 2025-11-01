@@ -1,6 +1,6 @@
 """Print jobs node for the multiagent workflow.
 
-This node processes and prints the list of jobs.
+This node processes and prints a single job.
 """
 
 from ..state import AgentState
@@ -8,35 +8,33 @@ from ..state import AgentState
 
 def print_jobs_node(state: AgentState) -> AgentState:
     """
-    Process and print the list of jobs.
+    Process and print a single job.
 
-    This is the main processing node that receives jobs and prints them.
+    This is the main processing node that receives a job and prints it.
     In the future, this can be expanded to perform more complex operations
     like filtering, analysis, or applying for jobs.
 
     Args:
-        state: Current agent state containing the list of jobs
+        state: Current agent state containing a single job
 
     Returns:
         Updated agent state with completion status
     """
-    jobs = state["jobs"]
+    job = state["job"]
 
     print(f"\n{'='*60}")
-    print(f"Processing {len(jobs)} jobs:")
+    print(f"Processing job:")
     print(f"{'='*60}\n")
 
-    for idx, job in enumerate(jobs, 1):
-        print(f"Job #{idx}:")
-        for key, value in job.items():
-            print(f"  {key}: {value}")
-        print()
+    for key, value in job.items():
+        print(f"  {key}: {value}")
+    print()
 
     print(f"{'='*60}")
-    print(f"Finished processing {len(jobs)} jobs")
+    print(f"Finished processing job")
     print(f"{'='*60}\n")
 
     return {
-        "jobs": jobs,
+        "job": job,
         "status": "completed"
     }

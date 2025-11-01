@@ -1,6 +1,6 @@
 """Extract skills node for the multiagent workflow.
 
-This node extracts must-have skills from job descriptions using OpenAI.
+This node extracts must-have skills from a single job description using OpenAI.
 """
 
 import os
@@ -13,53 +13,51 @@ from ..prompts import EXTRACT_MUST_HAVE_SKILLS_PROMPT
 
 
 def extract_must_have_skills_node(state: AgentState) -> AgentState:
-    jobs = state["jobs"]
+    job = state["job"]
+    job_id = job.get("job_id")
+    description = job.get("description", "")
 
     print("\n" + "=" * 60)
-    print(f"Extracting must-have skills from {len(jobs)} jobs using OpenAI...")
+    print(f"Extracting must-have skills for job ID {job_id} using OpenAI...")
     print("=" * 60 + "\n")
 
-    base_llm = ChatOpenAI(
-        model="gpt-4o-mini",
-        temperature=0,
-        api_key=os.getenv("OPENAI_API_KEY"),
-    )
-    structured_llm = base_llm.with_structured_output(SkillsExtraction)
+    if not description:
+        print(f"  Job (ID: {job_id}): No description available, skipping...")
+        print("=" * 60 + "\n")
+        return {
+            "job": job,
+            "status": state.get("status", "in_progress"),
+            "extracted_skills": [],
+        }
 
-    prompt = EXTRACT_MUST_HAVE_SKILLS_PROMPT
+    try:
+        base_llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0,
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
+        structured_llm = base_llm.with_structured_output(SkillsExtraction)
+        prompt = EXTRACT_MUST_HAVE_SKILLS_PROMPT
 
-    extracted_skills: dict[str, list[str]] = {}
+        messages = prompt.invoke({"job_description": description})
+        result: SkillsExtraction = structured_llm.invoke(messages)
 
-    for idx, job in enumerate(jobs, 1):
-        job_id = job.get("job_id")
-        description = job.get("description", "")
+        skills = (result.skills or []) if hasattr(result, "skills") else []
 
-        if not description:
-            print(f"  Job #{idx} (ID: {job_id}): No description available, skipping...")
-            extracted_skills[job_id] = []
-            continue
+        print(f"  Job (ID: {job_id}): Extracted {len(skills)} skills")
+        if skills:
+            print(f"    Skills: {', '.join(skills)}\n")
 
-        try:
-            messages = prompt.invoke({"job_description": description})
-            result: SkillsExtraction = structured_llm.invoke(messages)
-
-            skills = (result.skills or []) if hasattr(result, "skills") else []
-            extracted_skills[job_id] = skills
-
-            print(f"  Job #{idx} (ID: {job_id}): Extracted {len(skills)} skills")
-            if skills:
-                print(f"    Skills: {', '.join(skills)}\n")
-
-        except Exception as e:
-            print(f"  Job #{idx} (ID: {job_id}): Error extracting skills - {e}")
-            extracted_skills[job_id] = []
+    except Exception as e:
+        print(f"  Job (ID: {job_id}): Error extracting skills - {e}")
+        skills = []
 
     print("=" * 60)
-    print(f"Finished extracting skills from {len(jobs)} jobs")
+    print(f"Finished extracting skills for job ID {job_id}")
     print("=" * 60 + "\n")
 
     return {
-        "jobs": jobs,
+        "job": job,
         "status": state.get("status", "in_progress"),
-        "extracted_skills": extracted_skills,
+        "extracted_skills": skills,
     }
