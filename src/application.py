@@ -4,9 +4,12 @@ This module connects the scrapper service output with the multiagent system inpu
 serving as the main application entry point.
 """
 
+import os
+
 from dotenv import load_dotenv
 from scrapper_service import ScrapperManager
 
+from filter_service import FilterConfig, filter_jobs
 from multiagent import run_multiagent_system
 
 # Load environment variables from .env file
@@ -51,9 +54,24 @@ def run_application(
     )
     print(f"✓ Scraped {len(jobs)} jobs\n")
 
-    # Step 2: Process jobs with multiagent system
-    print("Step 2: Processing jobs with multiagent system...")
-    run_multiagent_system(jobs)
+    # Step 2: Filter unsuitable jobs
+    print("Step 2: Filtering jobs...")
+
+    # Build filter config from environment variables
+    filter_config: FilterConfig = {}
+
+    if os.getenv("FILTER_MAX_MONTHS_OF_EXPERIENCE"):
+        filter_config["max_months_of_experience"] = int(os.getenv("FILTER_MAX_MONTHS_OF_EXPERIENCE"))
+
+    if os.getenv("FILTER_LOCATION_ALLOWS_TO_APPLY"):
+        filter_config["location_allows_to_apply"] = os.getenv("FILTER_LOCATION_ALLOWS_TO_APPLY").lower() in ("true", "1", "yes")
+
+    filtered_jobs = filter_jobs(jobs, filter_config)
+    print(f"✓ Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed\n")
+
+    # Step 3: Process jobs with multiagent system
+    print("Step 3: Processing jobs with multiagent system...")
+    run_multiagent_system(filtered_jobs)
 
     print("\n" + "=" * 60)
     print("Application completed successfully")
