@@ -17,6 +17,8 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "job-scrapper-contracts @ git+ssh://git@github.com/job-agent/job-scrapper-contracts.git@main",
     "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@main#subdirectory=packages/scrapper-service",
+#    Mocked public scrapper-service
+#    "scrapper-service @ git+https://github.com/job-agent/scrappers-mock.git@main#subdirectory=packages/scrapper-service",
 ]
 
 [project.optional-dependencies]
