@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "job-agent-backend"
+version = "0.1.0"
+description = "Job Agent backend - multiagent system for job processing and filtering"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "langgraph>=1.0.2",
+    "langchain>=1.0.3",
+    "langchain-openai>=1.0.1",
+    "langsmith>=0.4.39",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.2.1",
+    "pypdf>=5.1.0",
+    "job-scrapper-contracts @ git+ssh://git@github.com/job-agent/job-scrapper-contracts.git@main",
+    "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@main#subdirectory=packages/scrapper-service",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.2",
+    "black>=25.9.0",
+    "ruff>=0.14.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

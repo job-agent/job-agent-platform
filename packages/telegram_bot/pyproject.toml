@@ -3,12 +3,16 @@ requires = ["setuptools>=80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "job-agent-platform"
+name = "telegram-bot"
 version = "0.1.0"
-description = "Monorepo containing job-agent-backend and telegram-bot packages"
+description = "Telegram bot interface for the Job Agent platform"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "python-telegram-bot>=21.0",
+    "python-dotenv>=1.2.1",
+    "job-agent-backend",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -17,9 +21,12 @@ dev = [
     "ruff>=0.14.3",
 ]
 
-# Monorepo packages
-# To install all packages in development mode:
-# pip install -e packages/job-agent-backend -e packages/telegram_bot
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.black]
 line-length = 100

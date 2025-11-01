@@ -10,7 +10,7 @@ from typing import Dict, Any
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from core.orchestrator import JobAgentOrchestrator
+from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 
 
 # Store active searches per user

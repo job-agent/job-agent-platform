@@ -6,8 +6,8 @@ This module defines the graph structure and builds the complete workflow.
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
-from workflows.job_processing.nodes import check_job_relevance_node, extract_must_have_skills_node, print_jobs_node
-from workflows.job_processing.state import AgentState
+from job_agent_backend.workflows.job_processing.nodes import check_job_relevance_node, extract_must_have_skills_node, print_jobs_node
+from job_agent_backend.workflows.job_processing.state import AgentState
 
 
 def create_workflow() -> CompiledStateGraph:

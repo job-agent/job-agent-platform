@@ -10,8 +10,8 @@ from typing import Optional
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from core.orchestrator import JobAgentOrchestrator
-from interfaces.telegram_bot.handlers import (
+from job_agent_backend.core.orchestrator import JobAgentOrchestrator
+from telegram_bot.handlers import (
     start_handler,
     help_handler,
     search_jobs_handler,
