@@ -7,7 +7,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
 from .state import AgentState
-from .nodes import print_jobs_node, extract_skills_node
+from .nodes import print_jobs_node, extract_must_have_skills_node
 
 
 def create_workflow() -> CompiledStateGraph:
@@ -26,7 +26,7 @@ def create_workflow() -> CompiledStateGraph:
     workflow = StateGraph(AgentState)
 
     # Add the skill extraction node
-    workflow.add_node("extract_skills", extract_skills_node)
+    workflow.add_node("extract_skills", extract_must_have_skills_node)
 
     # Add the processing node
     workflow.add_node("process_jobs", print_jobs_node)

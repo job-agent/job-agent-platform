@@ -3,6 +3,7 @@
 This module provides the public API for running the multiagent system.
 """
 
+import os
 from typing import List
 
 from job_scrapper_contracts import JobDict
@@ -26,6 +27,14 @@ def run_multiagent_system(jobs: List[JobDict]) -> None:
         >>> jobs = [{"title": "Python Developer", "salary": 5000}]
         >>> run_multiagent_system(jobs)
     """
+    # Check if LangSmith tracing is enabled
+    tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
+    project_name = os.getenv("LANGCHAIN_PROJECT", "default")
+
+    if tracing_enabled:
+        print(f"🔍 LangSmith tracing enabled - Project: {project_name}")
+        print(f"   View traces at: https://smith.langchain.com/\n")
+
     # Create the workflow
     workflow = create_workflow()
 
@@ -35,7 +44,7 @@ def run_multiagent_system(jobs: List[JobDict]) -> None:
         "status": "started"
     }
 
-    # Run the workflow
+    # Run the workflow with automatic LangSmith tracing
     final_state = workflow.invoke(initial_state)
 
     print(f"Workflow completed with status: {final_state['status']}")
