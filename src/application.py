@@ -11,6 +11,7 @@ from scrapper_service import ScrapperManager
 
 from filter_service import FilterConfig, filter_jobs
 from multiagent import run_multiagent_system
+from multiagent.utils import load_cv_from_pdf
 
 # Load environment variables from .env file
 load_dotenv()
@@ -69,8 +70,15 @@ def run_application(
     filtered_jobs = filter_jobs(jobs, filter_config)
     print(f"✓ Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed\n")
 
-    # Step 3: Process jobs with multiagent system
-    print("Step 3: Processing jobs with multiagent system...")
+    # Step 3: Load CV
+    print("Step 3: Loading CV...")
+    cv_content = load_cv_from_pdf()
+    if not cv_content:
+        raise ValueError("Failed to load CV content")
+    print("✓ CV loaded successfully\n")
+
+    # Step 4: Process jobs with multiagent system
+    print("Step 4: Processing jobs with multiagent system...")
     print(f"Processing {len(filtered_jobs)} jobs sequentially\n")
 
     for idx, job in enumerate(filtered_jobs, 1):
@@ -78,7 +86,7 @@ def run_application(
         print(f"Job {idx}/{len(filtered_jobs)}")
         print(f"{'='*60}\n")
 
-        run_multiagent_system(job)
+        run_multiagent_system(job, cv_content)
 
     print("\n" + "=" * 60)
     print(f"Application completed successfully - Processed {len(filtered_jobs)} jobs")

@@ -16,8 +16,10 @@ class AgentState(TypedDict):
     Attributes:
         job: Single job dictionary to process
         status: Current status of the workflow
+        cv_context: CV/resume content for context
         extracted_skills: List of extracted must-have skills (optional)
     """
     job: JobDict
     status: str
+    cv_context: str
     extracted_skills: NotRequired[List[str]]
