@@ -1,6 +1,5 @@
 """Utility functions for the multiagent system."""
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -26,8 +25,8 @@ def load_cv_from_pdf(cv_path: Optional[str] = None) -> Optional[str]:
     """
     # Default to data/cv.pdf in project root
     if cv_path is None:
-        # Get project root (4 levels up from this file: utils.py -> multiagent -> src -> job-agent-platform)
-        project_root = Path(__file__).parent.parent.parent
+        # Get project root (2 levels up from this file: utils.py -> src -> job-agent-platform)
+        project_root = Path(__file__).parent.parent
         cv_path = project_root / "data" / "cv.pdf"
     else:
         cv_path = Path(cv_path)

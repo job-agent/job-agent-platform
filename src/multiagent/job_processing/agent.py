@@ -7,11 +7,11 @@ import os
 
 from job_scrapper_contracts import JobDict
 
-from .graph import create_workflow
+from .job_processing import create_workflow
 from .state import AgentState
 
 
-def run_multiagent_system(job: JobDict, cv_content: str) -> None:
+def run_job_processing(job: JobDict, cv_content: str) -> None:
     """
     Run the multiagent system on a single job.
 
@@ -28,7 +28,7 @@ def run_multiagent_system(job: JobDict, cv_content: str) -> None:
     Example:
         >>> job = {"title": "Python Developer", "salary": 5000}
         >>> cv_content = "My CV content..."
-        >>> run_multiagent_system(job, cv_content)
+        >>> run_job_processing(job, cv_content)
     """
     # Check if LangSmith tracing is enabled
     tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"

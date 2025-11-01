@@ -1,6 +1,14 @@
-"""Multiagent system built with langgraph."""
+"""Multiagent system for job processing and PII removal.
 
-from .agent import run_multiagent_system
+This package provides workflows for:
+- Job processing: relevance checking, skill extraction, and job analysis
+- PII removal: cleaning personally identifiable information from CVs
+"""
 
-__all__ = ["run_multiagent_system"]
-__version__ = "0.1.0"
+from .job_processing.agent import run_job_processing
+from .pii_removal.agent import run_pii_removal
+
+__all__ = [
+    "run_job_processing",
+    "run_pii_removal",
+]

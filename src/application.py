@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 from scrapper_service import ScrapperManager
 
 from filter_service import FilterConfig, filter_jobs
-from multiagent import run_multiagent_system
-from multiagent.utils import load_cv_from_pdf
+from multiagent import run_job_processing, run_pii_removal
+from utils import load_cv_from_pdf
 
 # Load environment variables from .env file
 load_dotenv()
@@ -77,8 +77,13 @@ def run_application(
         raise ValueError("Failed to load CV content")
     print("✓ CV loaded successfully\n")
 
-    # Step 4: Process jobs with multiagent system
-    print("Step 4: Processing jobs with multiagent system...")
+    # Step 4: Remove PII from CV (run once for all jobs)
+    print("Step 4: Removing PII from CV...")
+    cleaned_cv = run_pii_removal(cv_content)
+    print("✓ PII removed from CV\n")
+
+    # Step 5: Process jobs with multiagent system
+    print("Step 5: Processing jobs with multiagent system...")
     print(f"Processing {len(filtered_jobs)} jobs sequentially\n")
 
     for idx, job in enumerate(filtered_jobs, 1):
@@ -86,7 +91,7 @@ def run_application(
         print(f"Job {idx}/{len(filtered_jobs)}")
         print(f"{'='*60}\n")
 
-        run_multiagent_system(job, cv_content)
+        run_job_processing(job, cleaned_cv)
 
     print("\n" + "=" * 60)
     print(f"Application completed successfully - Processed {len(filtered_jobs)} jobs")

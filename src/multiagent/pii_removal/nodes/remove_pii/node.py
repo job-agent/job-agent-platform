@@ -1,15 +1,16 @@
 """Remove PII node implementation."""
 
 import os
+from typing import Dict, Any
 
 from langchain_openai import ChatOpenAI
 
-from ...state import AgentState
 from .schemas import ProfessionalInfo
 from .prompts import REMOVE_PII_PROMPT
+from ...state import PIIRemovalState
 
 
-def remove_pii_node(state: AgentState) -> AgentState:
+def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
     """
     Extract professional information from CV, removing all PII.
 
@@ -24,11 +25,13 @@ def remove_pii_node(state: AgentState) -> AgentState:
         Updated state with cv_context replaced by professional information only
     """
     cv_context = state.get("cv_context", "")
-    job = state["job"]
-    job_id = job.get("job_id")
+
+    # Get job info if available (for logging purposes only)
+    job = state.get("job")
+    job_id = job.get("job_id") if job else "N/A"
 
     print("\n" + "=" * 60)
-    print(f"Extracting professional info from CV for job ID {job_id}...")
+    print(f"Extracting professional info from CV (job ID: {job_id})...")
     print("=" * 60 + "\n")
 
     # If no CV context available, skip extraction
