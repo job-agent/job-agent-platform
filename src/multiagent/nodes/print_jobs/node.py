@@ -1,9 +1,6 @@
-"""Print jobs node for the multiagent workflow.
+"""Print jobs node implementation."""
 
-This node processes and prints a single job.
-"""
-
-from ..state import AgentState
+from ...state import AgentState
 
 
 def print_jobs_node(state: AgentState) -> AgentState:
@@ -35,6 +32,5 @@ def print_jobs_node(state: AgentState) -> AgentState:
     print(f"{'='*60}\n")
 
     return {
-        "job": job,
         "status": "completed"
     }

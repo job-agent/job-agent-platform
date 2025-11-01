@@ -1,15 +1,12 @@
-"""Check job relevance node for the multiagent workflow.
-
-This node determines if a job is relevant to the candidate based on their CV.
-"""
+"""Check job relevance node implementation."""
 
 import os
 
 from langchain_openai import ChatOpenAI
 
-from ..state import AgentState
-from ..schemas import JobRelevance
-from ..prompts import CHECK_JOB_RELEVANCE_PROMPT
+from ...state import AgentState
+from .schemas import JobRelevance
+from .prompts import CHECK_JOB_RELEVANCE_PROMPT
 
 
 def check_job_relevance_node(state: AgentState) -> AgentState:

@@ -1,18 +1,24 @@
-"""Extract skills node for the multiagent workflow.
-
-This node extracts must-have skills from a single job description using OpenAI.
-"""
+"""Extract must-have skills node implementation."""
 
 import os
 
 from langchain_openai import ChatOpenAI
 
-from ..state import AgentState
-from ..schemas import SkillsExtraction
-from ..prompts import EXTRACT_MUST_HAVE_SKILLS_PROMPT
+from ...state import AgentState
+from .schemas import SkillsExtraction
+from .prompts import EXTRACT_MUST_HAVE_SKILLS_PROMPT
 
 
 def extract_must_have_skills_node(state: AgentState) -> AgentState:
+    """
+    Extract must-have skills from a job description.
+
+    Args:
+        state: Current agent state containing job information
+
+    Returns:
+        Updated state with extracted skills
+    """
     job = state["job"]
     job_id = job.get("job_id")
     description = job.get("description", "")
@@ -25,7 +31,6 @@ def extract_must_have_skills_node(state: AgentState) -> AgentState:
         print(f"  Job (ID: {job_id}): No description available, skipping...")
         print("=" * 60 + "\n")
         return {
-            "job": job,
             "status": state.get("status", "in_progress"),
             "extracted_skills": [],
         }
@@ -57,7 +62,6 @@ def extract_must_have_skills_node(state: AgentState) -> AgentState:
     print("=" * 60 + "\n")
 
     return {
-        "job": job,
         "status": state.get("status", "in_progress"),
         "extracted_skills": skills,
     }
