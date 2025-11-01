@@ -1,10 +1,9 @@
-"""Agent nodes for the multiagent workflow.
+"""Print jobs node for the multiagent workflow.
 
-This module contains the individual nodes that make up the langgraph workflow.
-Each node performs a specific task in the job processing pipeline.
+This node processes and prints the list of jobs.
 """
 
-from .state import AgentState
+from ..state import AgentState
 
 
 def print_jobs_node(state: AgentState) -> AgentState:

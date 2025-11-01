@@ -11,6 +11,7 @@ requires-python = ">=3.9"
 dependencies = [
     "langgraph>=1.0.2",
     "langchain>=1.0.3",
+    "langchain-openai>=1.0.1",
     "python-dotenv>=1.2.1",
     "job-scrapper-contracts @ git+ssh://git@github.com/job-agent/job-scrapper-contracts.git@main",
     "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@main#subdirectory=packages/scrapper-service",
