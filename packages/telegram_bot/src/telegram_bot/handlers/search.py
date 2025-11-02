@@ -1,7 +1,7 @@
 """Search command handler for Telegram bot."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -58,7 +58,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Calculate posted_after date if days parameter provided
     posted_after = None
     if params["days"] is not None:
-        posted_after = datetime.now() - timedelta(days=params["days"])
+        posted_after = datetime.now(timezone.utc) - timedelta(days=params["days"])
 
     # Send initial confirmation
     date_info = f"• Last {params['days']} days\n" if params["days"] else "• All available jobs\n"
