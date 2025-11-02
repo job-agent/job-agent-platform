@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from jobs_repository.database import Base
 from jobs_repository.repository import JobRepository
+from jobs_repository.exceptions import JobNotFoundError
 
 
 @pytest.fixture
@@ -110,13 +111,28 @@ def test_update_job(job_repo, sample_job_data):
     assert updated_job.title == "Senior Software Engineer"
 
 
+def test_update_nonexistent_job(job_repo):
+    """Test updating a nonexistent job raises exception."""
+    with pytest.raises(JobNotFoundError):
+        job_repo.update(99999, {"title": "New Title"})
+
+
 def test_delete_job(job_repo, sample_job_data):
     """Test deleting a job."""
     job = job_repo.create(sample_job_data)
     result = job_repo.delete(job.id)
 
     assert result is True
-    assert job_repo.get_by_id(job.id) is None
+
+    # Verify job is deleted by checking that get_by_id raises exception
+    with pytest.raises(JobNotFoundError):
+        job_repo.get_by_id_or_raise(job.id)
+
+
+def test_delete_nonexistent_job(job_repo):
+    """Test deleting a nonexistent job raises exception."""
+    with pytest.raises(JobNotFoundError):
+        job_repo.delete(99999)
 
 
 def test_soft_delete_job(job_repo, sample_job_data):

@@ -2,7 +2,7 @@
 
 from datetime import datetime, UTC
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, JSON
-from jobs_repository.database import Base
+from jobs_repository.database.base import Base
 
 
 class Job(Base):

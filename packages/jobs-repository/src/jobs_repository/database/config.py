@@ -1,11 +1,17 @@
-"""Configuration management for jobs repository."""
+"""Database configuration."""
 
 import os
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
 class DatabaseConfig(BaseModel):
     """Database configuration settings."""
+
+    model_config = {"env_prefix": "DB_"}
 
     url: str = Field(
         default_factory=lambda: os.getenv("DATABASE_URL", "postgresql://localhost:5432/jobs"),
@@ -23,11 +29,6 @@ class DatabaseConfig(BaseModel):
         default=False,
         description="Enable SQL query logging",
     )
-
-    class Config:
-        """Pydantic config."""
-
-        env_prefix = "DB_"
 
 
 def get_database_config() -> DatabaseConfig:
