@@ -5,6 +5,7 @@ It can be used by any interface (CLI, Telegram, Web, etc.).
 """
 
 import os
+from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 
 from dotenv import load_dotenv
@@ -58,14 +59,20 @@ class JobAgentOrchestrator:
         return filter_config
 
     def scrape_jobs(
-        self, salary: int = 4000, employment: str = "remote", page: int = 1, timeout: int = 30
+        self,
+        salary: int = 4000,
+        employment: str = "remote",
+        posted_after: Optional[datetime] = None,
+        timeout: int = 30,
     ) -> List[Dict[str, Any]]:
         """Scrape jobs using the scrapper service.
+
+        Automatically paginates through all pages until reaching the date cutoff.
 
         Args:
             salary: Minimum salary filter
             employment: Employment type filter
-            page: Page number for pagination
+            posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
             timeout: Request timeout in seconds
 
         Returns:
@@ -73,7 +80,7 @@ class JobAgentOrchestrator:
         """
         self.logger("Scraping jobs...")
         jobs = self.scrapper_manager.scrape_jobs_as_dicts(
-            salary=salary, employment=employment, page=page, timeout=timeout
+            salary=salary, employment=employment, posted_after=posted_after, timeout=timeout
         )
         self.logger(f"Scraped {len(jobs)} jobs")
         return jobs
@@ -127,12 +134,16 @@ class JobAgentOrchestrator:
         run_job_processing(job, cv_content)
 
     def run_complete_pipeline(
-        self, salary: int = 4000, employment: str = "remote", page: int = 1, timeout: int = 30
+        self,
+        salary: int = 4000,
+        employment: str = "remote",
+        posted_after: Optional[datetime] = None,
+        timeout: int = 30,
     ) -> Dict[str, Any]:
         """Run the complete job processing pipeline.
 
         This is the main entry point that:
-        1. Scrapes jobs
+        1. Scrapes jobs (automatically paginates until date cutoff)
         2. Filters unsuitable jobs
         3. Loads and cleans CV
         4. Processes each job with workflows
@@ -140,14 +151,14 @@ class JobAgentOrchestrator:
         Args:
             salary: Minimum salary filter
             employment: Employment type filter
-            page: Page number for pagination
+            posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
             timeout: Request timeout in seconds
 
         Returns:
             Dictionary with pipeline results and statistics
         """
         # Step 1: Scrape jobs
-        jobs = self.scrape_jobs(salary, employment, page, timeout)
+        jobs = self.scrape_jobs(salary, employment, posted_after, timeout)
 
         # Step 2: Filter jobs
         filtered_jobs = self.filter_jobs_list(jobs)

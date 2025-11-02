@@ -1,6 +1,7 @@
 """Search command handler for Telegram bot."""
 
 import asyncio
+from datetime import datetime, timedelta
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -20,7 +21,8 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     Examples:
         /search
         /search salary=5000
-        /search salary=6000 employment=remote page=1
+        /search salary=6000 employment=remote
+        /search salary=5000 days=7  # Get jobs from last 7 days
     """
     user_id = update.effective_user.id
 
@@ -34,7 +36,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Parse arguments
     args = context.args or []
-    params = {"salary": 4000, "employment": "remote", "page": 1, "timeout": 30}
+    params = {"salary": 4000, "employment": "remote", "days": 1, "timeout": 30}
 
     # Parse key=value arguments
     for arg in args:
@@ -42,7 +44,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             key, value = arg.split("=", 1)
             if key in params:
                 # Convert to appropriate type
-                if key in ("salary", "page", "timeout"):
+                if key in ("salary", "days", "timeout"):
                     try:
                         params[key] = int(value)
                     except ValueError:
@@ -53,13 +55,19 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 else:
                     params[key] = value
 
+    # Calculate posted_after date if days parameter provided
+    posted_after = None
+    if params["days"] is not None:
+        posted_after = datetime.now() - timedelta(days=params["days"])
+
     # Send initial confirmation
+    date_info = f"• Last {params['days']} days\n" if params["days"] else "• All available jobs\n"
     await update.message.reply_text(
         f"🔍 Starting job search...\n\n"
         f"Parameters:\n"
         f"• Salary: {params['salary']}\n"
         f"• Employment: {params['employment']}\n"
-        f"• Page: {params['page']}\n\n"
+        f"{date_info}\n"
         f"This may take a few minutes. I'll send you updates as I progress."
     )
 
@@ -83,13 +91,15 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Run the pipeline in a separate thread to avoid blocking
         loop = asyncio.get_event_loop()
 
-        await update.message.reply_text("📊 Step 1/4: Scraping jobs...")
+        await update.message.reply_text(
+            "📊 Step 1/4: Scraping jobs (will paginate through all pages)..."
+        )
         jobs = await loop.run_in_executor(
             None,
             orchestrator.scrape_jobs,
             params["salary"],
             params["employment"],
-            params["page"],
+            posted_after,
             params["timeout"],
         )
 
