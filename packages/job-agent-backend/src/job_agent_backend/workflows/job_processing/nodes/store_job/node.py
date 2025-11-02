@@ -109,8 +109,11 @@ def store_job_node(state: AgentState) -> AgentState:
     db_session = state.get("db_session")
     if not db_session:
         print("  ERROR: No database session available in state")
+        print(f"  State keys: {list(state.keys())}")
+        print(f"  HINT: Make sure DATABASE_URL is set and database is running")
+        print(f"  HINT: Ensure db_session is passed to run_job_processing()")
         print(f"{'='*60}\n")
-        return {"status": "error"}
+        return {"status": status}
 
     try:
         # Create repository instance

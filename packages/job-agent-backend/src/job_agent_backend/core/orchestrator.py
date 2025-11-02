@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 
 from scrapper_service import ScrapperManager
+from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
 
 from job_agent_backend.filter_service import FilterConfig, filter_jobs
@@ -141,10 +142,11 @@ class JobAgentOrchestrator:
         """Run the complete job processing pipeline.
 
         This is the main entry point that:
-        1. Scrapes jobs (automatically paginates until date cutoff)
-        2. Filters unsuitable jobs
-        3. Loads and cleans CV
-        4. Processes each job with workflows
+        1. Initializes database (creates tables if needed)
+        2. Scrapes jobs (automatically paginates until date cutoff)
+        3. Filters unsuitable jobs
+        4. Loads and cleans CV
+        5. Processes each job with workflows and stores relevant ones
 
         Args:
             salary: Minimum salary filter
@@ -155,6 +157,15 @@ class JobAgentOrchestrator:
         Returns:
             Dictionary with pipeline results and statistics
         """
+        # Step 0: Initialize database (create tables if they don't exist)
+        self.logger("Initializing database...")
+        try:
+            init_db()
+            self.logger("Database initialized successfully")
+        except Exception as e:
+            self.logger(f"Warning: Database initialization failed: {e}")
+            self.logger("Continuing without database storage...")
+
         # Step 1: Scrape jobs
         jobs = self.scrape_jobs(salary, employment, posted_after, timeout)
 

@@ -9,6 +9,7 @@ class Job(Base):
     """Job listing model."""
 
     __tablename__ = "jobs"
+    __table_args__ = {"schema": "jobs"}
 
     # Primary key
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
