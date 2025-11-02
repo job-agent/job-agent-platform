@@ -2,10 +2,6 @@
 
 import os
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 
 class DatabaseConfig(BaseModel):

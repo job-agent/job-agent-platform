@@ -14,7 +14,6 @@ dependencies = [
     "langchain-openai>=1.0.1",
     "langsmith>=0.4.39",
     "pydantic>=2.0.0",
-    "python-dotenv>=1.2.1",
     "pypdf>=5.1.0",
     "job-scrapper-contracts @ git+https://github.com/job-agent/job-scrapper-contracts.git@v0.1.0",
     "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@v0.1.2#subdirectory=packages/scrapper-service",

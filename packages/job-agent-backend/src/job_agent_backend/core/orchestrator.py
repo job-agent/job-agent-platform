@@ -8,15 +8,11 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 
-from dotenv import load_dotenv
 from scrapper_service import ScrapperManager
 
 from job_agent_backend.filter_service import FilterConfig, filter_jobs
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
 from job_agent_backend.utils import load_cv_from_pdf
-
-# Load environment variables from .env file
-load_dotenv()
 
 
 class JobAgentOrchestrator:
