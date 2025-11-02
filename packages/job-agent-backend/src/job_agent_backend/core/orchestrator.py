@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
 
 from scrapper_service import ScrapperManager
+from jobs_repository.database.session import get_db_session
 
 from job_agent_backend.filter_service import FilterConfig, filter_jobs
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
@@ -120,14 +121,15 @@ class JobAgentOrchestrator:
 
         return self.cleaned_cv
 
-    def process_job(self, job: Dict[str, Any], cv_content: str) -> None:
+    def process_job(self, job: Dict[str, Any], cv_content: str, db_session=None) -> None:
         """Process a single job with the workflows system.
 
         Args:
             job: Job dictionary to process
             cv_content: Cleaned CV content
+            db_session: Optional database session for storing jobs
         """
-        run_job_processing(job, cv_content)
+        run_job_processing(job, cv_content, db_session)
 
     def run_complete_pipeline(
         self,
@@ -162,18 +164,26 @@ class JobAgentOrchestrator:
         # Step 3: Load and clean CV
         cleaned_cv = self.load_and_clean_cv()
 
-        # Step 4: Process jobs
+        # Step 4: Process jobs with database session
         self.logger(f"Processing {len(filtered_jobs)} jobs with workflows system...")
 
-        for idx, job in enumerate(filtered_jobs, 1):
-            self.logger(f"\nProcessing job {idx}/{len(filtered_jobs)}")
-            self.process_job(job, cleaned_cv)
+        # Create a database session for all jobs
+        db_gen = get_db_session()
+        db_session = next(db_gen)
 
-        results = {
-            "total_scraped": len(jobs),
-            "total_filtered": len(filtered_jobs),
-            "total_processed": len(filtered_jobs),
-        }
+        try:
+            for idx, job in enumerate(filtered_jobs, 1):
+                self.logger(f"\nProcessing job {idx}/{len(filtered_jobs)}")
+                self.process_job(job, cleaned_cv, db_session)
 
-        self.logger(f"\nPipeline completed - Processed {len(filtered_jobs)} jobs")
-        return results
+            results = {
+                "total_scraped": len(jobs),
+                "total_filtered": len(filtered_jobs),
+                "total_processed": len(filtered_jobs),
+            }
+
+            self.logger(f"\nPipeline completed - Processed {len(filtered_jobs)} jobs")
+            return results
+        finally:
+            # Close the database session
+            db_session.close()

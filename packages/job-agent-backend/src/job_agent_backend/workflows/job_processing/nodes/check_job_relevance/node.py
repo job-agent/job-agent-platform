@@ -37,7 +37,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         print(f"  Job (ID: {job_id}): No CV context available, assuming relevant")
         print("=" * 60 + "\n")
         return {
-            "status": state.get("status", "in_progress"),
+            "is_relevant": True,
         }
 
     # Extract job details
@@ -49,7 +49,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         print(f"  Job (ID: {job_id}): No description available, assuming relevant")
         print("=" * 60 + "\n")
         return {
-            "status": state.get("status", "in_progress"),
+            "is_relevant": True,
         }
 
     try:
@@ -77,20 +77,17 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         relevance_status = "RELEVANT" if result.is_relevant else "IRRELEVANT"
         print(f"  Job (ID: {job_id}): {relevance_status}")
 
-        # Update status if irrelevant
-        new_status = state.get("status", "in_progress")
-        if not result.is_relevant:
-            new_status = "irrelevant"
+        is_relevant = result.is_relevant
 
     except Exception as e:
         print(f"  Job (ID: {job_id}): Error checking relevance - {e}")
         print("    Assuming relevant by default\n")
-        new_status = state.get("status", "in_progress")
+        is_relevant = True
 
     print("=" * 60)
     print(f"Finished checking relevance for job ID {job_id}")
     print("=" * 60 + "\n")
 
     return {
-        "status": new_status,
+        "is_relevant": is_relevant,
     }

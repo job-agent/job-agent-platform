@@ -31,7 +31,6 @@ def extract_must_have_skills_node(state: AgentState) -> AgentState:
         print(f"  Job (ID: {job_id}): No description available, skipping...")
         print("=" * 60 + "\n")
         return {
-            "status": state.get("status", "in_progress"),
             "extracted_skills": [],
         }
 
@@ -62,6 +61,5 @@ def extract_must_have_skills_node(state: AgentState) -> AgentState:
     print("=" * 60 + "\n")
 
     return {
-        "status": state.get("status", "in_progress"),
         "extracted_skills": skills,
     }

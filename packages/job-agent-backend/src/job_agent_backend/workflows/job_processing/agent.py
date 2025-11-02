@@ -4,6 +4,8 @@ This module provides the public API for running the workflows system.
 """
 
 import os
+from typing import Optional
+from sqlalchemy.orm import Session
 
 from job_scrapper_contracts import JobDict
 
@@ -11,7 +13,7 @@ from .job_processing import create_workflow
 from .state import AgentState
 
 
-def run_job_processing(job: JobDict, cv_content: str) -> None:
+def run_job_processing(job: JobDict, cv_content: str, db_session: Optional[Session] = None) -> None:
     """
     Run the workflows system on a single job.
 
@@ -21,6 +23,7 @@ def run_job_processing(job: JobDict, cv_content: str) -> None:
     Args:
         job: A single job dictionary to process
         cv_content: The CV content to match against the job
+        db_session: Optional database session for storing jobs
 
     Raises:
         ValueError: If cv_content is empty or None
@@ -46,7 +49,15 @@ def run_job_processing(job: JobDict, cv_content: str) -> None:
     workflow = create_workflow()
 
     # Initialize state for this job
-    initial_state: AgentState = {"job": job, "status": "started", "cv_context": cv_content}
+    initial_state: AgentState = {
+        "job": job,
+        "status": "started",
+        "cv_context": cv_content,
+    }
+
+    # Add db_session if provided
+    if db_session:
+        initial_state["db_session"] = db_session
 
     # Run the workflow
     final_state = workflow.invoke(initial_state)
