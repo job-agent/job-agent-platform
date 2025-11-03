@@ -116,12 +116,9 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         await update.message.reply_text(
             f"✅ {len(filtered_jobs)}/{len(jobs)} jobs passed filters\n\n"
-            f"📊 Step 3/4: Loading and cleaning your CV..."
+            f"📊 Step 3/4: Loading your CV..."
         )
-        cleaned_cv = await loop.run_in_executor(
-            None,
-            lambda: orchestrator.load_and_clean_cv(user_id=user_id)
-        )
+        cleaned_cv = await loop.run_in_executor(None, orchestrator.load_cv, user_id)
 
         await update.message.reply_text(
             f"✅ CV ready\n\n📊 Step 4/4: Processing {len(filtered_jobs)} jobs...\n"

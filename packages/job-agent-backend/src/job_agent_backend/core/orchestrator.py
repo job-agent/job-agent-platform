@@ -35,10 +35,8 @@ class JobAgentOrchestrator:
         """
         self.logger = logger or print
         self.scrapper_manager = ScrapperManager()
-        self.cv_content: Optional[str] = None
-        self.cleaned_cv: Optional[str] = None
 
-    def _get_cv_path(self, user_id: int) -> Path:
+    def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
 
         Args:
@@ -85,10 +83,15 @@ class JobAgentOrchestrator:
         if not cv_content:
             raise ValueError("Failed to extract content from CV file")
 
-        # Save the CV content
+        # Remove PII from CV content
+        self.logger(f"Removing PII from CV for user {user_id}")
+        cleaned_cv_content = run_pii_removal(cv_content)
+        self.logger(f"PII removed from CV for user {user_id}")
+
+        # Save the cleaned CV content
         cv_path = self.get_cv_path(user_id)
         cv_repository = CVRepository(cv_path)
-        cv_repository.create(cv_content)
+        cv_repository.create(cleaned_cv_content)
         self.logger(f"CV saved for user {user_id}")
 
     def has_cv(self, user_id: int) -> bool:
@@ -106,6 +109,31 @@ class JobAgentOrchestrator:
             return cv_repository.find() is not None
         except Exception:
             return False
+
+    def load_cv(self, user_id: int) -> str:
+        """Load CV content for a user from repository.
+
+        The CV is already cleaned of PII (done during upload).
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            CV content (already cleaned of PII)
+
+        Raises:
+            ValueError: If CV is not found or cannot be loaded
+        """
+        self.logger(f"Loading CV from repository for user {user_id}")
+        cv_path = self.get_cv_path(user_id)
+        cv_repository = CVRepository(cv_path)
+        cv_content = cv_repository.find()
+
+        if not cv_content:
+            raise ValueError(f"CV not found for user {user_id}. Please upload a CV first.")
+
+        self.logger(f"CV loaded successfully for user {user_id}")
+        return cv_content
 
     def _get_filter_config(self) -> FilterConfig:
         """Build filter configuration from environment variables.
@@ -169,50 +197,6 @@ class JobAgentOrchestrator:
         self.logger(f"Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed")
         return filtered_jobs
 
-    def load_and_clean_cv(
-        self, cv_path: Optional[str] = None, user_id: Optional[int] = None
-    ) -> str:
-        """Load CV from file and remove PII.
-
-        Args:
-            cv_path: Optional path to CV file (PDF or text). If not provided and user_id
-                    is given, will use user-specific CV path. If neither is provided,
-                    uses default PDF path. If the path ends with .txt, loads as text file.
-                    Otherwise loads as PDF.
-            user_id: Optional user identifier. If provided and cv_path is not, will load
-                    the user's CV from the standard location.
-
-        Returns:
-            Cleaned CV content
-
-        Raises:
-            ValueError: If CV cannot be loaded
-        """
-        if self.cleaned_cv:
-            return self.cleaned_cv
-
-        self.logger("Loading CV...")
-
-        # Determine CV path if not provided
-        if cv_path is None and user_id is not None:
-            cv_path = str(self.get_cv_path(user_id))
-
-        # Determine if we're loading from text or PDF
-        if cv_path and cv_path.endswith(".txt"):
-            self.cv_content = load_cv_from_text(cv_path)
-        else:
-            self.cv_content = load_cv_from_pdf(cv_path)
-
-        if not self.cv_content:
-            raise ValueError("Failed to load CV content")
-        self.logger("CV loaded successfully")
-
-        self.logger("Removing PII from CV...")
-        self.cleaned_cv = run_pii_removal(self.cv_content)
-        self.logger("PII removed from CV")
-
-        return self.cleaned_cv
-
     def process_job(self, job: Dict[str, Any], cv_content: str, db_session=None) -> Dict[str, Any]:
         """Process a single job with the workflows system.
 
@@ -234,6 +218,7 @@ class JobAgentOrchestrator:
 
     def run_complete_pipeline(
         self,
+        user_id: int,
         salary: int = 4000,
         employment: str = "remote",
         posted_after: Optional[datetime] = None,
@@ -245,10 +230,11 @@ class JobAgentOrchestrator:
         1. Initializes database (creates tables if needed)
         2. Scrapes jobs (automatically paginates until date cutoff)
         3. Filters unsuitable jobs
-        4. Loads and cleans CV
+        4. Loads CV from repository (already PII-free)
         5. Processes each job with workflows and stores relevant ones
 
         Args:
+            user_id: User identifier to load their CV
             salary: Minimum salary filter
             employment: Employment type filter
             posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
@@ -256,6 +242,9 @@ class JobAgentOrchestrator:
 
         Returns:
             Dictionary with pipeline results and statistics
+
+        Raises:
+            ValueError: If user CV is not found or cannot be loaded
         """
         # Step 0: Initialize database (create tables if they don't exist)
         self.logger("Initializing database...")
@@ -272,8 +261,8 @@ class JobAgentOrchestrator:
         # Step 2: Filter jobs
         filtered_jobs = self.filter_jobs_list(jobs)
 
-        # Step 3: Load and clean CV
-        cleaned_cv = self.load_and_clean_cv()
+        # Step 3: Load CV from repository (already cleaned of PII)
+        cleaned_cv = self.load_cv(user_id)
 
         # Step 4: Process jobs with database session
         self.logger(f"Processing {len(filtered_jobs)} jobs with workflows system...")

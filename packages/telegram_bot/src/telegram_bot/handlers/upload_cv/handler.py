@@ -31,7 +31,7 @@ async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         file = await context.bot.get_file(document.file_id)
 
         # Preserve original file extension
-        file_extension = Path(document.file_name).suffix if document.file_name else ''
+        file_extension = Path(document.file_name).suffix if document.file_name else ""
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
             tmp_path = tmp_file.name
             await file.download_to_drive(tmp_path)
