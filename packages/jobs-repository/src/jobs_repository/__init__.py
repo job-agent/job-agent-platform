@@ -15,19 +15,13 @@ from jobs_repository.database import (
 )
 
 # Models
-from jobs_repository.models import Job
+from jobs_repository.models import Job, Company, Location, Category, Industry
 
 # Repository
 from jobs_repository.repository import JobRepository
 
-# Schemas
-from jobs_repository.schemas import (
-    JobBase,
-    JobCreate,
-    JobUpdate,
-    JobResponse,
-    JobSearch,
-)
+# Mapper
+from jobs_repository.mapper import JobMapper
 
 # Exceptions
 from jobs_repository.exceptions import (
@@ -55,14 +49,14 @@ __all__ = [
     "drop_all_tables",
     # Models
     "Job",
+    "Company",
+    "Location",
+    "Category",
+    "Industry",
     # Repository
     "JobRepository",
-    # Schemas
-    "JobBase",
-    "JobCreate",
-    "JobUpdate",
-    "JobResponse",
-    "JobSearch",
+    # Mapper
+    "JobMapper",
     # Exceptions
     "JobRepositoryError",
     "JobNotFoundError",

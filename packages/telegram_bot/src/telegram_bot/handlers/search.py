@@ -144,11 +144,15 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await update.message.reply_text("🛑 Search cancelled by user.")
                     return
 
-                await loop.run_in_executor(None, orchestrator.process_job, job, cleaned_cv, db_session)
+                await loop.run_in_executor(
+                    None, orchestrator.process_job, job, cleaned_cv, db_session
+                )
 
                 # Send progress update every 3 jobs
                 if idx % 3 == 0 or idx == len(filtered_jobs):
-                    await update.message.reply_text(f"⏳ Processed {idx}/{len(filtered_jobs)} jobs...")
+                    await update.message.reply_text(
+                        f"⏳ Processed {idx}/{len(filtered_jobs)} jobs..."
+                    )
         finally:
             # Always close the database session
             db_session.close()
