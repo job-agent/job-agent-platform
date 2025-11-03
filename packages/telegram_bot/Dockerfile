@@ -30,12 +30,20 @@ RUN --mount=type=ssh ssh -T git@github.com || true
 COPY packages/job-agent-backend /app/packages/job-agent-backend
 RUN --mount=type=ssh pip install --no-cache-dir /app/packages/job-agent-backend
 
+# Copy data directory to the installed package location
+# (utils.py expects data/ to be at parent.parent of __file__)
+RUN cp -r /app/packages/job-agent-backend/src/data /usr/local/lib/python3.11/site-packages/data
+
 # Copy and install telegram_bot
 COPY packages/telegram_bot /app/packages/telegram_bot
-RUN pip install --no-cache-dir /app/packages/telegram_bot
+RUN --mount=type=ssh pip install --no-cache-dir /app/packages/telegram_bot
+
+# Copy entrypoint script and make it executable
+COPY packages/telegram_bot/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Set working directory to telegram_bot
 WORKDIR /app/packages/telegram_bot
 
-# Default command
-CMD ["python", "-m", "telegram_bot.main"]
+# Use entrypoint script that runs migrations before starting the bot
+CMD ["/app/entrypoint.sh"]

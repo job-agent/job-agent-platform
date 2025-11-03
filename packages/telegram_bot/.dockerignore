@@ -45,8 +45,3 @@ htmlcov/
 docs/
 
 **/tests/
-
-# Optional: exclude bulky data not needed in image
-# packages/**/src/data/**
-# Or keep specific needed files with negation rules:
-# !packages/some_pkg/src/data/keep_this.json

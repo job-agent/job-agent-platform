@@ -7,7 +7,6 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
-from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
 
 from . import formatter
@@ -116,18 +115,8 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"This may take a while..."
         )
 
-        # Initialize database and create session
-        await update.message.reply_text("🗄️ Initializing database...")
-        try:
-            await loop.run_in_executor(None, init_db)
-            await update.message.reply_text("✅ Database ready")
-        except Exception as e:
-            await update.message.reply_text(
-                f"⚠️ Database initialization warning: {e}\n"
-                f"Continuing without database storage..."
-            )
-
         # Create database session for processing jobs
+        # (migrations are run automatically on container startup)
         db_gen = get_db_session()
         db_session = next(db_gen)
 
