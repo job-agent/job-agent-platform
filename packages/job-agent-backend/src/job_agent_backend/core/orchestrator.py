@@ -216,6 +216,33 @@ class JobAgentOrchestrator:
         result = run_job_processing(job, cv_content, db_session)
         return result
 
+    def process_jobs_iterator(
+        self, jobs: List[Dict[str, Any]], cv_content: str
+    ):
+        """Process jobs one at a time, yielding results as they complete.
+
+        This method manages the database session internally and yields results
+        for each processed job. Useful for progress reporting in interactive contexts.
+
+        Args:
+            jobs: List of job dictionaries to process
+            cv_content: Cleaned CV content
+
+        Yields:
+            Tuple of (job_index, total_jobs, result_dict) for each processed job
+        """
+        # Create database session (migrations run automatically on container startup)
+        db_gen = get_db_session()
+        db_session = next(db_gen)
+
+        try:
+            for idx, job in enumerate(jobs, 1):
+                result = self.process_job(job, cv_content, db_session)
+                yield idx, len(jobs), result
+        finally:
+            # Always close the database session
+            db_session.close()
+
     def run_complete_pipeline(
         self,
         user_id: int,

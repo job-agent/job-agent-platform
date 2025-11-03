@@ -7,7 +7,6 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
-from jobs_repository.database.session import get_db_session
 
 from . import formatter
 from ..state import active_searches
@@ -125,37 +124,27 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"This may take a while..."
         )
 
-        # Create database session for processing jobs
-        # (migrations are run automatically on container startup)
-        db_gen = get_db_session()
-        db_session = next(db_gen)
-
         relevant_jobs = []
 
-        try:
-            # Process jobs
-            for idx, job in enumerate(filtered_jobs, 1):
-                # Check if user cancelled
-                if not active_searches.get(user_id, False):
-                    await update.message.reply_text("🛑 Search cancelled by user.")
-                    return
+        # Process jobs using orchestrator iterator (handles DB session internally)
+        for idx, total, result in await loop.run_in_executor(
+            None,
+            lambda: list(orchestrator.process_jobs_iterator(filtered_jobs, cleaned_cv))
+        ):
+            # Check if user cancelled
+            if not active_searches.get(user_id, False):
+                await update.message.reply_text("🛑 Search cancelled by user.")
+                return
 
-                result = await loop.run_in_executor(
-                    None, orchestrator.process_job, job, cleaned_cv, db_session
+            # Collect relevant jobs
+            if result.get("is_relevant"):
+                relevant_jobs.append(result)
+
+            # Send progress update every 3 jobs
+            if idx % 3 == 0 or idx == total:
+                await update.message.reply_text(
+                    f"⏳ Processed {idx}/{total} jobs... ({len(relevant_jobs)} relevant)"
                 )
-
-                # Collect relevant jobs
-                if result.get("is_relevant"):
-                    relevant_jobs.append(result)
-
-                # Send progress update every 3 jobs
-                if idx % 3 == 0 or idx == len(filtered_jobs):
-                    await update.message.reply_text(
-                        f"⏳ Processed {idx}/{len(filtered_jobs)} jobs... ({len(relevant_jobs)} relevant)"
-                    )
-        finally:
-            # Always close the database session
-            db_session.close()
 
         # Send final results summary
         await update.message.reply_text(
