@@ -3,6 +3,7 @@
 from job_scrapper_contracts import JobDict
 
 from jobs_repository.repository import JobRepository
+from jobs_repository.schemas import JobCreate
 
 from ...state import AgentState
 
@@ -43,7 +44,19 @@ def store_job_node(state: AgentState) -> AgentState:
         # Create repository instance
         job_repo = JobRepository(db_session)
 
-        stored_job = job_repo.create(job)
+        # Create JobCreate dict with job data and extracted skills
+        job_create_data: JobCreate = {**job}  # type: ignore
+
+        # Add extracted skills from state to the job data
+        if extracted_must_have_skills := state.get("extracted_must_have_skills"):
+            job_create_data["must_have_skills"] = extracted_must_have_skills
+            print(f"  Added {len(extracted_must_have_skills)} must-have skills")
+
+        if extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills"):
+            job_create_data["nice_to_have_skills"] = extracted_nice_to_have_skills
+            print(f"  Added {len(extracted_nice_to_have_skills)} nice-to-have skills")
+
+        stored_job = job_repo.create(job_create_data)
         print(f"  Job created successfully (DB ID: {stored_job.id})")
 
     except Exception as e:

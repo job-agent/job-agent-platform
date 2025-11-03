@@ -2,6 +2,7 @@
 
 from datetime import datetime, UTC
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 from jobs_repository.database.base import Base
 
@@ -87,6 +88,8 @@ class Job(Base):
     # Job basic information
     title = Column(String(500), nullable=False, index=True)
     description = Column(Text, nullable=True)
+    must_have_skills = Column(ARRAY(String), nullable=True)
+    nice_to_have_skills = Column(ARRAY(String), nullable=True)
 
     # Foreign keys to normalized tables
     company_id = Column(Integer, ForeignKey("jobs.companies.id"), nullable=True, index=True)
@@ -145,6 +148,8 @@ class Job(Base):
             "industry_id": self.industry_id,
             "industry_name": self.industry_rel.name if self.industry_rel else None,
             "description": self.description,
+            "must_have_skills": self.must_have_skills,
+            "nice_to_have_skills": self.nice_to_have_skills,
             "job_type": self.job_type,
             "experience_months": self.experience_months,
             "salary_min": self.salary_min,

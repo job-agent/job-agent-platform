@@ -21,6 +21,7 @@ from sqlalchemy import select
 
 from jobs_repository.models import Job, Company, Location, Category, Industry
 from jobs_repository.mapper import JobMapper
+from jobs_repository.schemas import JobCreate
 from jobs_repository.exceptions import (
     JobAlreadyExistsError,
     TransactionError,
@@ -150,15 +151,17 @@ class JobRepository:
     # Core CRUD Operations
     # ============================================================
 
-    def create(self, job_data: JobDict | Dict[str, Any]) -> Job:
+    def create(self, job_data: JobDict | JobCreate | Dict[str, Any]) -> Job:
         """
-        Create a new job from JobDict contract data.
+        Create a new job from JobDict or JobCreate contract data.
 
         This method uses JobMapper to transform contract data to model format,
         then creates the job record with all related entities.
 
         Args:
-            job_data: Job data in JobDict format from contracts
+            job_data: Job data in JobDict or JobCreate format from contracts.
+                     JobCreate includes additional fields like must_have_skills
+                     and nice_to_have_skills.
 
         Returns:
             Created Job instance

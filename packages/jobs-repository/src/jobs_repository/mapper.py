@@ -58,6 +58,12 @@ class JobMapper:
         mapped_data["job_type"] = job_data.get("employment_type")  # employment_type -> job_type
         mapped_data["experience_months"] = job_data.get("experience_months")
 
+        # Map skills arrays
+        if must_have_skills := job_data.get("must_have_skills"):
+            mapped_data["must_have_skills"] = must_have_skills
+        if nice_to_have_skills := job_data.get("nice_to_have_skills"):
+            mapped_data["nice_to_have_skills"] = nice_to_have_skills
+
     def _map_company(self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]) -> None:
         """Extract company name from nested object."""
         if company_data := job_data.get("company"):

@@ -23,6 +23,9 @@ from jobs_repository.repository import JobRepository
 # Mapper
 from jobs_repository.mapper import JobMapper
 
+# Schemas
+from jobs_repository.schemas import JobCreate
+
 # Exceptions
 from jobs_repository.exceptions import (
     JobRepositoryError,
@@ -57,6 +60,8 @@ __all__ = [
     "JobRepository",
     # Mapper
     "JobMapper",
+    # Schemas
+    "JobCreate",
     # Exceptions
     "JobRepositoryError",
     "JobNotFoundError",

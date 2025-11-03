@@ -45,19 +45,19 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
 
     # Add must-have skills if available
     if must_have_skills:
-        message += "\n🔧 Must-have skills:\n"
-        for skill in must_have_skills[:10]:  # Limit to 10 skills to avoid long messages
-            message += f"  • {skill}\n"
+        skills_text = ", ".join(must_have_skills[:10])
+        message += f"\n🔧 Must-have skills: {skills_text}"
         if len(must_have_skills) > 10:
-            message += f"  ... and {len(must_have_skills) - 10} more\n"
+            message += f" ... and {len(must_have_skills) - 10} more"
+        message += "\n"
 
     # Add nice-to-have skills if available
     if nice_to_have_skills:
-        message += "\n✨ Nice-to-have skills:\n"
-        for skill in nice_to_have_skills[:10]:  # Limit to 10 skills to avoid long messages
-            message += f"  • {skill}\n"
+        skills_text = ", ".join(nice_to_have_skills[:10])
+        message += f"\n✨ Nice-to-have skills: {skills_text}"
         if len(nice_to_have_skills) > 10:
-            message += f"  ... and {len(nice_to_have_skills) - 10} more\n"
+            message += f" ... and {len(nice_to_have_skills) - 10} more"
+        message += "\n"
 
     # Add URL
     message += f"\n🔗 URL: {job.get('url', 'N/A')}"
