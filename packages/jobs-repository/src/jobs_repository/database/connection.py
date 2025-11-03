@@ -1,7 +1,7 @@
 """Database connection management."""
 
 from typing import Optional
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import create_engine, Engine, text
 
 from jobs_repository.database.config import get_database_config
 from jobs_repository.exceptions import DatabaseConnectionError
@@ -34,7 +34,7 @@ def get_engine() -> Engine:
             )
             # Test connection
             with _engine.connect() as conn:
-                conn.execute("SELECT 1")
+                conn.execute(text("SELECT 1"))
         except Exception as e:
             raise DatabaseConnectionError(f"Failed to connect to database: {e}") from e
 
