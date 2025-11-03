@@ -1,12 +1,9 @@
 """Mapper service for transforming JobDict contract data to Job model format."""
 
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Dict, Any
 from dateutil import parser as date_parser
 
 from job_scrapper_contracts import JobDict
-
-if TYPE_CHECKING:
-    from jobs_repository.repository import JobRepository
 
 
 class JobMapper:
@@ -15,19 +12,13 @@ class JobMapper:
 
     This mapper handles:
     - Field name transformations (job_id -> external_id, url -> source_url, etc.)
-    - Nested object extraction and reference creation (company, location, etc.)
+    - Nested object extraction (company, location, etc.)
     - Data type conversions (ISO datetime strings -> datetime objects)
     - Flattening nested structures (salary dict -> separate fields)
+
+    Note: This mapper only transforms data structure. It does NOT create any
+    database entities. Entity creation is handled by the repository.
     """
-
-    def __init__(self, repository: "JobRepository"):
-        """
-        Initialize mapper with repository reference.
-
-        Args:
-            repository: JobRepository instance for accessing get_or_create methods
-        """
-        self.repository = repository
 
     def map_to_model(self, job_data: JobDict | Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -67,43 +58,35 @@ class JobMapper:
         mapped_data["job_type"] = job_data.get("employment_type")  # employment_type -> job_type
         mapped_data["experience_months"] = job_data.get("experience_months")
 
-    def _map_company(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
-        """Extract company from nested object and get/create company record."""
+    def _map_company(self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]) -> None:
+        """Extract company name from nested object."""
         if company_data := job_data.get("company"):
-            company = self.repository._get_or_create_company(company_data["name"])
-            mapped_data["company_id"] = company.id
+            mapped_data["company_name"] = company_data["name"]
 
     def _map_location(
         self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
     ) -> None:
-        """Extract location from nested object and get/create location record."""
+        """Extract location from nested object."""
         if location_data := job_data.get("location"):
             if region := location_data.get("region"):
-                location = self.repository._get_or_create_location(region)
-                mapped_data["location_id"] = location.id
+                mapped_data["location_region"] = region
             mapped_data["is_remote"] = location_data.get("is_remote", False)
 
     def _map_category(
         self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
     ) -> None:
-        """Extract category and get/create category record."""
+        """Extract category name."""
         if category_name := job_data.get("category"):
-            category = self.repository._get_or_create_category(category_name)
-            mapped_data["category_id"] = category.id
+            mapped_data["category_name"] = category_name
 
     def _map_industry(
         self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
     ) -> None:
-        """Extract industry and get/create industry record."""
+        """Extract industry name."""
         if industry_name := job_data.get("industry"):
-            industry = self.repository._get_or_create_industry(industry_name)
-            mapped_data["industry_id"] = industry.id
+            mapped_data["industry_name"] = industry_name
 
-    def _map_salary(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
+    def _map_salary(self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]) -> None:
         """Flatten salary nested object into separate fields."""
         if salary_data := job_data.get("salary"):
             mapped_data["salary_currency"] = salary_data.get("currency", "USD")

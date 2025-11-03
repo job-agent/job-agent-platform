@@ -14,6 +14,7 @@ class Company(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(300), nullable=False, unique=True, index=True)
+    website = Column(String(500), nullable=True)
 
     # Relationships
     jobs = relationship("Job", back_populates="company_rel")
@@ -95,7 +96,6 @@ class Job(Base):
 
     # Job details
     job_type = Column(String(100), nullable=True)  # e.g., "Full-time", "Part-time", "Contract"
-    experience_level = Column(String(100), nullable=True)  # e.g., "Junior", "Mid", "Senior"
     experience_months = Column(Integer, nullable=True)  # Required experience in months
     salary_min = Column(Float, nullable=True)
     salary_max = Column(Float, nullable=True)
@@ -107,7 +107,6 @@ class Job(Base):
     source_url = Column(Text, nullable=True)
 
     # Status and metadata
-    is_active = Column(Boolean, default=True, index=True)
     is_remote = Column(Boolean, default=False, index=True)
     posted_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=True)
@@ -147,7 +146,6 @@ class Job(Base):
             "industry_name": self.industry_rel.name if self.industry_rel else None,
             "description": self.description,
             "job_type": self.job_type,
-            "experience_level": self.experience_level,
             "experience_months": self.experience_months,
             "salary_min": self.salary_min,
             "salary_max": self.salary_max,
@@ -155,7 +153,6 @@ class Job(Base):
             "external_id": self.external_id,
             "source": self.source,
             "source_url": self.source_url,
-            "is_active": self.is_active,
             "is_remote": self.is_remote,
             "posted_at": self.posted_at.isoformat() if self.posted_at else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,

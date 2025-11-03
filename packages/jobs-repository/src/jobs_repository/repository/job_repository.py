@@ -49,7 +49,7 @@ class JobRepository:
             session: SQLAlchemy database session
         """
         self.session = session
-        self.mapper = JobMapper(self)
+        self.mapper = JobMapper()
 
     # ============================================================
     # Internal Helper Methods
@@ -173,6 +173,35 @@ class JobRepository:
             # Use mapper to transform JobDict to Job model fields
             mapped_data = self.mapper.map_to_model(job_data)
 
+            # Handle reference entity creation and get their IDs
+            if company_name := mapped_data.pop("company_name", None):
+                company = self._get_or_create_company(company_name)
+                mapped_data["company_id"] = company.id
+
+            if location_region := mapped_data.pop("location_region", None):
+                location = self._get_or_create_location(location_region)
+                mapped_data["location_id"] = location.id
+
+            if category_name := mapped_data.pop("category_name", None):
+                category = self._get_or_create_category(category_name)
+                mapped_data["category_id"] = category.id
+
+            if industry_name := mapped_data.pop("industry_name", None):
+                industry = self._get_or_create_industry(industry_name)
+                mapped_data["industry_id"] = industry.id
+
+            # Check if job already exists
+            existing_job = self.get_by_external_id(
+                mapped_data["external_id"],
+                mapped_data.get("source")
+            )
+            if existing_job:
+                self.session.rollback()
+                raise JobAlreadyExistsError(
+                    external_id=mapped_data["external_id"],
+                    source=mapped_data.get("source", "unknown")
+                )
+
             # Create Job instance with mapped data
             job = Job(**mapped_data)
             self.session.add(job)
@@ -181,6 +210,7 @@ class JobRepository:
             return job
 
         except JobAlreadyExistsError:
+            self.session.rollback()
             raise
         except IntegrityError as e:
             self.session.rollback()
