@@ -13,7 +13,6 @@ Structure:
 """
 
 from typing import Dict, Any, Optional
-from datetime import datetime
 
 from job_scrapper_contracts import JobDict
 from sqlalchemy.orm import Session
@@ -192,14 +191,13 @@ class JobRepository:
 
             # Check if job already exists
             existing_job = self.get_by_external_id(
-                mapped_data["external_id"],
-                mapped_data.get("source")
+                mapped_data["external_id"], mapped_data.get("source")
             )
             if existing_job:
                 self.session.rollback()
                 raise JobAlreadyExistsError(
                     external_id=mapped_data["external_id"],
-                    source=mapped_data.get("source", "unknown")
+                    source=mapped_data.get("source", "unknown"),
                 )
 
             # Create Job instance with mapped data

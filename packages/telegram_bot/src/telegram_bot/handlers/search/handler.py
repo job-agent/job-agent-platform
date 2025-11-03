@@ -10,7 +10,9 @@ from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
 
-from .state import active_searches
+from telegram_bot.services import JobFormatter
+
+from ..state import active_searches
 
 
 async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -63,14 +65,10 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         posted_after = datetime.now(timezone.utc) - timedelta(days=params["days"])
 
     # Send initial confirmation
-    date_info = f"• Last {params['days']} days\n" if params["days"] else "• All available jobs\n"
     await update.message.reply_text(
-        f"🔍 Starting job search...\n\n"
-        f"Parameters:\n"
-        f"• Salary: {params['salary']}\n"
-        f"• Employment: {params['employment']}\n"
-        f"{date_info}\n"
-        f"This may take a few minutes. I'll send you updates as I progress."
+        JobFormatter.format_search_parameters(
+            params["salary"], params["employment"], params["days"]
+        )
     )
 
     # Mark search as active
@@ -165,53 +163,17 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Send final results summary
         await update.message.reply_text(
-            f"✅ Search completed!\n\n"
-            f"📊 Results:\n"
-            f"• Total scraped: {len(jobs)}\n"
-            f"• Passed filters: {len(filtered_jobs)}\n"
-            f"• Processed: {len(filtered_jobs)}\n"
-            f"• Relevant jobs: {len(relevant_jobs)}\n\n"
-            f"Sending relevant jobs..."
+            JobFormatter.format_search_summary(
+                total_scraped=len(jobs),
+                passed_filters=len(filtered_jobs),
+                processed=len(filtered_jobs),
+                relevant=len(relevant_jobs),
+            )
         )
 
         # Send each relevant job to the user
         for idx, result in enumerate(relevant_jobs, 1):
-            job = result["job"]
-            skills = result.get("extracted_skills", [])
-
-            # Format job message
-            message = f"📋 Job {idx}/{len(relevant_jobs)}\n\n"
-            message += f"🏢 {job.get('title', 'N/A')}\n"
-            message += f"🏭 Company: {job.get('company', {}).get('name', 'N/A')}\n"
-
-            if job.get("salary"):
-                salary = job["salary"]
-                message += (
-                    f"💰 Salary: {salary.get('currency', '')} {salary.get('min_value', 'N/A')}"
-                )
-                if salary.get("max_value"):
-                    message += f" - {salary.get('max_value')}"
-                message += "\n"
-
-            if job.get("location"):
-                location = job["location"]
-                message += f"📍 Location: {location.get('region', 'N/A')}"
-                if location.get("is_remote"):
-                    message += " (Remote)"
-                message += "\n"
-
-            if job.get("employment_type"):
-                message += f"⏰ Type: {job['employment_type']}\n"
-
-            if skills:
-                message += f"\n🔧 Must-have skills:\n"
-                for skill in skills[:10]:  # Limit to 10 skills to avoid long messages
-                    message += f"  • {skill}\n"
-                if len(skills) > 10:
-                    message += f"  ... and {len(skills) - 10} more\n"
-
-            message += f"\n🔗 URL: {job.get('url', 'N/A')}"
-
+            message = JobFormatter.format_job_message(result, idx, len(relevant_jobs))
             await update.message.reply_text(message)
 
         if not relevant_jobs:

@@ -13,7 +13,9 @@ from .job_processing import create_workflow
 from .state import AgentState
 
 
-def run_job_processing(job: JobDict, cv_content: str, db_session: Optional[Session] = None) -> AgentState:
+def run_job_processing(
+    job: JobDict, cv_content: str, db_session: Optional[Session] = None
+) -> AgentState:
     """
     Run the workflows system on a single job.
 
