@@ -122,15 +122,23 @@ class JobAgentOrchestrator:
 
         return self.cleaned_cv
 
-    def process_job(self, job: Dict[str, Any], cv_content: str, db_session=None) -> None:
+    def process_job(self, job: Dict[str, Any], cv_content: str, db_session=None) -> Dict[str, Any]:
         """Process a single job with the workflows system.
 
         Args:
             job: Job dictionary to process
             cv_content: Cleaned CV content
             db_session: Optional database session for storing jobs
+
+        Returns:
+            Dictionary containing processing results:
+            - is_relevant: Whether the job is relevant to the candidate
+            - extracted_skills: List of must-have skills (for relevant jobs)
+            - status: Final workflow status
+            - job: Original job dictionary
         """
-        run_job_processing(job, cv_content, db_session)
+        result = run_job_processing(job, cv_content, db_session)
+        return result
 
     def run_complete_pipeline(
         self,

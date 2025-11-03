@@ -136,6 +136,8 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         db_gen = get_db_session()
         db_session = next(db_gen)
 
+        relevant_jobs = []
+
         try:
             # Process jobs
             for idx, job in enumerate(filtered_jobs, 1):
@@ -144,28 +146,79 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await update.message.reply_text("🛑 Search cancelled by user.")
                     return
 
-                await loop.run_in_executor(
+                result = await loop.run_in_executor(
                     None, orchestrator.process_job, job, cleaned_cv, db_session
                 )
+
+                # Collect relevant jobs
+                if result.get("is_relevant"):
+                    relevant_jobs.append(result)
 
                 # Send progress update every 3 jobs
                 if idx % 3 == 0 or idx == len(filtered_jobs):
                     await update.message.reply_text(
-                        f"⏳ Processed {idx}/{len(filtered_jobs)} jobs..."
+                        f"⏳ Processed {idx}/{len(filtered_jobs)} jobs... ({len(relevant_jobs)} relevant)"
                     )
         finally:
             # Always close the database session
             db_session.close()
 
-        # Send final results
+        # Send final results summary
         await update.message.reply_text(
             f"✅ Search completed!\n\n"
             f"📊 Results:\n"
             f"• Total scraped: {len(jobs)}\n"
             f"• Passed filters: {len(filtered_jobs)}\n"
-            f"• Processed: {len(filtered_jobs)}\n\n"
-            f"Check the logs for detailed analysis of each job."
+            f"• Processed: {len(filtered_jobs)}\n"
+            f"• Relevant jobs: {len(relevant_jobs)}\n\n"
+            f"Sending relevant jobs..."
         )
+
+        # Send each relevant job to the user
+        for idx, result in enumerate(relevant_jobs, 1):
+            job = result["job"]
+            skills = result.get("extracted_skills", [])
+
+            # Format job message
+            message = f"📋 Job {idx}/{len(relevant_jobs)}\n\n"
+            message += f"🏢 {job.get('title', 'N/A')}\n"
+            message += f"🏭 Company: {job.get('company', {}).get('name', 'N/A')}\n"
+
+            if job.get("salary"):
+                salary = job["salary"]
+                message += (
+                    f"💰 Salary: {salary.get('currency', '')} {salary.get('min_value', 'N/A')}"
+                )
+                if salary.get("max_value"):
+                    message += f" - {salary.get('max_value')}"
+                message += "\n"
+
+            if job.get("location"):
+                location = job["location"]
+                message += f"📍 Location: {location.get('region', 'N/A')}"
+                if location.get("is_remote"):
+                    message += " (Remote)"
+                message += "\n"
+
+            if job.get("employment_type"):
+                message += f"⏰ Type: {job['employment_type']}\n"
+
+            if skills:
+                message += f"\n🔧 Must-have skills:\n"
+                for skill in skills[:10]:  # Limit to 10 skills to avoid long messages
+                    message += f"  • {skill}\n"
+                if len(skills) > 10:
+                    message += f"  ... and {len(skills) - 10} more\n"
+
+            message += f"\n🔗 URL: {job.get('url', 'N/A')}"
+
+            await update.message.reply_text(message)
+
+        if not relevant_jobs:
+            await update.message.reply_text(
+                "😔 No relevant jobs found matching your CV.\n"
+                "Try adjusting your search parameters or check back later."
+            )
 
     except Exception as e:
         await update.message.reply_text(

@@ -13,7 +13,7 @@ from .job_processing import create_workflow
 from .state import AgentState
 
 
-def run_job_processing(job: JobDict, cv_content: str, db_session: Optional[Session] = None) -> None:
+def run_job_processing(job: JobDict, cv_content: str, db_session: Optional[Session] = None) -> AgentState:
     """
     Run the workflows system on a single job.
 
@@ -25,13 +25,21 @@ def run_job_processing(job: JobDict, cv_content: str, db_session: Optional[Sessi
         cv_content: The CV content to match against the job
         db_session: Optional database session for storing jobs
 
+    Returns:
+        Final agent state containing job processing results including:
+        - is_relevant: Whether the job is relevant to the candidate
+        - extracted_skills: List of must-have skills (for relevant jobs)
+        - status: Final workflow status
+
     Raises:
         ValueError: If cv_content is empty or None
 
     Example:
         >>> job = {"title": "Python Developer", "salary": 5000}
         >>> cv_content = "My CV content..."
-        >>> run_job_processing(job, cv_content)
+        >>> result = run_job_processing(job, cv_content)
+        >>> if result.get("is_relevant"):
+        >>>     print(f"Relevant job with skills: {result.get('extracted_skills')}")
     """
     # Check if LangSmith tracing is enabled
     tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
@@ -63,3 +71,5 @@ def run_job_processing(job: JobDict, cv_content: str, db_session: Optional[Sessi
     final_state = workflow.invoke(initial_state)
 
     print(f"Workflow completed with status: {final_state['status']}")
+
+    return final_state
