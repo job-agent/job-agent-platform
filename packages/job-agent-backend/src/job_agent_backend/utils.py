@@ -6,6 +6,38 @@ from typing import Optional
 from pypdf import PdfReader
 
 
+def load_cv_from_text(cv_path: str) -> Optional[str]:
+    """
+    Load CV content from a text file.
+
+    Args:
+        cv_path: Path to the CV text file.
+
+    Returns:
+        The CV content from the file, or None if the file
+        doesn't exist or cannot be read.
+
+    Example:
+        >>> cv_content = load_cv_from_text('data/cvs/cv_12345.txt')
+        >>> if cv_content:
+        ...     print(f"Loaded CV with {len(cv_content)} characters")
+    """
+    cv_path_obj = Path(cv_path)
+
+    # Check if file exists
+    if not cv_path_obj.exists():
+        print(f"CV file not found at: {cv_path}")
+        return None
+
+    try:
+        cv_content = cv_path_obj.read_text(encoding="utf-8")
+        print(f"✓ Loaded CV from {cv_path} ({len(cv_content)} characters)")
+        return cv_content
+    except Exception as e:
+        print(f"Error reading CV text at {cv_path}: {e}")
+        return None
+
+
 def load_cv_from_pdf(cv_path: Optional[str] = None) -> Optional[str]:
     """
     Load CV content from a PDF file.

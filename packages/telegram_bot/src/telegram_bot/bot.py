@@ -8,7 +8,7 @@ import os
 from typing import Optional
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from telegram_bot.handlers import (
@@ -17,6 +17,7 @@ from telegram_bot.handlers import (
     search_jobs_handler,
     status_handler,
     cancel_handler,
+    upload_cv_handler,
 )
 
 
@@ -48,6 +49,9 @@ class JobAgentBot:
         self.application.add_handler(CommandHandler("search", search_jobs_handler))
         self.application.add_handler(CommandHandler("status", status_handler))
         self.application.add_handler(CommandHandler("cancel", cancel_handler))
+
+        # Register document handler for CV uploads
+        self.application.add_handler(MessageHandler(filters.Document.PDF, upload_cv_handler))
 
     async def post_init(self, application: Application) -> None:
         """Called after bot initialization."""

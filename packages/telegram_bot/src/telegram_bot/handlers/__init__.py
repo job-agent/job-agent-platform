@@ -9,6 +9,7 @@ from .help.handler import help_handler
 from .search.handler import search_jobs_handler
 from .start.handler import start_handler
 from .status.handler import status_handler
+from .upload_cv.handler import upload_cv_handler
 
 __all__ = [
     "cancel_handler",
@@ -16,4 +17,5 @@ __all__ = [
     "search_jobs_handler",
     "start_handler",
     "status_handler",
+    "upload_cv_handler",
 ]

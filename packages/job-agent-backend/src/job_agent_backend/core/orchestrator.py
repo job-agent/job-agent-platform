@@ -6,15 +6,17 @@ It can be used by any interface (CLI, Telegram, Web, etc.).
 
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable
 
 from scrapper_service import ScrapperManager
 from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
+from cvs_repository import CVRepository
 
 from job_agent_backend.filter_service import FilterConfig, filter_jobs
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
-from job_agent_backend.utils import load_cv_from_pdf
+from job_agent_backend.utils import load_cv_from_pdf, load_cv_from_text
 
 
 class JobAgentOrchestrator:
@@ -35,6 +37,75 @@ class JobAgentOrchestrator:
         self.scrapper_manager = ScrapperManager()
         self.cv_content: Optional[str] = None
         self.cleaned_cv: Optional[str] = None
+
+    def _get_cv_path(self, user_id: int) -> Path:
+        """Get the storage path for a user's CV.
+
+        Args:
+            user_id: User identifier (e.g., Telegram user ID)
+
+        Returns:
+            Path object for the user's CV file
+        """
+        # Store CVs in data/cvs/ directory relative to package root
+        package_root = Path(__file__).parent.parent.parent
+        cv_dir = package_root / "data" / "cvs"
+        cv_dir.mkdir(parents=True, exist_ok=True)
+        return cv_dir / f"cv_{user_id}.txt"
+
+    def upload_cv(self, user_id: int, file_path: str) -> None:
+        """Upload and process a CV file for a user.
+
+        Automatically detects file type and processes accordingly.
+        Supports PDF and text files.
+
+        Args:
+            user_id: User identifier
+            file_path: Path to CV file (PDF or text)
+
+        Raises:
+            ValueError: If file format is unsupported or processing fails
+        """
+        file_path_lower = file_path.lower()
+
+        # Determine file type and extract content
+        if file_path_lower.endswith(".pdf"):
+            self.logger(f"Processing PDF CV for user {user_id}")
+            cv_content = load_cv_from_pdf(file_path)
+        elif file_path_lower.endswith(".txt"):
+            self.logger(f"Processing text CV for user {user_id}")
+            cv_content = load_cv_from_text(file_path)
+        else:
+            # Unsupported file format
+            extension = Path(file_path).suffix
+            raise ValueError(
+                f"Unsupported file format: {extension}. " f"Supported formats: .pdf, .txt"
+            )
+
+        if not cv_content:
+            raise ValueError("Failed to extract content from CV file")
+
+        # Save the CV content
+        cv_path = self.get_cv_path(user_id)
+        cv_repository = CVRepository(cv_path)
+        cv_repository.create(cv_content)
+        self.logger(f"CV saved for user {user_id}")
+
+    def has_cv(self, user_id: int) -> bool:
+        """Check if a user has uploaded a CV.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            True if user has a CV, False otherwise
+        """
+        try:
+            cv_path = self.get_cv_path(user_id)
+            cv_repository = CVRepository(cv_path)
+            return cv_repository.find() is not None
+        except Exception:
+            return False
 
     def _get_filter_config(self) -> FilterConfig:
         """Build filter configuration from environment variables.
@@ -98,8 +169,18 @@ class JobAgentOrchestrator:
         self.logger(f"Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed")
         return filtered_jobs
 
-    def load_and_clean_cv(self) -> str:
-        """Load CV from PDF and remove PII.
+    def load_and_clean_cv(
+        self, cv_path: Optional[str] = None, user_id: Optional[int] = None
+    ) -> str:
+        """Load CV from file and remove PII.
+
+        Args:
+            cv_path: Optional path to CV file (PDF or text). If not provided and user_id
+                    is given, will use user-specific CV path. If neither is provided,
+                    uses default PDF path. If the path ends with .txt, loads as text file.
+                    Otherwise loads as PDF.
+            user_id: Optional user identifier. If provided and cv_path is not, will load
+                    the user's CV from the standard location.
 
         Returns:
             Cleaned CV content
@@ -111,7 +192,17 @@ class JobAgentOrchestrator:
             return self.cleaned_cv
 
         self.logger("Loading CV...")
-        self.cv_content = load_cv_from_pdf()
+
+        # Determine CV path if not provided
+        if cv_path is None and user_id is not None:
+            cv_path = str(self.get_cv_path(user_id))
+
+        # Determine if we're loading from text or PDF
+        if cv_path and cv_path.endswith(".txt"):
+            self.cv_content = load_cv_from_text(cv_path)
+        else:
+            self.cv_content = load_cv_from_pdf(cv_path)
+
         if not self.cv_content:
             raise ValueError("Failed to load CV content")
         self.logger("CV loaded successfully")

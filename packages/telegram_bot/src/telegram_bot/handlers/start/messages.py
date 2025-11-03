@@ -14,5 +14,8 @@ def get_welcome_message(first_name: str) -> str:
         f"👋 Hello {first_name}!\n\n"
         "I'm the Job Agent Bot. I help you find and analyze job opportunities "
         "that match your profile.\n\n"
-        "Use /help to see available commands."
+        "To get started:\n"
+        "1. Upload your CV as a PDF document\n"
+        "2. Use /search to find relevant jobs\n\n"
+        "Use /help to see all available commands."
     )

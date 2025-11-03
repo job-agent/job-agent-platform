@@ -62,6 +62,16 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     if params["days"] is not None:
         posted_after = datetime.now(timezone.utc) - timedelta(days=params["days"])
 
+    # Check if user has uploaded a CV
+    orchestrator = JobAgentOrchestrator()
+    if not orchestrator.has_cv(user_id):
+        await update.message.reply_text(
+            "❌ No CV found!\n\n"
+            "Please upload your CV first by sending it as a PDF document to this bot.\n"
+            "Once uploaded, you can use /search to find relevant jobs."
+        )
+        return
+
     # Send initial confirmation
     await update.message.reply_text(
         formatter.format_search_parameters(params["salary"], params["employment"], params["days"])
@@ -108,7 +118,10 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"✅ {len(filtered_jobs)}/{len(jobs)} jobs passed filters\n\n"
             f"📊 Step 3/4: Loading and cleaning your CV..."
         )
-        cleaned_cv = await loop.run_in_executor(None, orchestrator.load_and_clean_cv)
+        cleaned_cv = await loop.run_in_executor(
+            None,
+            lambda: orchestrator.load_and_clean_cv(user_id=user_id)
+        )
 
         await update.message.reply_text(
             f"✅ CV ready\n\n📊 Step 4/4: Processing {len(filtered_jobs)} jobs...\n"

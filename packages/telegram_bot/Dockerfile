@@ -23,6 +23,10 @@ WORKDIR /app
 COPY packages/jobs-repository /app/packages/jobs-repository
 RUN pip install --no-cache-dir /app/packages/jobs-repository
 
+# Copy and install cvs-repository (dependency of job-agent-backend)
+COPY packages/cvs-repository /app/packages/cvs-repository
+RUN pip install --no-cache-dir /app/packages/cvs-repository
+
 RUN --mount=type=ssh ssh -T git@github.com || true
 
 # Copy and install job-agent-backend
