@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing caches
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+**/.env
+**/.env.local
+.python-version
+
+# Git
+.git/
+.gitignore
+
+docs/
+
+**/tests/
+
+# Optional: exclude bulky data not needed in image
+# packages/**/src/data/**
+# Or keep specific needed files with negation rules:
+# !packages/some_pkg/src/data/keep_this.json

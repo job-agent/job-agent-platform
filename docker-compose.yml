@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: job-agent-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobagent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobagent}
+      POSTGRES_DB: ${POSTGRES_DB:-jobs}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobagent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - job-agent-network
+    restart: unless-stopped
+
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: packages/telegram_bot/Dockerfile
+      # ⬇️ Enable BuildKit SSH mounts for private git+ssh deps
+      ssh:
+        - default
+        # Or, to point at a specific key (replace with your full absolute path):
+        # - id=github,src=/home/youruser/.ssh/id_github
+    container_name: telegram-bot
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-jobagent}:${POSTGRES_PASSWORD:-jobagent}@postgres:5432/${POSTGRES_DB:-jobs}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
+      LANGCHAIN_PROJECT: ${LANGCHAIN_PROJECT:-telegram-bot}
+      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
+      FILTER_MAX_MONTHS_OF_EXPERIENCE: ${FILTER_MAX_MONTHS_OF_EXPERIENCE:-}
+      FILTER_LOCATION_ALLOWS_TO_APPLY: ${FILTER_LOCATION_ALLOWS_TO_APPLY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - job-agent-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  job-agent-network:
+    driver: bridge
