@@ -10,8 +10,7 @@ from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
 
-from telegram_bot.services import JobFormatter
-
+from . import formatter
 from ..state import active_searches
 
 
@@ -66,9 +65,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Send initial confirmation
     await update.message.reply_text(
-        JobFormatter.format_search_parameters(
-            params["salary"], params["employment"], params["days"]
-        )
+        formatter.format_search_parameters(params["salary"], params["employment"], params["days"])
     )
 
     # Mark search as active
@@ -163,7 +160,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Send final results summary
         await update.message.reply_text(
-            JobFormatter.format_search_summary(
+            formatter.format_search_summary(
                 total_scraped=len(jobs),
                 passed_filters=len(filtered_jobs),
                 processed=len(filtered_jobs),
@@ -173,7 +170,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Send each relevant job to the user
         for idx, result in enumerate(relevant_jobs, 1):
-            message = JobFormatter.format_job_message(result, idx, len(relevant_jobs))
+            message = formatter.format_job_message(result, idx, len(relevant_jobs))
             await update.message.reply_text(message)
 
         if not relevant_jobs:

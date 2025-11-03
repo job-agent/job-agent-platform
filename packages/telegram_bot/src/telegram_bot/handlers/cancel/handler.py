@@ -3,6 +3,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from .messages import CANCELLING_MESSAGE, NO_SEARCH_TO_CANCEL_MESSAGE
 from ..state import active_searches
 
 
@@ -18,11 +19,6 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if is_active:
         active_searches[user_id] = False
-        await update.message.reply_text(
-            "🛑 Cancelling your job search...\n\n"
-            "The search will stop after the current job finishes processing."
-        )
+        await update.message.reply_text(CANCELLING_MESSAGE)
     else:
-        await update.message.reply_text(
-            "ℹ️ No active search to cancel.\n\n" "Use /search to start a new job search."
-        )
+        await update.message.reply_text(NO_SEARCH_TO_CANCEL_MESSAGE)

@@ -3,6 +3,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from .messages import ACTIVE_SEARCH_MESSAGE, NO_ACTIVE_SEARCH_MESSAGE
 from ..state import active_searches
 
 
@@ -17,10 +18,6 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     is_active = active_searches.get(user_id, False)
 
     if is_active:
-        await update.message.reply_text(
-            "⏳ You have an active job search running.\n\n" "Use /cancel to stop it."
-        )
+        await update.message.reply_text(ACTIVE_SEARCH_MESSAGE)
     else:
-        await update.message.reply_text(
-            "✅ No active searches.\n\n" "Use /search to start a new job search."
-        )
+        await update.message.reply_text(NO_ACTIVE_SEARCH_MESSAGE)

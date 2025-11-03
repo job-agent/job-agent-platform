@@ -3,6 +3,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from .messages import get_welcome_message
+
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle the /start command.
@@ -12,9 +14,4 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         context: Callback context
     """
     user = update.effective_user
-    await update.message.reply_text(
-        f"👋 Hello {user.first_name}!\n\n"
-        "I'm the Job Agent Bot. I help you find and analyze job opportunities "
-        "that match your profile.\n\n"
-        "Use /help to see available commands."
-    )
+    await update.message.reply_text(get_welcome_message(user.first_name))
