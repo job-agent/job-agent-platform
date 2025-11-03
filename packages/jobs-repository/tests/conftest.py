@@ -4,9 +4,8 @@ from datetime import datetime, UTC
 from typing import Generator
 
 import pytest
-from sqlalchemy import create_engine, JSON, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.types import TypeDecorator, String
 
 from jobs_repository.database.base import Base
@@ -15,6 +14,7 @@ from jobs_repository.models import Job, Company, Location, Category, Industry
 
 class JSONArray(TypeDecorator):
     """Custom type that stores arrays as JSON in SQLite."""
+
     impl = String
     cache_ok = True
 
@@ -22,6 +22,7 @@ class JSONArray(TypeDecorator):
         """Convert list to JSON string for storage."""
         if value is not None:
             import json
+
             return json.dumps(value)
         return value
 
@@ -29,6 +30,7 @@ class JSONArray(TypeDecorator):
         """Convert JSON string back to list."""
         if value is not None:
             import json
+
             return json.loads(value)
         return value
 
@@ -37,9 +39,7 @@ class JSONArray(TypeDecorator):
 def in_memory_engine():
     """Create an in-memory SQLite engine for testing."""
     engine = create_engine(
-        "sqlite:///:memory:",
-        echo=False,
-        connect_args={"check_same_thread": False}
+        "sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False}
     )
 
     # Remove schema from all tables for SQLite compatibility
@@ -47,7 +47,7 @@ def in_memory_engine():
     for table in Base.metadata.tables.values():
         table.schema = None
         for column in table.columns:
-            if hasattr(column.type, '__class__') and column.type.__class__.__name__ == 'ARRAY':
+            if hasattr(column.type, "__class__") and column.type.__class__.__name__ == "ARRAY":
                 # Replace PostgreSQL ARRAY with our JSONArray type for SQLite
                 column.type = JSONArray()
 
@@ -109,7 +109,9 @@ def sample_industry(db_session) -> Industry:
 
 
 @pytest.fixture
-def sample_job(db_session, sample_company, sample_location, sample_category, sample_industry) -> Job:
+def sample_job(
+    db_session, sample_company, sample_location, sample_category, sample_industry
+) -> Job:
     """Create a sample job for testing."""
     job = Job(
         title="Software Engineer",
@@ -146,25 +148,15 @@ def sample_job_dict():
         "title": "Senior Python Developer",
         "url": "https://example.com/jobs/12345",
         "description": "Looking for an experienced Python developer.",
-        "company": {
-            "name": "Example Corp",
-            "website": "https://example.com"
-        },
+        "company": {"name": "Example Corp", "website": "https://example.com"},
         "category": "Software Development",
         "date_posted": "2024-01-15T10:00:00Z",
         "valid_through": "2024-02-15T10:00:00Z",
         "employment_type": "FULL_TIME",
-        "salary": {
-            "currency": "USD",
-            "min_value": 120000.0,
-            "max_value": 160000.0
-        },
+        "salary": {"currency": "USD", "min_value": 120000.0, "max_value": 160000.0},
         "experience_months": 36.0,
-        "location": {
-            "region": "New York, NY",
-            "is_remote": True
-        },
-        "industry": "Information Technology"
+        "location": {"region": "New York, NY", "is_remote": True},
+        "industry": "Information Technology",
     }
 
 
@@ -176,20 +168,14 @@ def sample_job_create_dict():
         "title": "DevOps Engineer",
         "url": "https://example.com/jobs/54321",
         "description": "We need a skilled DevOps engineer.",
-        "company": {
-            "name": "DevOps Inc",
-            "website": "https://devopsinc.com"
-        },
+        "company": {"name": "DevOps Inc", "website": "https://devopsinc.com"},
         "category": "DevOps",
         "date_posted": "2024-01-20T09:00:00Z",
         "valid_through": "2024-03-20T09:00:00Z",
         "employment_type": "CONTRACT",
         "experience_months": 48.0,
-        "location": {
-            "region": "Remote",
-            "is_remote": True
-        },
+        "location": {"region": "Remote", "is_remote": True},
         "industry": "Cloud Computing",
         "must_have_skills": ["AWS", "Terraform", "Docker", "Kubernetes"],
-        "nice_to_have_skills": ["Ansible", "Jenkins", "Python"]
+        "nice_to_have_skills": ["Ansible", "Jenkins", "Python"],
     }

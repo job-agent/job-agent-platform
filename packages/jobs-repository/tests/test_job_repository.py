@@ -1,6 +1,6 @@
 """Tests for JobRepository class."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -250,11 +250,7 @@ class TestJobRepository:
 
     def test_create_job_with_minimal_data(self, repository):
         """Test creating job with minimal required fields."""
-        minimal_data = {
-            "job_id": 777,
-            "title": "Minimal Job",
-            "company": {"name": "Minimal Corp"}
-        }
+        minimal_data = {"job_id": 777, "title": "Minimal Job", "company": {"name": "Minimal Corp"}}
         job = repository.create(minimal_data)
 
         assert job.id is not None
@@ -266,10 +262,7 @@ class TestJobRepository:
 
     def test_create_job_without_company(self, repository):
         """Test creating job without company data."""
-        job_data = {
-            "job_id": 666,
-            "title": "Job Without Company"
-        }
+        job_data = {"job_id": 666, "title": "Job Without Company"}
         job = repository.create(job_data)
 
         assert job.id is not None
@@ -295,7 +288,7 @@ class TestJobRepository:
     def test_create_job_handles_integrity_error(self, repository, sample_job_dict, db_session):
         """Test that IntegrityError is converted to ValidationError."""
         # Mock the session to raise IntegrityError
-        with patch.object(db_session, 'commit', side_effect=IntegrityError("mock", "mock", "mock")):
+        with patch.object(db_session, "commit", side_effect=IntegrityError("mock", "mock", "mock")):
             with pytest.raises(ValidationError) as exc_info:
                 repository.create(sample_job_dict)
 
@@ -304,13 +297,15 @@ class TestJobRepository:
     def test_create_job_handles_sqlalchemy_error(self, repository, sample_job_dict, db_session):
         """Test that SQLAlchemyError is converted to TransactionError."""
         # Mock the session to raise SQLAlchemyError
-        with patch.object(db_session, 'commit', side_effect=SQLAlchemyError("Database error")):
+        with patch.object(db_session, "commit", side_effect=SQLAlchemyError("Database error")):
             with pytest.raises(TransactionError) as exc_info:
                 repository.create(sample_job_dict)
 
             assert "Failed to create job" in str(exc_info.value)
 
-    def test_create_rolls_back_on_already_exists_error(self, repository, sample_job_dict, db_session):
+    def test_create_rolls_back_on_already_exists_error(
+        self, repository, sample_job_dict, db_session
+    ):
         """Test that session is rolled back when job already exists."""
         # Create first job
         repository.create(sample_job_dict)
@@ -334,7 +329,7 @@ class TestJobRepository:
     def test_create_rolls_back_on_integrity_error(self, repository, sample_job_dict, db_session):
         """Test that session is rolled back on IntegrityError."""
         # Mock commit to raise IntegrityError
-        with patch.object(db_session, 'commit', side_effect=IntegrityError("mock", "mock", "mock")):
+        with patch.object(db_session, "commit", side_effect=IntegrityError("mock", "mock", "mock")):
             try:
                 repository.create(sample_job_dict)
             except ValidationError:
@@ -346,7 +341,7 @@ class TestJobRepository:
     def test_create_rolls_back_on_sqlalchemy_error(self, repository, sample_job_dict, db_session):
         """Test that session is rolled back on SQLAlchemyError."""
         # Mock commit to raise SQLAlchemyError
-        with patch.object(db_session, 'commit', side_effect=SQLAlchemyError("error")):
+        with patch.object(db_session, "commit", side_effect=SQLAlchemyError("error")):
             try:
                 repository.create(sample_job_dict)
             except TransactionError:
@@ -364,7 +359,7 @@ class TestJobRepository:
         job_data = {
             "job_id": 555,
             "title": "Job Without Source",
-            "company": {"name": "Source Test Corp"}
+            "company": {"name": "Source Test Corp"},
         }
         job = repository.create(job_data)
 
@@ -377,7 +372,7 @@ class TestJobRepository:
         job_data = {
             "job_id": 444,
             "title": "Job With None Source",
-            "company": {"name": "None Source Corp"}
+            "company": {"name": "None Source Corp"},
         }
         created_job = repository.create(job_data)
 
@@ -403,6 +398,7 @@ class TestJobRepository:
         """Test that repository initializes with a mapper."""
         assert repository.mapper is not None
         from jobs_repository.mapper import JobMapper
+
         assert isinstance(repository.mapper, JobMapper)
 
     # ============================================================
@@ -430,7 +426,7 @@ class TestJobRepository:
         job_data = {
             "job_id": 333,
             "title": "Standalone Job",
-            "description": "Job with no relationships"
+            "description": "Job with no relationships",
         }
         job = repository.create(job_data)
 
@@ -451,6 +447,7 @@ class TestJobRepository:
 
         # Verify created_at and updated_at are auto-generated
         from datetime import datetime
+
         assert isinstance(job.created_at, datetime)
         assert isinstance(job.updated_at, datetime)
 
@@ -497,14 +494,17 @@ class TestJobRepository:
 
         # After rollback, company shouldn't exist
         from sqlalchemy import select
+
         stmt = select(Company).where(Company.name == "Flush Test Company")
         result = db_session.scalar(stmt)
         assert result is None
 
-    def test_create_multiple_jobs_same_external_id_different_source(self, repository, sample_job_dict):
+    def test_create_multiple_jobs_same_external_id_different_source(
+        self, repository, sample_job_dict
+    ):
         """Test that same external_id can exist for different sources."""
         # Create first job
-        job1 = repository.create(sample_job_dict)
+        repository.create(sample_job_dict)
 
         # Create second job with same external_id but different source
         job_dict_2 = sample_job_dict.copy()
@@ -521,11 +521,7 @@ class TestJobRepository:
     def test_get_by_external_id_with_multiple_sources(self, repository):
         """Test retrieving jobs with same external_id from different sources."""
         # Create jobs with same external_id but without source
-        job_data_1 = {
-            "job_id": 111,
-            "title": "Job 1",
-            "company": {"name": "Company 1"}
-        }
+        job_data_1 = {"job_id": 111, "title": "Job 1", "company": {"name": "Company 1"}}
 
         job1 = repository.create(job_data_1)
 
@@ -545,7 +541,7 @@ class TestJobRepository:
             "title": "Job With Empty Skills",
             "company": {"name": "Skills Test Corp"},
             "must_have_skills": [],
-            "nice_to_have_skills": []
+            "nice_to_have_skills": [],
         }
         job = repository.create(job_data)
 
@@ -578,6 +574,7 @@ class TestJobRepository:
 
         # Query directly from database to verify commit
         from sqlalchemy import select
+
         stmt = select(Job).where(Job.id == job.id)
         db_job = db_session.scalar(stmt)
 
@@ -599,7 +596,7 @@ class TestJobRepository:
             "category": "Software Development & Engineering",
             "industry": "IT & Services",
             "location": {"region": "São Paulo, Brazil"},
-            "description": "Looking for engineers with C++ & Python skills, 3+ years exp."
+            "description": "Looking for engineers with C++ & Python skills, 3+ years exp.",
         }
         job = repository.create(job_data)
 
@@ -614,6 +611,7 @@ class TestJobRepository:
         """Test that get_or_create actually creates entity on first call."""
         # Verify company doesn't exist
         from sqlalchemy import select
+
         stmt = select(Company).where(Company.name == "First Call Company")
         assert db_session.scalar(stmt) is None
 
