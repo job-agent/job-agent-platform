@@ -9,6 +9,7 @@ from langgraph.graph.state import CompiledStateGraph
 from job_agent_backend.workflows.job_processing.nodes import (
     check_job_relevance_node,
     extract_must_have_skills_node,
+    extract_nice_to_have_skills_node,
     print_jobs_node,
     store_job_node,
 )
@@ -26,8 +27,9 @@ def create_workflow() -> CompiledStateGraph:
     1. check_job_relevance - Checks if the job is relevant to the candidate's CV
        - If irrelevant: workflow ends immediately
        - If relevant: continues to next steps
-    2. extract_skills - Extracts must-have skills from a job description using OpenAI
-    3. store_job - Stores relevant jobs to the database
+    2. extract_must_have_skills & extract_nice_to_have_skills - Run in parallel
+       to extract both types of skills from job description using OpenAI
+    3. store_job - Stores relevant jobs to the database (waits for both extraction nodes)
     4. process_jobs - Receives and prints the single job with extracted skills
     5. END - Terminates the workflow
 
@@ -43,8 +45,9 @@ def create_workflow() -> CompiledStateGraph:
     # Add the job relevance check node
     workflow.add_node("check_job_relevance", check_job_relevance_node)
 
-    # Add the skill extraction node
-    workflow.add_node("extract_skills", extract_must_have_skills_node)
+    # Add the skill extraction nodes (will run in parallel)
+    workflow.add_node("extract_must_have_skills", extract_must_have_skills_node)
+    workflow.add_node("extract_nice_to_have_skills", extract_nice_to_have_skills_node)
 
     # Add the store job node
     workflow.add_node("store_job", store_job_node)
@@ -56,17 +59,23 @@ def create_workflow() -> CompiledStateGraph:
     workflow.set_entry_point("check_job_relevance")
 
     # Add conditional edge after relevance check
+    # When job is relevant, both extraction nodes run in parallel
     workflow.add_conditional_edges(
         "check_job_relevance",
         route_after_relevance_check,
         {
-            "extract_skills": "extract_skills",
+            "extract_must_have_skills": "extract_must_have_skills",
+            "extract_nice_to_have_skills": "extract_nice_to_have_skills",
             "end": END,
         },
     )
 
-    # Add remaining edges for relevant jobs
-    workflow.add_edge("extract_skills", "store_job")
+    # Both extraction nodes converge to store_job
+    # The framework waits for both to complete before proceeding
+    workflow.add_edge("extract_must_have_skills", "store_job")
+    workflow.add_edge("extract_nice_to_have_skills", "store_job")
+
+    # Continue the workflow
     workflow.add_edge("store_job", "process_jobs")
     workflow.add_edge("process_jobs", END)
 

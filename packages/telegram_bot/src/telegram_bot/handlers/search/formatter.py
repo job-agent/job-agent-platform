@@ -15,7 +15,8 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
         Formatted message string ready to be sent via Telegram
     """
     job = result["job"]
-    skills = result.get("extracted_skills", [])
+    must_have_skills = result.get("extracted_must_have_skills", [])
+    nice_to_have_skills = result.get("extracted_nice_to_have_skills", [])
 
     # Build message
     message = f"📋 Job {job_number}/{total_jobs}\n\n"
@@ -42,13 +43,21 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
     if job.get("employment_type"):
         message += f"⏰ Type: {job['employment_type']}\n"
 
-    # Add skills if available
-    if skills:
+    # Add must-have skills if available
+    if must_have_skills:
         message += "\n🔧 Must-have skills:\n"
-        for skill in skills[:10]:  # Limit to 10 skills to avoid long messages
+        for skill in must_have_skills[:10]:  # Limit to 10 skills to avoid long messages
             message += f"  • {skill}\n"
-        if len(skills) > 10:
-            message += f"  ... and {len(skills) - 10} more\n"
+        if len(must_have_skills) > 10:
+            message += f"  ... and {len(must_have_skills) - 10} more\n"
+
+    # Add nice-to-have skills if available
+    if nice_to_have_skills:
+        message += "\n✨ Nice-to-have skills:\n"
+        for skill in nice_to_have_skills[:10]:  # Limit to 10 skills to avoid long messages
+            message += f"  • {skill}\n"
+        if len(nice_to_have_skills) > 10:
+            message += f"  ... and {len(nice_to_have_skills) - 10} more\n"
 
     # Add URL
     message += f"\n🔗 URL: {job.get('url', 'N/A')}"

@@ -133,7 +133,8 @@ class JobAgentOrchestrator:
         Returns:
             Dictionary containing processing results:
             - is_relevant: Whether the job is relevant to the candidate
-            - extracted_skills: List of must-have skills (for relevant jobs)
+            - extracted_must_have_skills: List of must-have skills (for relevant jobs)
+            - extracted_nice_to_have_skills: List of nice-to-have skills (for relevant jobs)
             - status: Final workflow status
             - job: Original job dictionary
         """

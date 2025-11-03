@@ -30,7 +30,8 @@ def run_job_processing(
     Returns:
         Final agent state containing job processing results including:
         - is_relevant: Whether the job is relevant to the candidate
-        - extracted_skills: List of must-have skills (for relevant jobs)
+        - extracted_must_have_skills: List of must-have skills (for relevant jobs)
+        - extracted_nice_to_have_skills: List of nice-to-have skills (for relevant jobs)
         - status: Final workflow status
 
     Raises:
@@ -41,7 +42,7 @@ def run_job_processing(
         >>> cv_content = "My CV content..."
         >>> result = run_job_processing(job, cv_content)
         >>> if result.get("is_relevant"):
-        >>>     print(f"Relevant job with skills: {result.get('extracted_skills')}")
+        >>>     print(f"Relevant job with skills: {result.get('extracted_must_have_skills')}")
     """
     # Check if LangSmith tracing is enabled
     tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
