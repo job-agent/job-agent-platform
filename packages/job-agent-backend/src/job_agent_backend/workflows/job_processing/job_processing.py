@@ -3,10 +3,12 @@
 This module defines the graph structure and builds the complete workflow.
 """
 
-from typing import Type, Any
+from collections.abc import Mapping
+from typing import Type, Any, Optional, Tuple
 
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
+from langchain_core.runnables import RunnableConfig
 
 from jobs_repository.repository import JobRepository
 from job_agent_backend.workflows.job_processing.node_names import JobProcessingNode
@@ -23,7 +25,7 @@ from job_agent_backend.workflows.job_processing.nodes.check_job_relevance import
 from job_agent_backend.workflows.job_processing.state import AgentState
 
 
-def create_workflow(job_repository_class: Type[Any] = JobRepository) -> CompiledStateGraph:
+def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGraph:
     """
     Create and configure the workflows workflow graph.
 
@@ -41,11 +43,13 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
     on multiple jobs. See pii_graph.py for the PII removal workflow.
 
     Args:
-        job_repository_class: Job repository class for dependency injection
+        config: Optional runnable configuration providing dependency overrides
 
     Returns:
         Configured StateGraph ready for execution
     """
+    job_repository_class, db_session = _resolve_dependencies(config)
+
     workflow = StateGraph(AgentState)
 
     workflow.add_node(JobProcessingNode.CHECK_JOB_RELEVANCE, check_job_relevance_node)
@@ -56,7 +60,7 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
         extract_nice_to_have_skills_node,
     )
 
-    store_job_node = create_store_job_node(job_repository_class)
+    store_job_node = create_store_job_node(job_repository_class, db_session)
     workflow.add_node(JobProcessingNode.STORE_JOB, store_job_node)
 
     workflow.add_node(JobProcessingNode.PROCESS_JOBS, print_jobs_node)
@@ -86,3 +90,23 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
     workflow.add_edge(JobProcessingNode.PROCESS_JOBS, END)
 
     return workflow.compile(name="JobProcessingWorkflow")
+
+
+def _resolve_dependencies(config: Optional[RunnableConfig]) -> Tuple[Type[Any], Optional[Any]]:
+    job_repository_class: Type[Any] = JobRepository
+    db_session: Optional[Any] = None
+
+    if not config:
+        return job_repository_class, db_session
+
+    if isinstance(config, Mapping):
+        candidate = config.get("configurable")
+        if isinstance(candidate, Mapping):
+            config_values: Mapping[str, Any] = candidate
+        else:
+            config_values = config
+
+        job_repository_class = config_values.get("job_repository_class", job_repository_class)
+        db_session = config_values.get("db_session", db_session)
+
+    return job_repository_class, db_session

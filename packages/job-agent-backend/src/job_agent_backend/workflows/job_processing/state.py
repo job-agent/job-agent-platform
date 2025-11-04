@@ -3,7 +3,7 @@
 This module defines the state schema that flows through the langgraph workflow.
 """
 
-from typing import List, Any
+from typing import List
 from typing_extensions import TypedDict, NotRequired
 
 from job_scrapper_contracts import JobDict
@@ -20,7 +20,6 @@ class AgentState(TypedDict):
         is_relevant: Whether the job is relevant to the candidate's CV (optional)
         extracted_must_have_skills: List of extracted must-have skills (optional)
         extracted_nice_to_have_skills: List of extracted nice-to-have skills (optional)
-        db_session: Database session for storing jobs (optional)
     """
 
     job: JobDict
@@ -29,4 +28,3 @@ class AgentState(TypedDict):
     is_relevant: NotRequired[bool]
     extracted_must_have_skills: NotRequired[List[str]]
     extracted_nice_to_have_skills: NotRequired[List[str]]
-    db_session: NotRequired[Any]

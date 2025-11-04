@@ -4,7 +4,7 @@ This module provides the public API for running the workflows system.
 """
 
 import os
-from typing import Optional, Type, Any
+from job_agent_platform_contracts import IJobRepository
 from sqlalchemy.orm import Session
 
 from job_scrapper_contracts import JobDict
@@ -16,8 +16,8 @@ from .state import AgentState
 def run_job_processing(
     job: JobDict,
     cv_content: str,
-    db_session: Optional[Session] = None,
-    job_repository_class: Optional[Type[Any]] = None,
+    db_session: Session,
+    job_repository_class: IJobRepository,
 ) -> AgentState:
     """
     Run the workflows system on a single job.
@@ -59,19 +59,20 @@ def run_job_processing(
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
 
-    if job_repository_class is not None:
-        workflow = create_workflow(job_repository_class=job_repository_class)
-    else:
-        workflow = create_workflow()
+    workflow_config = {
+        "configurable": {
+            "db_session": db_session,
+            "job_repository_class": job_repository_class,
+        }
+    }
+
+    workflow = create_workflow(workflow_config)
 
     initial_state: AgentState = {
         "job": job,
         "status": "started",
         "cv_context": cv_content,
     }
-
-    if db_session:
-        initial_state["db_session"] = db_session
 
     final_state = workflow.invoke(initial_state)
 

@@ -1,7 +1,8 @@
 """Store job node implementation."""
 
-from typing import Type, Any, Callable
+from typing import Type, Any, Callable, Optional
 
+from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
 
 from jobs_repository.repository import JobRepository
@@ -10,12 +11,16 @@ from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from ...state import AgentState
 
 
-def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Callable:
+def create_store_job_node(
+    job_repository_class: IJobRepository = JobRepository,
+    db_session: Optional[Any] = None,
+) -> Callable:
     """
     Factory function to create a store_job_node with injected dependencies.
 
     Args:
         job_repository_class: Job repository class to use for creating instances
+        db_session: Optional database session for persistence
 
     Returns:
         Configured store_job_node function
@@ -30,7 +35,7 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
         conditional routing in the workflow.
 
         Args:
-            state: Current agent state containing job and db_session
+            state: Current agent state containing job details
 
         Returns:
             State update containing the persistence status for the job
@@ -43,10 +48,8 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
         print(f"Storing job to database (ID: {job_id})...")
         print(f"{'=' * 60}\n")
 
-        db_session = state.get("db_session")
         if not db_session:
-            print("  ERROR: No database session available in state")
-            print(f"  State keys: {list(state.keys())}")
+            print("  ERROR: No database session available")
             print("  HINT: Make sure DATABASE_URL is set and database is running")
             print("  HINT: Ensure db_session is passed to run_job_processing()")
             print(f"{'=' * 60}\n")
