@@ -197,6 +197,8 @@ class JobRepository(IJobRepository):
                 session.flush()
                 session.refresh(job)
                 self._load_relationships(job)
+                if self._close_session:
+                    session.expunge(job)
                 return job
 
         except JobAlreadyExistsError:
@@ -224,4 +226,6 @@ class JobRepository(IJobRepository):
             job = session.scalar(stmt)
             if job:
                 self._load_relationships(job)
+                if self._close_session:
+                    session.expunge(job)
             return job

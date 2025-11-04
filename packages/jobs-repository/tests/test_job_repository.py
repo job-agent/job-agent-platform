@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from jobs_repository.repository import JobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
-from jobs_repository.exceptions import (
+from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
     TransactionError,
     ValidationError,

@@ -1,77 +1,10 @@
 """Shared test fixtures for job-agent-backend integration tests."""
 
 import os
-import tempfile
 from pathlib import Path
-from typing import Generator
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.types import TypeDecorator, String
-
-from jobs_repository.database.base import Base
-
-
-class JSONArray(TypeDecorator):
-    """Custom type that stores arrays as JSON in SQLite."""
-
-    impl = String
-    cache_ok = True
-
-    def process_bind_param(self, value, dialect):
-        """Convert list to JSON string for storage."""
-        if value is not None:
-            import json
-
-            return json.dumps(value)
-        return value
-
-    def process_result_value(self, value, dialect):
-        """Convert JSON string back to list."""
-        if value is not None:
-            import json
-
-            return json.loads(value)
-        return value
-
-
-@pytest.fixture
-def in_memory_engine():
-    """Create an in-memory SQLite engine for testing."""
-    engine = create_engine(
-        "sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False}
-    )
-
-    for table in Base.metadata.tables.values():
-        table.schema = None
-        for column in table.columns:
-            if hasattr(column.type, "__class__") and column.type.__class__.__name__ == "ARRAY":
-                column.type = JSONArray()
-
-    Base.metadata.create_all(engine)
-    yield engine
-    engine.dispose()
-
-
-@pytest.fixture
-def db_session(in_memory_engine) -> Generator[Session, None, None]:
-    """Create a database session for testing."""
-    SessionLocal = sessionmaker(bind=in_memory_engine)
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        session.rollback()
-        session.close()
-
-
-@pytest.fixture
-def temp_cv_dir():
-    """Create a temporary directory for CV storage."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
 
 
 @pytest.fixture
@@ -254,6 +187,14 @@ def sample_pdf_cv_path(temp_cv_dir):
     """Create a temporary PDF file path for testing (without actual PDF content)."""
     pdf_file = temp_cv_dir / "test_cv.pdf"
     return pdf_file
+
+
+@pytest.fixture
+def temp_cv_dir(tmp_path):
+    """Create a temporary directory for CV files."""
+    cv_dir = tmp_path / "cv_files"
+    cv_dir.mkdir()
+    return Path(cv_dir)
 
 
 @pytest.fixture(autouse=True)

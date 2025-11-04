@@ -2,10 +2,17 @@
 
 from unittest.mock import patch, MagicMock
 from datetime import datetime, UTC
+import sys
 
 import pytest
 
-from job_agent_backend.container import ApplicationContainer
+
+sys.modules["scrapper_service"] = MagicMock()
+sys.modules["djinni_scrapper"] = MagicMock()
+sys.modules["djinni_scrapper.scrapper"] = MagicMock()
+
+
+from job_agent_backend.container import ApplicationContainer  # noqa: E402
 
 
 class TestJobAgentOrchestrator:
@@ -60,10 +67,8 @@ class TestJobAgentOrchestrator:
         assert str(cv_path).endswith("data/cvs/cv_67890.txt")
 
     @patch("job_agent_backend.core.orchestrator.run_pii_removal")
-    @patch("job_agent_backend.core.orchestrator.load_cv_from_text")
     def test_upload_cv_text_file(
         self,
-        mock_load_text,
         mock_pii_removal,
         sample_temp_cv_file,
         sample_cv_content,
@@ -71,39 +76,48 @@ class TestJobAgentOrchestrator:
     ):
         """Test uploading a text CV file."""
         user_id = 111
-        mock_load_text.return_value = sample_cv_content
         mock_pii_removal.return_value = "Cleaned CV content"
 
         mock_repo_instance = MagicMock()
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
+        mock_cv_loader = MagicMock()
+        mock_cv_loader.load_from_text.return_value = sample_cv_content
+
+        orchestrator = app_container.orchestrator(
+            cv_repository_class=mock_cv_repo_class,
+            cv_loader=mock_cv_loader,
+        )
 
         orchestrator.upload_cv(user_id, str(sample_temp_cv_file))
 
-        mock_load_text.assert_called_once_with(str(sample_temp_cv_file))
+        mock_cv_loader.load_from_text.assert_called_once_with(str(sample_temp_cv_file))
 
         mock_pii_removal.assert_called_once_with(sample_cv_content)
 
         mock_repo_instance.create.assert_called_once_with("Cleaned CV content")
 
     @patch("job_agent_backend.core.orchestrator.run_pii_removal")
-    @patch("job_agent_backend.core.orchestrator.load_cv_from_pdf")
-    def test_upload_cv_pdf_file(self, mock_load_pdf, mock_pii_removal, app_container):
+    def test_upload_cv_pdf_file(self, mock_pii_removal, app_container):
         """Test uploading a PDF CV file."""
         user_id = 222
         pdf_path = "/tmp/test_cv.pdf"
-        mock_load_pdf.return_value = "PDF CV content"
         mock_pii_removal.return_value = "Cleaned PDF content"
 
         mock_repo_instance = MagicMock()
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
+        mock_cv_loader = MagicMock()
+        mock_cv_loader.load_from_pdf.return_value = "PDF CV content"
+
+        orchestrator = app_container.orchestrator(
+            cv_repository_class=mock_cv_repo_class,
+            cv_loader=mock_cv_loader,
+        )
 
         orchestrator.upload_cv(user_id, pdf_path)
 
-        mock_load_pdf.assert_called_once_with(pdf_path)
+        mock_cv_loader.load_from_pdf.assert_called_once_with(pdf_path)
 
         mock_pii_removal.assert_called_once_with("PDF CV content")
 
@@ -117,11 +131,14 @@ class TestJobAgentOrchestrator:
         with pytest.raises(ValueError, match="Unsupported file format"):
             orchestrator.upload_cv(user_id, unsupported_file)
 
-    @patch("job_agent_backend.core.orchestrator.load_cv_from_text")
-    def test_upload_cv_empty_content_raises_error(self, mock_load_text, orchestrator):
+    def test_upload_cv_empty_content_raises_error(self, app_container):
         """Test that uploading CV with empty content raises ValueError."""
         user_id = 444
-        mock_load_text.return_value = ""
+
+        mock_cv_loader = MagicMock()
+        mock_cv_loader.load_from_text.return_value = ""
+
+        orchestrator = app_container.orchestrator(cv_loader=mock_cv_loader)
 
         with pytest.raises(ValueError, match="Failed to extract content"):
             orchestrator.upload_cv(user_id, "/tmp/empty.txt")
@@ -248,7 +265,6 @@ class TestJobAgentOrchestrator:
         sample_cv_content,
     ):
         """Test process_job forwards custom repository factory."""
-        from unittest.mock import ANY
 
         mock_factory = MagicMock()
         orchestrator = app_container.orchestrator(job_repository_factory=mock_factory)

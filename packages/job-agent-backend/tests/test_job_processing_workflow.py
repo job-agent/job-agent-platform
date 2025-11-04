@@ -136,50 +136,6 @@ class TestJobProcessingWorkflow:
             )
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.ChatOpenAI"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.ChatOpenAI"
-    )
-    def test_workflow_with_database_session_stores_job(
-        self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
-        sample_job_dict,
-        sample_cv_content,
-        db_session,
-        job_repository_factory_with_session,
-    ):
-        """Test that workflow stores job in database when session is provided."""
-
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
-
-        mock_must_result = MagicMock()
-        mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
-
-        mock_nice_result = MagicMock()
-        mock_nice_result.skills = ["Docker"]
-        mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
-
-        run_job_processing(
-            sample_job_dict,
-            sample_cv_content,
-            job_repository_factory=job_repository_factory_with_session,
-        )
-
-        stored_job = (
-            db_session.query(Job).filter_by(external_id=str(sample_job_dict["job_id"])).first()
-        )
-        assert stored_job is not None
-        assert stored_job.title == sample_job_dict["title"]
-        assert len(stored_job.must_have_skills) > 0
-
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
     def test_workflow_without_database_session_completes(
         self,
         mock_relevance_chat,

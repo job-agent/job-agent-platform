@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Protocol, Sequence, cast
 
-from scrapper_service import ScrapperManager
 from cvs_repository import CVRepository
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import (
@@ -19,10 +18,11 @@ from job_agent_platform_contracts import (
     PipelineSummary,
 )
 from job_agent_backend.contracts import ICVLoader, IFilterService
-from job_agent_backend.cv_loader import CVLoader
-from job_agent_backend.filter_service.filter import FilterService
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
 from job_agent_backend.workflows.job_processing.state import AgentState
+
+
+CVRepositoryFactory = Callable[[str | Path], ICVRepository]
 
 
 class ScrapperManagerProtocol(Protocol):
@@ -44,13 +44,13 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
 
     def __init__(
         self,
+        cv_repository_class: CVRepositoryFactory,
+        cv_loader: ICVLoader,
+        job_repository_factory: Callable[[], IJobRepository],
+        scrapper_manager: ScrapperManagerProtocol,
+        filter_service: IFilterService,
+        database_initializer: Callable[[], None],
         logger: Optional[Callable[[str], None]] = None,
-        cv_repository_class: type[ICVRepository] = CVRepository,
-        cv_loader: Optional[ICVLoader] = None,
-        job_repository_factory: Optional[Callable[[], IJobRepository]] = None,
-        scrapper_manager: Optional[ScrapperManagerProtocol] = None,
-        filter_service: Optional[IFilterService] = None,
-        database_initializer: Optional[Callable[[], None]] = None,
     ):
         """Initialize the orchestrator.
 
@@ -69,14 +69,15 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
                             default configuration-based implementation is used.
         """
         self.logger: Callable[[str], None] = logger or print
-        self.cv_repository_class: type[ICVRepository] = cv_repository_class
-        self.cv_loader: ICVLoader = cv_loader or cast(ICVLoader, CVLoader())
+        repository_factory = cv_repository_class or CVRepository
+        self.cv_repository_class: CVRepositoryFactory = repository_factory
+        self.cv_loader: ICVLoader = cv_loader
         if job_repository_factory is None:
             raise ValueError("job_repository_factory must be provided")
         self.job_repository_factory: Callable[[], IJobRepository] = job_repository_factory
-        self.scrapper_manager: ScrapperManagerProtocol = scrapper_manager or ScrapperManager()
-        self.filter_service: IFilterService = filter_service or FilterService()
-        self.database_initializer: Callable[[], None] = database_initializer or (lambda: None)
+        self.scrapper_manager: ScrapperManagerProtocol = scrapper_manager
+        self.filter_service: IFilterService = filter_service
+        self.database_initializer: Callable[[], None] = database_initializer
 
     def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
