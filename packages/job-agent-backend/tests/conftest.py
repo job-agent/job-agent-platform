@@ -48,7 +48,6 @@ def in_memory_engine():
         table.schema = None
         for column in table.columns:
             if hasattr(column.type, "__class__") and column.type.__class__.__name__ == "ARRAY":
-
                 column.type = JSONArray()
 
     Base.metadata.create_all(engine)
@@ -261,7 +260,7 @@ def sample_pdf_cv_path(temp_cv_dir):
 def setup_test_env(monkeypatch):
     """Set up test environment variables."""
 
-    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+    monkeypatch.setenv("LANGSMITH_TRACING_V2", "false")
 
     if not os.getenv("OPENAI_API_KEY"):
         monkeypatch.setenv("OPENAI_API_KEY", "test-api-key")

@@ -1,0 +1,8 @@
+{
+  "python_path": ["./packages/job-agent-backend/src"],
+  "graphs": {
+    "@workflows/job_processing": "job_agent_backend.workflows.job_processing.job_processing:create_workflow",
+    "@workflows/pii_removal": "job_agent_backend.workflows.pii_removal.pii_removal:create_pii_removal_workflow"
+  },
+  "dependencies": ["."]
+}

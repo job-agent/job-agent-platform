@@ -49,8 +49,8 @@ def run_job_processing(
         >>>     print(f"Relevant job with skills: {result.get('extracted_must_have_skills')}")
     """
 
-    tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
-    project_name = os.getenv("LANGCHAIN_PROJECT", "default")
+    tracing_enabled = os.getenv("LANGSMITH_TRACING_V2", "").lower() == "true"
+    project_name = os.getenv("LANGSMITH_PROJECT", "default")
 
     if tracing_enabled:
         print(f"🔍 LangSmith tracing enabled - Project: {project_name}")

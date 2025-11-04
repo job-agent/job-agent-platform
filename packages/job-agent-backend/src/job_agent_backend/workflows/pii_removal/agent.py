@@ -32,8 +32,8 @@ def run_pii_removal(cv_content: str) -> str:
         "My name is [REDACTED], email: [REDACTED]..."
     """
 
-    tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
-    project_name = os.getenv("LANGCHAIN_PROJECT", "default")
+    tracing_enabled = os.getenv("LANGSMITH_TRACING_V2", "").lower() == "true"
+    project_name = os.getenv("LANGSMITH_PROJECT", "default")
 
     if tracing_enabled:
         print(f"🔍 LangSmith tracing enabled - Project: {project_name}")

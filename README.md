@@ -45,8 +45,8 @@
 - `OPENAI_API_KEY` — enables LangGraph workflows that rely on OpenAI models.
 - `TELEGRAM_BOT_TOKEN` — token issued by @BotFather so the bot can connect to Telegram.
 - `DATABASE_URL` — PostgreSQL connection string used by `jobs-repository` for persistence.
-- `LANGCHAIN_API_KEY` (optional) — enables LangSmith tracing and analytics for LangGraph runs.
-- `LANGCHAIN_TRACING_V2` and `LANGCHAIN_PROJECT` (optional) — configure tracing behavior when LangSmith is enabled.
+- `LANGSMITH_API_KEY` (optional) — enables LangSmith tracing and analytics for LangGraph runs.
+- `LANGSMITH_TRACING_V2` and `LANGSMITH_PROJECT` (optional) — configure tracing behavior when LangSmith is enabled.
 - Scrapper service credentials (if applicable) — match the configuration expected by the dependency injector when contacting the job scrapper service.
 
 ### About `scrapper-service`
