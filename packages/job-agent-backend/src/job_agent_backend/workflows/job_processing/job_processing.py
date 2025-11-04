@@ -4,7 +4,7 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from collections.abc import Mapping
-from typing import Callable, Optional, cast
+from typing import Callable, cast
 
 from job_agent_platform_contracts import IJobRepository
 from langgraph.graph import StateGraph, END
@@ -25,7 +25,7 @@ from job_agent_backend.workflows.job_processing.nodes.check_job_relevance import
 from job_agent_backend.workflows.job_processing.state import AgentState
 
 
-def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGraph:
+def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
     """
     Create and configure the workflows workflow graph.
 
@@ -43,7 +43,7 @@ def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGra
     on multiple jobs. See pii_graph.py for the PII removal workflow.
 
     Args:
-        config: Optional runnable configuration providing dependency overrides
+        config: Runnable configuration providing dependency overrides
 
     Returns:
         Configured StateGraph ready for execution
@@ -93,11 +93,8 @@ def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGra
 
 
 def _resolve_dependencies(
-    config: Optional[RunnableConfig],
+    config: RunnableConfig,
 ) -> Callable[[], IJobRepository]:
-    if not config:
-        raise ValueError("job_repository_factory dependency is not configured")
-
     if isinstance(config, Mapping):
         config_values: Mapping[str, object] = config
         configurable = config.get("configurable")
