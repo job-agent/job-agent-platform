@@ -228,33 +228,42 @@ class TestJobAgentOrchestrator:
         result = orchestrator.process_job(sample_job_dict, sample_cv_content)
 
         mock_run_job_processing.assert_called_once_with(
-            sample_job_dict, sample_cv_content, None, job_repository_class=ANY
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=ANY,
         )
         assert result["is_relevant"] is True
         assert result["status"] == "completed"
 
     @patch("job_agent_backend.core.orchestrator.run_job_processing")
-    def test_process_job_with_db_session(
-        self, mock_run_job_processing, orchestrator, sample_job_dict, sample_cv_content, db_session
+    def test_process_job_with_custom_repository_factory(
+        self,
+        mock_run_job_processing,
+        app_container,
+        sample_job_dict,
+        sample_cv_content,
     ):
-        """Test process_job passes db_session to workflow."""
+        """Test process_job forwards custom repository factory."""
         from unittest.mock import ANY
+
+        mock_factory = MagicMock()
+        orchestrator = app_container.orchestrator(job_repository_factory=mock_factory)
 
         mock_run_job_processing.return_value = {"status": "completed"}
 
-        orchestrator.process_job(sample_job_dict, sample_cv_content, db_session)
+        orchestrator.process_job(sample_job_dict, sample_cv_content)
 
         mock_run_job_processing.assert_called_once_with(
-            sample_job_dict, sample_cv_content, db_session, job_repository_class=ANY
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=mock_factory,
         )
 
     @patch("job_agent_backend.core.orchestrator.init_db")
-    @patch("job_agent_backend.core.orchestrator.get_db_session")
     @patch("job_agent_backend.core.orchestrator.run_job_processing")
     def test_run_complete_pipeline_integration(
         self,
         mock_run_job_processing,
-        mock_get_db_session,
         mock_init_db,
         mock_scrapper_manager,
         sample_cv_content,
@@ -271,9 +280,6 @@ class TestJobAgentOrchestrator:
             cv_repository_class=mock_cv_repo_class,
             scrapper_manager=mock_scrapper_manager,
         )
-
-        mock_session = MagicMock()
-        mock_get_db_session.return_value = iter([mock_session])
 
         mock_run_job_processing.return_value = {
             "is_relevant": True,
@@ -310,12 +316,10 @@ class TestJobAgentOrchestrator:
             orchestrator.run_complete_pipeline(user_id=user_id)
 
     @patch("job_agent_backend.core.orchestrator.init_db")
-    @patch("job_agent_backend.core.orchestrator.get_db_session")
     @patch("job_agent_backend.core.orchestrator.run_job_processing")
     def test_run_complete_pipeline_with_filtering(
         self,
         mock_run_job_processing,
-        mock_get_db_session,
         mock_init_db,
         sample_cv_content,
         app_container,
@@ -363,9 +367,6 @@ class TestJobAgentOrchestrator:
 
         orchestrator.filter_service.configure({"max_months_of_experience": 24})
 
-        mock_session = MagicMock()
-        mock_get_db_session.return_value = iter([mock_session])
-
         mock_run_job_processing.return_value = {"status": "completed"}
 
         result = orchestrator.run_complete_pipeline(user_id=user_id)
@@ -389,5 +390,4 @@ class TestJobAgentOrchestrator:
         try:
             orchestrator.run_complete_pipeline(user_id=1)
         except Exception as e:
-
             assert "Database connection failed" not in str(e)

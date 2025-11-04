@@ -4,20 +4,21 @@ This module provides the public API for running the workflows system.
 """
 
 import os
+from typing import Callable
+
 from job_agent_platform_contracts import IJobRepository
-from sqlalchemy.orm import Session
 
 from job_scrapper_contracts import JobDict
 
 from .job_processing import create_workflow
 from .state import AgentState
+from jobs_repository.container import get_job_repository
 
 
 def run_job_processing(
     job: JobDict,
     cv_content: str,
-    db_session: Session,
-    job_repository_class: IJobRepository,
+    job_repository_factory: Callable[[], IJobRepository] = get_job_repository,
 ) -> AgentState:
     """
     Run the workflows system on a single job.
@@ -28,8 +29,7 @@ def run_job_processing(
     Args:
         job: A single job dictionary to process
         cv_content: The CV content to match against the job
-        db_session: Optional database session for storing jobs
-        job_repository_class: Optional job repository class for dependency injection
+        job_repository_factory: Factory for producing job repository instances
 
     Returns:
         Final agent state containing job processing results including:
@@ -61,8 +61,7 @@ def run_job_processing(
 
     workflow_config = {
         "configurable": {
-            "db_session": db_session,
-            "job_repository_class": job_repository_class,
+            "job_repository_factory": job_repository_factory,
         }
     }
 

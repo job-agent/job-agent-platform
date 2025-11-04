@@ -4,13 +4,14 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from collections.abc import Mapping
-from typing import Type, Any, Optional, Tuple
+from typing import Callable, Optional
 
+from job_agent_platform_contracts import IJobRepository
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
 
-from jobs_repository.repository import JobRepository
+from jobs_repository.container import get_job_repository
 from job_agent_backend.workflows.job_processing.node_names import JobProcessingNode
 from job_agent_backend.workflows.job_processing.nodes import (
     check_job_relevance_node,
@@ -48,7 +49,7 @@ def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGra
     Returns:
         Configured StateGraph ready for execution
     """
-    job_repository_class, db_session = _resolve_dependencies(config)
+    job_repository_factory = _resolve_dependencies(config)
 
     workflow = StateGraph(AgentState)
 
@@ -60,7 +61,7 @@ def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGra
         extract_nice_to_have_skills_node,
     )
 
-    store_job_node = create_store_job_node(job_repository_class, db_session)
+    store_job_node = create_store_job_node(job_repository_factory)
     workflow.add_node(JobProcessingNode.STORE_JOB, store_job_node)
 
     workflow.add_node(JobProcessingNode.PROCESS_JOBS, print_jobs_node)
@@ -92,21 +93,23 @@ def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGra
     return workflow.compile(name="JobProcessingWorkflow")
 
 
-def _resolve_dependencies(config: Optional[RunnableConfig]) -> Tuple[Type[Any], Optional[Any]]:
-    job_repository_class: Type[Any] = JobRepository
-    db_session: Optional[Any] = None
+def _resolve_dependencies(
+    config: Optional[RunnableConfig],
+) -> Callable[[], IJobRepository]:
+    job_repository_factory: Callable[[], IJobRepository] = get_job_repository
 
     if not config:
-        return job_repository_class, db_session
+        return job_repository_factory
 
     if isinstance(config, Mapping):
         candidate = config.get("configurable")
         if isinstance(candidate, Mapping):
-            config_values: Mapping[str, Any] = candidate
+            config_values: Mapping[str, object] = candidate
         else:
             config_values = config
 
-        job_repository_class = config_values.get("job_repository_class", job_repository_class)
-        db_session = config_values.get("db_session", db_session)
+        override = config_values.get("job_repository_factory")
+        if callable(override):
+            job_repository_factory = override
 
-    return job_repository_class, db_session
+    return job_repository_factory

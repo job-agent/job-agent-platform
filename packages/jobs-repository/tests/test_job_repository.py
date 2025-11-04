@@ -1,9 +1,10 @@
 """Tests for JobRepository class."""
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
 
 from jobs_repository.repository import JobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
@@ -24,7 +25,7 @@ class TestJobRepository:
 
     def test_get_or_create_company_creates_new(self, repository, db_session):
         """Test creating a new company when it doesn't exist."""
-        company = repository._get_or_create_company("New Company")
+        company = repository._get_or_create_company(db_session, "New Company")
 
         assert company.id is not None
         assert company.name == "New Company"
@@ -33,16 +34,16 @@ class TestJobRepository:
         assert db_company is not None
         assert db_company.id == company.id
 
-    def test_get_or_create_company_returns_existing(self, repository, sample_company):
+    def test_get_or_create_company_returns_existing(self, repository, sample_company, db_session):
         """Test returning existing company instead of creating duplicate."""
-        company = repository._get_or_create_company(sample_company.name)
+        company = repository._get_or_create_company(db_session, sample_company.name)
 
         assert company.id == sample_company.id
         assert company.name == sample_company.name
 
     def test_get_or_create_location_creates_new(self, repository, db_session):
         """Test creating a new location when it doesn't exist."""
-        location = repository._get_or_create_location("Seattle, WA")
+        location = repository._get_or_create_location(db_session, "Seattle, WA")
 
         assert location.id is not None
         assert location.region == "Seattle, WA"
@@ -51,16 +52,16 @@ class TestJobRepository:
         assert db_location is not None
         assert db_location.id == location.id
 
-    def test_get_or_create_location_returns_existing(self, repository, sample_location):
+    def test_get_or_create_location_returns_existing(self, repository, sample_location, db_session):
         """Test returning existing location instead of creating duplicate."""
-        location = repository._get_or_create_location(sample_location.region)
+        location = repository._get_or_create_location(db_session, sample_location.region)
 
         assert location.id == sample_location.id
         assert location.region == sample_location.region
 
     def test_get_or_create_category_creates_new(self, repository, db_session):
         """Test creating a new category when it doesn't exist."""
-        category = repository._get_or_create_category("Data Science")
+        category = repository._get_or_create_category(db_session, "Data Science")
 
         assert category.id is not None
         assert category.name == "Data Science"
@@ -69,16 +70,16 @@ class TestJobRepository:
         assert db_category is not None
         assert db_category.id == category.id
 
-    def test_get_or_create_category_returns_existing(self, repository, sample_category):
+    def test_get_or_create_category_returns_existing(self, repository, sample_category, db_session):
         """Test returning existing category instead of creating duplicate."""
-        category = repository._get_or_create_category(sample_category.name)
+        category = repository._get_or_create_category(db_session, sample_category.name)
 
         assert category.id == sample_category.id
         assert category.name == sample_category.name
 
     def test_get_or_create_industry_creates_new(self, repository, db_session):
         """Test creating a new industry when it doesn't exist."""
-        industry = repository._get_or_create_industry("Healthcare")
+        industry = repository._get_or_create_industry(db_session, "Healthcare")
 
         assert industry.id is not None
         assert industry.name == "Healthcare"
@@ -87,9 +88,9 @@ class TestJobRepository:
         assert db_industry is not None
         assert db_industry.id == industry.id
 
-    def test_get_or_create_industry_returns_existing(self, repository, sample_industry):
+    def test_get_or_create_industry_returns_existing(self, repository, sample_industry, db_session):
         """Test returning existing industry instead of creating duplicate."""
-        industry = repository._get_or_create_industry(sample_industry.name)
+        industry = repository._get_or_create_industry(db_session, sample_industry.name)
 
         assert industry.id == sample_industry.id
         assert industry.name == sample_industry.name
@@ -408,23 +409,23 @@ class TestJobRepository:
 
     def test_get_or_create_company_case_sensitive(self, repository, db_session):
         """Test that company names are case-sensitive."""
-        company1 = repository._get_or_create_company("TechCorp")
-        company2 = repository._get_or_create_company("techcorp")
+        company1 = repository._get_or_create_company(db_session, "TechCorp")
+        company2 = repository._get_or_create_company(db_session, "techcorp")
 
         assert company1.id != company2.id
         assert db_session.query(Company).count() == 2
 
     def test_get_or_create_location_whitespace_sensitive(self, repository, db_session):
         """Test that location regions are whitespace-sensitive."""
-        location1 = repository._get_or_create_location("San Francisco, CA")
-        location2 = repository._get_or_create_location("San Francisco,CA")
+        location1 = repository._get_or_create_location(db_session, "San Francisco, CA")
+        location2 = repository._get_or_create_location(db_session, "San Francisco,CA")
 
         assert location1.id != location2.id
         assert db_session.query(Location).count() == 2
 
     def test_get_or_create_methods_use_flush(self, repository, db_session):
         """Test that get_or_create methods flush to get ID without committing."""
-        company = repository._get_or_create_company("Flush Test Company")
+        company = repository._get_or_create_company(db_session, "Flush Test Company")
 
         assert company.id is not None
 
@@ -488,10 +489,35 @@ class TestJobRepository:
 
         assert job.job_type == sample_job_dict["employment_type"]
 
-    def test_repository_session_property(self, repository, db_session):
-        """Test that repository stores and provides access to session."""
-        assert repository.session is db_session
-        assert repository.session is not None
+    def test_repository_commits_with_provided_session(
+        self, repository, sample_job_dict, db_session
+    ):
+        """Test that repository uses provided session for committing changes."""
+        with patch.object(db_session, "commit") as mock_commit:
+            repository.create(sample_job_dict)
+
+        mock_commit.assert_called_once()
+
+    def test_create_with_internal_session_factory(self, in_memory_engine, sample_job_dict):
+        """Test that repository manages its own sessions when factory provided."""
+        factory = sessionmaker(bind=in_memory_engine)
+        repository = JobRepository(session_factory=factory)
+
+        job = repository.create(sample_job_dict)
+
+        assert job.id is not None
+
+    def test_get_job_repository_uses_container(self):
+        """Test that container factory produces repository instances."""
+        from jobs_repository.container import container, get_job_repository
+
+        mock_factory = MagicMock(return_value="repository")
+
+        with container.job_repository.override(mock_factory):
+            repo_instance = get_job_repository()
+
+        mock_factory.assert_called_once()
+        assert repo_instance == "repository"
 
     def test_create_commits_transaction(self, repository, sample_job_dict, db_session):
         """Test that create() commits the transaction."""
@@ -539,7 +565,7 @@ class TestJobRepository:
         stmt = select(Company).where(Company.name == "First Call Company")
         assert db_session.scalar(stmt) is None
 
-        company = repository._get_or_create_company("First Call Company")
+        company = repository._get_or_create_company(db_session, "First Call Company")
 
         assert company.id is not None
         db_company = db_session.scalar(select(Company).where(Company.name == "First Call Company"))

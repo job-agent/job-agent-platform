@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from jobs_repository.database.connection import get_engine
-from jobs_repository.exceptions import TransactionError
+from job_agent_platform_contracts.job_repository.exceptions import TransactionError
 
 
 _SessionLocal: Optional[sessionmaker] = None

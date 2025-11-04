@@ -1,26 +1,24 @@
 """Store job node implementation."""
 
-from typing import Type, Any, Callable, Optional
+from typing import Callable
 
 from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
 
-from jobs_repository.repository import JobRepository
+from jobs_repository.container import get_job_repository
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
 from ...state import AgentState
 
 
 def create_store_job_node(
-    job_repository_class: IJobRepository = JobRepository,
-    db_session: Optional[Any] = None,
+    job_repository_factory: Callable[[], IJobRepository] = get_job_repository,
 ) -> Callable:
     """
     Factory function to create a store_job_node with injected dependencies.
 
     Args:
-        job_repository_class: Job repository class to use for creating instances
-        db_session: Optional database session for persistence
+        job_repository_factory: Factory used to create job repository instances
 
     Returns:
         Configured store_job_node function
@@ -48,15 +46,8 @@ def create_store_job_node(
         print(f"Storing job to database (ID: {job_id})...")
         print(f"{'=' * 60}\n")
 
-        if not db_session:
-            print("  ERROR: No database session available")
-            print("  HINT: Make sure DATABASE_URL is set and database is running")
-            print("  HINT: Ensure db_session is passed to run_job_processing()")
-            print(f"{'=' * 60}\n")
-            return {"status": status}
-
         try:
-            job_repo = job_repository_class(db_session)
+            job_repo = job_repository_factory()
 
             job_create_data: JobCreate = {**job}
 
@@ -83,6 +74,4 @@ def create_store_job_node(
         return {"status": status}
 
     return store_job_node
-
-
 store_job_node = create_store_job_node()

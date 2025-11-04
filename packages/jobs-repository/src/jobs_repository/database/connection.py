@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import create_engine, Engine, text
 
 from jobs_repository.database.config import get_database_config
-from jobs_repository.exceptions import DatabaseConnectionError
+from job_agent_platform_contracts.job_repository.exceptions import DatabaseConnectionError
 
 
 _engine: Optional[Engine] = None

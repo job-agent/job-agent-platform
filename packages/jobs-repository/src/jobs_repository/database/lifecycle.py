@@ -2,7 +2,7 @@
 
 from jobs_repository.database.base import Base
 from jobs_repository.database.connection import get_engine
-from jobs_repository.exceptions import DatabaseConnectionError
+from job_agent_platform_contracts.job_repository.exceptions import DatabaseConnectionError
 
 
 def init_db() -> None:

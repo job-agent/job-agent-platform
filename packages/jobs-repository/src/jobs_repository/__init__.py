@@ -19,16 +19,9 @@ from jobs_repository.repository import JobRepository
 
 from jobs_repository.mapper import JobMapper
 
-from job_agent_platform_contracts.job_repository.schemas import JobCreate
+from jobs_repository.container import get_job_repository
 
-from jobs_repository.exceptions import (
-    JobRepositoryError,
-    JobNotFoundError,
-    JobAlreadyExistsError,
-    DatabaseConnectionError,
-    ValidationError,
-    TransactionError,
-)
+from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
 __version__ = "0.1.0"
 
@@ -50,11 +43,6 @@ __all__ = [
     "Industry",
     "JobRepository",
     "JobMapper",
+    "get_job_repository",
     "JobCreate",
-    "JobRepositoryError",
-    "JobNotFoundError",
-    "JobAlreadyExistsError",
-    "DatabaseConnectionError",
-    "ValidationError",
-    "TransactionError",
 ]

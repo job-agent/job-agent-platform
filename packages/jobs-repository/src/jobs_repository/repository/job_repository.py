@@ -5,7 +5,8 @@ category, industry) exist before a job is written, and exposes a small API for c
 jobs and looking them up by external identifier.
 """
 
-from typing import Optional
+from contextlib import contextmanager
+from typing import Callable, Generator, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -14,6 +15,7 @@ from sqlalchemy import select
 from job_agent_platform_contracts import IJobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
 from jobs_repository.mapper import JobMapper
+from jobs_repository.database.session import get_session_factory
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
@@ -30,99 +32,116 @@ class JobRepository(IJobRepository):
     industries) are populated transparently through the helper methods.
     """
 
-    def __init__(self, session: Session):
+    def __init__(
+        self,
+        session: Optional[Session] = None,
+        session_factory: Optional[Callable[[], Session]] = None,
+    ):
         """
-        Initialize the repository with a database session.
+        Initialize the repository with a managed or external session.
 
         Args:
-            session: SQLAlchemy database session
+            session: Existing SQLAlchemy session to reuse
+            session_factory: Callable returning SQLAlchemy session instances
         """
-        self.session = session
+        if session is not None and session_factory is not None:
+            raise ValueError("Provide either session or session_factory, not both")
+
         self.mapper = JobMapper()
 
-    def _get_or_create_company(self, name: str) -> Company:
-        """
-        Get existing company or create new one.
+        if session is not None:
+            self._session_factory: Callable[[], Session] = lambda: session
+            self._close_session = False
+        else:
+            factory_candidate = session_factory or get_session_factory()
 
-        Args:
-            name: Company name
+            if not callable(factory_candidate):
+                raise TypeError("session_factory must be callable")
 
-        Returns:
-            Company instance
-        """
+            self._session_factory = lambda: factory_candidate()
+            self._close_session = True
+
+    @contextmanager
+    def _session_scope(self, *, commit: bool) -> Generator[Session, None, None]:
+        session = self._session_factory()
+        close_session = self._close_session
+
+        try:
+            yield session
+            if commit:
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            if close_session:
+                session.close()
+
+    def _get_or_create_company(self, session: Session, name: str) -> Company:
         stmt = select(Company).where(Company.name == name)
-        company = self.session.scalar(stmt)
+        company = session.scalar(stmt)
 
         if company:
             return company
 
         company = Company(name=name)
-        self.session.add(company)
-        self.session.flush()
+        session.add(company)
+        session.flush()
         return company
 
-    def _get_or_create_location(self, region: str) -> Location:
-        """
-        Get existing location or create new one.
-
-        Args:
-            region: Location region/name
-
-        Returns:
-            Location instance
-        """
+    def _get_or_create_location(self, session: Session, region: str) -> Location:
         stmt = select(Location).where(Location.region == region)
-        location = self.session.scalar(stmt)
+        location = session.scalar(stmt)
 
         if location:
             return location
 
         location = Location(region=region)
-        self.session.add(location)
-        self.session.flush()
+        session.add(location)
+        session.flush()
         return location
 
-    def _get_or_create_category(self, name: str) -> Category:
-        """
-        Get existing category or create new one.
-
-        Args:
-            name: Category name
-
-        Returns:
-            Category instance
-        """
+    def _get_or_create_category(self, session: Session, name: str) -> Category:
         stmt = select(Category).where(Category.name == name)
-        category = self.session.scalar(stmt)
+        category = session.scalar(stmt)
 
         if category:
             return category
 
         category = Category(name=name)
-        self.session.add(category)
-        self.session.flush()
+        session.add(category)
+        session.flush()
         return category
 
-    def _get_or_create_industry(self, name: str) -> Industry:
-        """
-        Get existing industry or create new one.
-
-        Args:
-            name: Industry name
-
-        Returns:
-            Industry instance
-        """
+    def _get_or_create_industry(self, session: Session, name: str) -> Industry:
         stmt = select(Industry).where(Industry.name == name)
-        industry = self.session.scalar(stmt)
+        industry = session.scalar(stmt)
 
         if industry:
             return industry
 
         industry = Industry(name=name)
-        self.session.add(industry)
-        self.session.flush()
+        session.add(industry)
+        session.flush()
         return industry
+
+    def _load_relationships(self, job: Job) -> None:
+        if job.company_rel:
+            _ = job.company_rel.name
+        if job.location_rel:
+            _ = job.location_rel.region
+        if job.category_rel:
+            _ = job.category_rel.name
+        if job.industry_rel:
+            _ = job.industry_rel.name
+
+    def _get_job_by_external_id(
+        self, session: Session, external_id: str, source: Optional[str]
+    ) -> Optional[Job]:
+        stmt = select(Job).where(Job.external_id == external_id)
+        if source:
+            stmt = stmt.where(Job.source == source)
+        return session.scalar(stmt)
 
     def create(self, job_data: JobCreate) -> Job:
         """
@@ -145,48 +164,46 @@ class JobRepository(IJobRepository):
             TransactionError: If database transaction fails
         """
         try:
-            mapped_data = self.mapper.map_to_model(job_data)
+            with self._session_scope(commit=True) as session:
+                mapped_data = self.mapper.map_to_model(job_data)
 
-            if company_name := mapped_data.pop("company_name", None):
-                company = self._get_or_create_company(company_name)
-                mapped_data["company_id"] = company.id
+                if company_name := mapped_data.pop("company_name", None):
+                    company = self._get_or_create_company(session, company_name)
+                    mapped_data["company_id"] = company.id
 
-            if location_region := mapped_data.pop("location_region", None):
-                location = self._get_or_create_location(location_region)
-                mapped_data["location_id"] = location.id
+                if location_region := mapped_data.pop("location_region", None):
+                    location = self._get_or_create_location(session, location_region)
+                    mapped_data["location_id"] = location.id
 
-            if category_name := mapped_data.pop("category_name", None):
-                category = self._get_or_create_category(category_name)
-                mapped_data["category_id"] = category.id
+                if category_name := mapped_data.pop("category_name", None):
+                    category = self._get_or_create_category(session, category_name)
+                    mapped_data["category_id"] = category.id
 
-            if industry_name := mapped_data.pop("industry_name", None):
-                industry = self._get_or_create_industry(industry_name)
-                mapped_data["industry_id"] = industry.id
+                if industry_name := mapped_data.pop("industry_name", None):
+                    industry = self._get_or_create_industry(session, industry_name)
+                    mapped_data["industry_id"] = industry.id
 
-            existing_job = self.get_by_external_id(
-                mapped_data["external_id"], mapped_data.get("source")
-            )
-            if existing_job:
-                self.session.rollback()
-                raise JobAlreadyExistsError(
-                    external_id=mapped_data["external_id"],
-                    source=mapped_data.get("source", "unknown"),
+                existing_job = self._get_job_by_external_id(
+                    session, mapped_data["external_id"], mapped_data.get("source")
                 )
+                if existing_job:
+                    raise JobAlreadyExistsError(
+                        external_id=mapped_data["external_id"],
+                        source=mapped_data.get("source", "unknown"),
+                    )
 
-            job = Job(**mapped_data)
-            self.session.add(job)
-            self.session.commit()
-            self.session.refresh(job)
-            return job
+                job = Job(**mapped_data)
+                session.add(job)
+                session.flush()
+                session.refresh(job)
+                self._load_relationships(job)
+                return job
 
         except JobAlreadyExistsError:
-            self.session.rollback()
             raise
         except IntegrityError as e:
-            self.session.rollback()
             raise ValidationError("data", f"Integrity constraint violated: {e}") from e
         except SQLAlchemyError as e:
-            self.session.rollback()
             raise TransactionError(f"Failed to create job: {e}") from e
 
     def get_by_external_id(self, external_id: str, source: Optional[str] = None) -> Optional[Job]:
@@ -200,7 +217,11 @@ class JobRepository(IJobRepository):
         Returns:
             Job instance if found, None otherwise
         """
-        stmt = select(Job).where(Job.external_id == external_id)
-        if source:
-            stmt = stmt.where(Job.source == source)
-        return self.session.scalar(stmt)
+        with self._session_scope(commit=False) as session:
+            stmt = select(Job).where(Job.external_id == external_id)
+            if source:
+                stmt = stmt.where(Job.source == source)
+            job = session.scalar(stmt)
+            if job:
+                self._load_relationships(job)
+            return job

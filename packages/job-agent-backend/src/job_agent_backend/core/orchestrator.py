@@ -8,12 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Protocol, Sequence, cast
 
-from sqlalchemy.orm import Session
-
 from scrapper_service import ScrapperManager
 from jobs_repository import init_db
-from jobs_repository.database.session import get_db_session
-from jobs_repository.repository import JobRepository
+from jobs_repository.container import get_job_repository
 from cvs_repository import CVRepository
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import (
@@ -52,7 +49,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         logger: Optional[Callable[[str], None]] = None,
         cv_repository_class: type[ICVRepository] = CVRepository,
         cv_loader: Optional[ICVLoader] = None,
-        job_repository_class: type[IJobRepository] = JobRepository,
+        job_repository_factory: Callable[[], IJobRepository] = get_job_repository,
         scrapper_manager: Optional[ScrapperManagerProtocol] = None,
         filter_service: Optional[IFilterService] = None,
     ):
@@ -65,8 +62,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
                                 Defaults to CVRepository for backward compatibility.
             cv_loader: Optional loader implementation for reading CV content.
                         Defaults to the built-in PDF/text loader.
-            job_repository_class: Job repository class to use for creating instances.
-                                 Defaults to JobRepository for backward compatibility.
+            job_repository_factory: Factory for creating job repository instances.
+                                     Defaults to get_job_repository for backward compatibility.
             scrapper_manager: Optional scrapper manager instance.
                             If None, will create a new ScrapperManager().
             filter_service: Optional filter service instance. If not provided, the
@@ -75,7 +72,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger: Callable[[str], None] = logger or print
         self.cv_repository_class: type[ICVRepository] = cv_repository_class
         self.cv_loader: ICVLoader = cv_loader or cast(ICVLoader, CVLoader())
-        self.job_repository_class: type[IJobRepository] = job_repository_class
+        self.job_repository_factory: Callable[[], IJobRepository] = job_repository_factory
         self.scrapper_manager: ScrapperManagerProtocol = scrapper_manager or ScrapperManager()
         self.filter_service: IFilterService = filter_service or FilterService()
 
@@ -216,14 +213,12 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self,
         job: JobDict,
         cv_content: str,
-        db_session: Optional[Session] = None,
     ) -> JobProcessingResult:
         """Process a single job with the workflows system.
 
         Args:
             job: Job dictionary to process
             cv_content: Cleaned CV content
-            db_session: Optional database session for storing jobs
 
         Returns:
             Dictionary containing processing results:
@@ -234,7 +229,9 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             - job: Original job dictionary
         """
         result: AgentState = run_job_processing(
-            job, cv_content, db_session, job_repository_class=self.job_repository_class
+            job,
+            cv_content,
+            job_repository_factory=self.job_repository_factory,
         )
         return cast(JobProcessingResult, result)
 
@@ -245,8 +242,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
     ) -> Iterator[tuple[int, int, JobProcessingResult]]:
         """Process jobs one at a time, yielding results as they complete.
 
-        This method manages the database session internally and yields results
-        for each processed job. Useful for progress reporting in interactive contexts.
+        Useful for progress reporting in interactive contexts.
 
         Args:
             jobs: List of job dictionaries to process
@@ -255,15 +251,9 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Yields:
             Tuple of (job_index, total_jobs, result_dict) for each processed job
         """
-        db_generator = get_db_session()
-        db_session = next(db_generator)
-
-        try:
-            for idx, job in enumerate(jobs, 1):
-                result = self.process_job(job, cv_content, db_session)
-                yield idx, len(jobs), result
-        finally:
-            db_session.close()
+        for idx, job in enumerate(jobs, 1):
+            result = self.process_job(job, cv_content)
+            yield idx, len(jobs), result
 
     def run_complete_pipeline(
         self,
@@ -311,21 +301,15 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
 
         self.logger(f"Processing {len(filtered_jobs)} jobs with workflows system...")
 
-        db_generator = get_db_session()
-        db_session = next(db_generator)
+        for idx, job in enumerate(filtered_jobs, 1):
+            self.logger(f"\nProcessing job {idx}/{len(filtered_jobs)}")
+            self.process_job(job, cleaned_cv)
 
-        try:
-            for idx, job in enumerate(filtered_jobs, 1):
-                self.logger(f"\nProcessing job {idx}/{len(filtered_jobs)}")
-                self.process_job(job, cleaned_cv, db_session)
+        results: PipelineSummary = {
+            "total_scraped": len(jobs),
+            "total_filtered": len(filtered_jobs),
+            "total_processed": len(filtered_jobs),
+        }
 
-            results: PipelineSummary = {
-                "total_scraped": len(jobs),
-                "total_filtered": len(filtered_jobs),
-                "total_processed": len(filtered_jobs),
-            }
-
-            self.logger(f"\nPipeline completed - Processed {len(filtered_jobs)} jobs")
-            return results
-        finally:
-            db_session.close()
+        self.logger(f"\nPipeline completed - Processed {len(filtered_jobs)} jobs")
+        return results
