@@ -10,7 +10,6 @@ from typing import Optional
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from telegram_bot.handlers import (
     start_handler,
     help_handler,
@@ -19,6 +18,7 @@ from telegram_bot.handlers import (
     cancel_handler,
     upload_cv_handler,
 )
+from telegram_bot.di import build_dependencies
 
 
 class JobAgentBot:
@@ -36,7 +36,7 @@ class JobAgentBot:
         """
         self.token = token
         self.application: Optional[Application] = None
-        self.orchestrator = JobAgentOrchestrator()
+        self.dependencies = build_dependencies()
 
     def setup_handlers(self) -> None:
         """Set up command handlers for the bot."""
@@ -74,6 +74,7 @@ class JobAgentBot:
         """
         self.application = Application.builder().token(self.token).post_init(self.post_init).build()
 
+        self.application.bot_data["dependencies"] = self.dependencies
         self.setup_handlers()
         return self.application
 

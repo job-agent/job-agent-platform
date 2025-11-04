@@ -6,8 +6,8 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from telegram_bot.handlers.upload_cv import messages
+from telegram_bot.di import get_dependencies
 
 
 async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -22,6 +22,7 @@ async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     user_id = update.effective_user.id
     document = update.message.document
+    dependencies = get_dependencies(context)
 
     # Send processing message
     processing_msg = await update.message.reply_text(messages.INFO_PROCESSING)
@@ -37,7 +38,7 @@ async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await file.download_to_drive(tmp_path)
 
         # Pass the file to orchestrator for processing
-        orchestrator = JobAgentOrchestrator()
+        orchestrator = dependencies.orchestrator_factory()
         orchestrator.upload_cv(user_id, tmp_path)
 
         # Clean up temporary file

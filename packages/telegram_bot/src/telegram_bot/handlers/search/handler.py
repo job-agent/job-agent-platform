@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from job_agent_backend.core.orchestrator import JobAgentOrchestrator
+from telegram_bot.di import get_dependencies
 
 from . import formatter
 from ..state import active_searches
@@ -26,6 +26,8 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         /search salary=5000 days=7  # Get jobs from last 7 days
     """
     user_id = update.effective_user.id
+    dependencies = get_dependencies(context)
+    orchestrator = dependencies.orchestrator_factory()
 
     # Check if user already has an active search
     if active_searches.get(user_id, False):
@@ -62,7 +64,6 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         posted_after = datetime.now(timezone.utc) - timedelta(days=params["days"])
 
     # Check if user has uploaded a CV
-    orchestrator = JobAgentOrchestrator()
     if not orchestrator.has_cv(user_id):
         await update.message.reply_text(
             "❌ No CV found!\n\n"
@@ -91,7 +92,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             # We'll collect messages and send them in batches
             print(f"[Telegram Bot] {message}")
 
-        orchestrator = JobAgentOrchestrator(logger=sync_logger)
+        orchestrator = dependencies.orchestrator_factory(logger=sync_logger)
 
         # Run the pipeline in a separate thread to avoid blocking
         loop = asyncio.get_event_loop()
@@ -128,8 +129,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         # Process jobs using orchestrator iterator (handles DB session internally)
         for idx, total, result in await loop.run_in_executor(
-            None,
-            lambda: list(orchestrator.process_jobs_iterator(filtered_jobs, cleaned_cv))
+            None, lambda: list(orchestrator.process_jobs_iterator(filtered_jobs, cleaned_cv))
         ):
             # Check if user cancelled
             if not active_searches.get(user_id, False):

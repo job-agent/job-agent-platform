@@ -7,20 +7,20 @@ It can be used by any interface (CLI, Telegram, Web, etc.).
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Callable, Type
+from typing import List, Dict, Any, Optional, Callable
 
 from scrapper_service import ScrapperManager
 from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
 from jobs_repository.repository import JobRepository
 from cvs_repository import CVRepository
-
+from job_agent_platform_contracts import ICVRepository, IJobRepository, IJobAgentOrchestrator
 from job_agent_backend.filter_service import FilterConfig, filter_jobs
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
 from job_agent_backend.utils import load_cv_from_pdf, load_cv_from_text
 
 
-class JobAgentOrchestrator:
+class JobAgentOrchestrator(IJobAgentOrchestrator):
     """Orchestrates the complete job processing pipeline.
 
     This class provides a clean interface for running the job agent workflow
@@ -30,8 +30,8 @@ class JobAgentOrchestrator:
     def __init__(
         self,
         logger: Optional[Callable[[str], None]] = None,
-        cv_repository_class: Type[CVRepository] = CVRepository,
-        job_repository_class: Type[JobRepository] = JobRepository,
+        cv_repository_class: ICVRepository = CVRepository,
+        job_repository_class: IJobRepository = JobRepository,
         scrapper_manager: Optional[ScrapperManager] = None,
     ):
         """Initialize the orchestrator.
@@ -91,9 +91,7 @@ class JobAgentOrchestrator:
         else:
             # Unsupported file format
             extension = Path(file_path).suffix
-            raise ValueError(
-                f"Unsupported file format: {extension}. " f"Supported formats: .pdf, .txt"
-            )
+            raise ValueError(f"Unsupported file format: {extension}. Supported formats: .pdf, .txt")
 
         if not cv_content:
             raise ValueError("Failed to extract content from CV file")
@@ -233,9 +231,7 @@ class JobAgentOrchestrator:
         )
         return result
 
-    def process_jobs_iterator(
-        self, jobs: List[Dict[str, Any]], cv_content: str
-    ):
+    def process_jobs_iterator(self, jobs: List[Dict[str, Any]], cv_content: str):
         """Process jobs one at a time, yielding results as they complete.
 
         This method manages the database session internally and yields results

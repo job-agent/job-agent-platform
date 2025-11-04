@@ -5,33 +5,38 @@ from datetime import datetime, UTC
 
 import pytest
 
-from job_agent_backend.core.orchestrator import JobAgentOrchestrator
+from job_agent_backend.container import ApplicationContainer
 
 
 class TestJobAgentOrchestrator:
     """Test suite for JobAgentOrchestrator class."""
 
     @pytest.fixture
-    def orchestrator(self):
-        """Create an orchestrator instance."""
-        return JobAgentOrchestrator()
+    def app_container(self):
+        """Provide a fresh dependency container per test."""
+        return ApplicationContainer()
 
     @pytest.fixture
-    def orchestrator_with_logger(self):
+    def orchestrator(self, app_container):
+        """Create an orchestrator instance."""
+        return app_container.orchestrator()
+
+    @pytest.fixture
+    def orchestrator_with_logger(self, app_container):
         """Create an orchestrator with a mock logger."""
         mock_logger = MagicMock()
-        return JobAgentOrchestrator(logger=mock_logger), mock_logger
+        return app_container.orchestrator(logger=mock_logger), mock_logger
 
-    def test_orchestrator_initialization_default_logger(self):
+    def test_orchestrator_initialization_default_logger(self, app_container):
         """Test orchestrator initializes with default logger."""
-        orchestrator = JobAgentOrchestrator()
+        orchestrator = app_container.orchestrator()
         assert orchestrator.logger is not None
         assert orchestrator.scrapper_manager is not None
 
-    def test_orchestrator_initialization_custom_logger(self):
+    def test_orchestrator_initialization_custom_logger(self, app_container):
         """Test orchestrator initializes with custom logger."""
         mock_logger = MagicMock()
-        orchestrator = JobAgentOrchestrator(logger=mock_logger)
+        orchestrator = app_container.orchestrator(logger=mock_logger)
         assert orchestrator.logger == mock_logger
 
     def test_get_cv_path_creates_directory(self, orchestrator):
@@ -59,6 +64,7 @@ class TestJobAgentOrchestrator:
         mock_pii_removal,
         sample_temp_cv_file,
         sample_cv_content,
+        app_container,
     ):
         """Test uploading a text CV file."""
         user_id = 111
@@ -70,7 +76,7 @@ class TestJobAgentOrchestrator:
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
         # Create orchestrator with injected mock repository
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
 
         orchestrator.upload_cv(user_id, str(sample_temp_cv_file))
 
@@ -83,9 +89,7 @@ class TestJobAgentOrchestrator:
 
     @patch("job_agent_backend.core.orchestrator.run_pii_removal")
     @patch("job_agent_backend.core.orchestrator.load_cv_from_pdf")
-    def test_upload_cv_pdf_file(
-        self, mock_load_pdf, mock_pii_removal
-    ):
+    def test_upload_cv_pdf_file(self, mock_load_pdf, mock_pii_removal, app_container):
         """Test uploading a PDF CV file."""
         user_id = 222
         pdf_path = "/tmp/test_cv.pdf"
@@ -97,7 +101,7 @@ class TestJobAgentOrchestrator:
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
         # Create orchestrator with injected mock repository
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
 
         orchestrator.upload_cv(user_id, pdf_path)
 
@@ -125,60 +129,60 @@ class TestJobAgentOrchestrator:
         with pytest.raises(ValueError, match="Failed to extract content"):
             orchestrator.upload_cv(user_id, "/tmp/empty.txt")
 
-    def test_has_cv_returns_true_when_cv_exists(self):
+    def test_has_cv_returns_true_when_cv_exists(self, app_container):
         """Test has_cv returns True when CV exists."""
         user_id = 555
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = "CV content"
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
         result = orchestrator.has_cv(user_id)
 
         assert result is True
 
-    def test_has_cv_returns_false_when_cv_missing(self):
+    def test_has_cv_returns_false_when_cv_missing(self, app_container):
         """Test has_cv returns False when CV doesn't exist."""
         user_id = 666
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = None
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
         result = orchestrator.has_cv(user_id)
 
         assert result is False
 
-    def test_has_cv_returns_false_on_exception(self):
+    def test_has_cv_returns_false_on_exception(self, app_container):
         """Test has_cv returns False when exception occurs."""
         user_id = 777
         mock_cv_repo_class = MagicMock(side_effect=Exception("File not found"))
 
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
         result = orchestrator.has_cv(user_id)
 
         assert result is False
 
-    def test_load_cv_returns_content(self, sample_cv_content):
+    def test_load_cv_returns_content(self, sample_cv_content, app_container):
         """Test load_cv returns CV content."""
         user_id = 888
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = sample_cv_content
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
         result = orchestrator.load_cv(user_id)
 
         assert result == sample_cv_content
 
-    def test_load_cv_raises_error_when_not_found(self):
+    def test_load_cv_raises_error_when_not_found(self, app_container):
         """Test load_cv raises ValueError when CV not found."""
         user_id = 999
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = None
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        orchestrator = JobAgentOrchestrator(cv_repository_class=mock_cv_repo_class)
+        orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
 
         with pytest.raises(ValueError, match="CV not found"):
             orchestrator.load_cv(user_id)
@@ -296,6 +300,7 @@ class TestJobAgentOrchestrator:
         mock_init_db,
         mock_scrapper_manager,
         sample_cv_content,
+        app_container,
     ):
         """Test complete pipeline integration."""
         user_id = 1000
@@ -306,9 +311,9 @@ class TestJobAgentOrchestrator:
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
         # Create orchestrator with mocked dependencies
-        orchestrator = JobAgentOrchestrator(
+        orchestrator = app_container.orchestrator(
             cv_repository_class=mock_cv_repo_class,
-            scrapper_manager=mock_scrapper_manager
+            scrapper_manager=mock_scrapper_manager,
         )
 
         # Mock database session
@@ -364,6 +369,7 @@ class TestJobAgentOrchestrator:
         mock_init_db,
         sample_cv_content,
         monkeypatch,
+        app_container,
     ):
         """Test complete pipeline with job filtering."""
         user_id = 3000
@@ -407,9 +413,9 @@ class TestJobAgentOrchestrator:
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
         # Create orchestrator with mocked dependencies
-        orchestrator = JobAgentOrchestrator(
+        orchestrator = app_container.orchestrator(
             cv_repository_class=mock_cv_repo_class,
-            scrapper_manager=mock_scrapper
+            scrapper_manager=mock_scrapper,
         )
 
         # Mock DB session
