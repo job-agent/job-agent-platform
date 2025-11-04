@@ -115,6 +115,13 @@ job-agent-platform/
   ruff check packages/*/src
   ```
 
+### LangSmith Studio
+
+1. Activate the repository virtual environment.
+2. From the repository root run `langgraph dev`. The CLI reads `langgraph.json`, starts the local LangGraph API server, and opens the LangSmith Studio workspace mapped to your project.
+3. If the browser does not open automatically, visit `https://smith.langchain.com/studio/dev/local` while the server is running.
+4. Stop the server with `Ctrl+C` when you finish working in Studio.
+
 ## Architecture Highlights
 
 1. **Job Agent Orchestrator** — Coordinates CV ingestion, job scraping, filtering, and workflow execution.
