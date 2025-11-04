@@ -3,15 +3,18 @@
 This module defines the graph structure and builds the complete workflow.
 """
 
+from typing import Type, Any
+
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
+from jobs_repository.repository import JobRepository
 from job_agent_backend.workflows.job_processing.nodes import (
     check_job_relevance_node,
     extract_must_have_skills_node,
     extract_nice_to_have_skills_node,
     print_jobs_node,
-    store_job_node,
+    create_store_job_node,
 )
 from job_agent_backend.workflows.job_processing.nodes.check_job_relevance import (
     route_after_relevance_check,
@@ -19,7 +22,7 @@ from job_agent_backend.workflows.job_processing.nodes.check_job_relevance import
 from job_agent_backend.workflows.job_processing.state import AgentState
 
 
-def create_workflow() -> CompiledStateGraph:
+def create_workflow(job_repository_class: Type[Any] = JobRepository) -> CompiledStateGraph:
     """
     Create and configure the workflows workflow graph.
 
@@ -36,6 +39,9 @@ def create_workflow() -> CompiledStateGraph:
     Note: PII removal should be performed once before running this workflow
     on multiple jobs. See pii_graph.py for the PII removal workflow.
 
+    Args:
+        job_repository_class: Job repository class for dependency injection
+
     Returns:
         Configured StateGraph ready for execution
     """
@@ -49,7 +55,8 @@ def create_workflow() -> CompiledStateGraph:
     workflow.add_node("extract_must_have_skills", extract_must_have_skills_node)
     workflow.add_node("extract_nice_to_have_skills", extract_nice_to_have_skills_node)
 
-    # Add the store job node
+    # Create and add the store job node with injected repository
+    store_job_node = create_store_job_node(job_repository_class)
     workflow.add_node("store_job", store_job_node)
 
     # Add the processing node

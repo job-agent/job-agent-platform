@@ -7,11 +7,12 @@ It can be used by any interface (CLI, Telegram, Web, etc.).
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Type
 
 from scrapper_service import ScrapperManager
 from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
+from jobs_repository.repository import JobRepository
 from cvs_repository import CVRepository
 
 from job_agent_backend.filter_service import FilterConfig, filter_jobs
@@ -26,15 +27,29 @@ class JobAgentOrchestrator:
     from any entry point (CLI, Telegram bot, API, etc.).
     """
 
-    def __init__(self, logger: Optional[Callable[[str], None]] = None):
+    def __init__(
+        self,
+        logger: Optional[Callable[[str], None]] = None,
+        cv_repository_class: Type[CVRepository] = CVRepository,
+        job_repository_class: Type[JobRepository] = JobRepository,
+        scrapper_manager: Optional[ScrapperManager] = None,
+    ):
         """Initialize the orchestrator.
 
         Args:
             logger: Optional logging function to report progress.
                    If None, will use print().
+            cv_repository_class: CV repository class to use for creating instances.
+                                Defaults to CVRepository for backward compatibility.
+            job_repository_class: Job repository class to use for creating instances.
+                                 Defaults to JobRepository for backward compatibility.
+            scrapper_manager: Optional scrapper manager instance.
+                            If None, will create a new ScrapperManager().
         """
         self.logger = logger or print
-        self.scrapper_manager = ScrapperManager()
+        self.cv_repository_class = cv_repository_class
+        self.job_repository_class = job_repository_class
+        self.scrapper_manager = scrapper_manager or ScrapperManager()
 
     def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
@@ -90,7 +105,7 @@ class JobAgentOrchestrator:
 
         # Save the cleaned CV content
         cv_path = self.get_cv_path(user_id)
-        cv_repository = CVRepository(cv_path)
+        cv_repository = self.cv_repository_class(cv_path)
         cv_repository.create(cleaned_cv_content)
         self.logger(f"CV saved for user {user_id}")
 
@@ -105,7 +120,7 @@ class JobAgentOrchestrator:
         """
         try:
             cv_path = self.get_cv_path(user_id)
-            cv_repository = CVRepository(cv_path)
+            cv_repository = self.cv_repository_class(cv_path)
             return cv_repository.find() is not None
         except Exception:
             return False
@@ -126,7 +141,7 @@ class JobAgentOrchestrator:
         """
         self.logger(f"Loading CV from repository for user {user_id}")
         cv_path = self.get_cv_path(user_id)
-        cv_repository = CVRepository(cv_path)
+        cv_repository = self.cv_repository_class(cv_path)
         cv_content = cv_repository.find()
 
         if not cv_content:
@@ -213,7 +228,9 @@ class JobAgentOrchestrator:
             - status: Final workflow status
             - job: Original job dictionary
         """
-        result = run_job_processing(job, cv_content, db_session)
+        result = run_job_processing(
+            job, cv_content, db_session, job_repository_class=self.job_repository_class
+        )
         return result
 
     def process_jobs_iterator(

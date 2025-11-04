@@ -4,7 +4,7 @@ This module provides the public API for running the workflows system.
 """
 
 import os
-from typing import Optional
+from typing import Optional, Type, Any
 from sqlalchemy.orm import Session
 
 from job_scrapper_contracts import JobDict
@@ -14,7 +14,10 @@ from .state import AgentState
 
 
 def run_job_processing(
-    job: JobDict, cv_content: str, db_session: Optional[Session] = None
+    job: JobDict,
+    cv_content: str,
+    db_session: Optional[Session] = None,
+    job_repository_class: Optional[Type[Any]] = None,
 ) -> AgentState:
     """
     Run the workflows system on a single job.
@@ -26,6 +29,7 @@ def run_job_processing(
         job: A single job dictionary to process
         cv_content: The CV content to match against the job
         db_session: Optional database session for storing jobs
+        job_repository_class: Optional job repository class for dependency injection
 
     Returns:
         Final agent state containing job processing results including:
@@ -56,8 +60,11 @@ def run_job_processing(
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
 
-    # Create the workflow
-    workflow = create_workflow()
+    # Create the workflow with injected repository class
+    if job_repository_class is not None:
+        workflow = create_workflow(job_repository_class=job_repository_class)
+    else:
+        workflow = create_workflow()
 
     # Initialize state for this job
     initial_state: AgentState = {
