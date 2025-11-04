@@ -16,7 +16,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "pypdf>=5.1.0",
     "job-scrapper-contracts @ git+https://github.com/job-agent/job-scrapper-contracts.git@v0.1.1",
-    "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@v0.1.3#subdirectory=packages/scrapper-service",
+    "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@v0.1.4#subdirectory=packages/scrapper-service",
 #    Mock service
 #    "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers-mock.git@v0.1.1#subdirectory=packages/scrapper-service",
     "jobs-repository>=0.1.0",
