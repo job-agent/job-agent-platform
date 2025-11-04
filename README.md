@@ -5,28 +5,40 @@
 1. Create and activate a Python 3.9+ virtual environment.
 2. Rename `.env.example` (if present) to `.env` in the repository root.
 3. Populate the `.env` file with the environment variables described below.
-4. Install project packages in editable mode:
+4. Decide how to satisfy the `scrapper-service` dependency in `packages/job-agent-backend/pyproject.toml`. You can either point the entry to your own implementation or switch to the provided mock when the private repository is unavailable:
+
+   ```toml
+   # Example: comment the private dependency and enable the mock implementation
+   # "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@v0.1.3#subdirectory=packages/scrapper-service"
+   "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers-mock.git@v0.1.0#subdirectory=packages/scrapper-service"
+   ```
+
+5. Install project packages in editable mode:
 
    ```bash
+   pip install -e packages/jobs-repository
+   pip install -e packages/cvs-repository
    pip install -e packages/job-agent-backend
    pip install -e packages/telegram_bot
    ```
 
-5. Optional: install development extras when running tests or tooling:
+6. Optional: install development extras when running tests or tooling:
 
    ```bash
+   pip install -e "packages/jobs-repository[dev]"
+   pip install -e "packages/cvs-repository[dev]"
    pip install -e "packages/job-agent-backend[dev]"
    pip install -e "packages/telegram_bot[dev]"
    ```
 
-6. Apply database migrations if you plan to persist jobs:
+7. Apply database migrations if you plan to persist jobs:
 
    ```bash
    cd packages/jobs-repository
    alembic upgrade head
    ```
 
-7. Start the Telegram bot with either `python -m telegram_bot.main` or `docker compose up` from the repository root.
+8. Start the Telegram bot with either `python -m telegram_bot.main` or `docker compose up` from the repository root.
 
 ### Required Environment Variables
 
@@ -45,7 +57,7 @@
 "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@v0.1.3#subdirectory=packages/scrapper-service"
 ```
 
-If you do not have access to that repository, either implement an alternative scrapper service that matches the expected interface or comment out the private dependency and uncomment the provided mock entry:
+If you do not have access to that repository, either point the dependency to your own compatible scrapper implementation or comment out the private line and enable the provided mock entry:
 
 ```toml
 # "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers.git@v0.1.3#subdirectory=packages/scrapper-service"
@@ -69,66 +81,6 @@ Monorepo for the Job Agent ecosystem: a LangGraph-powered backend that sanitizes
 - OpenAI API access (`OPENAI_API_KEY`), plus credentials for optional LangSmith tracing
 - Telegram bot token from [@BotFather](https://t.me/botfather)
 - Access to the shared scrapper service referenced by the backend configuration
-
-## Setup
-
-1. Create and activate a virtual environment.
-2. Install backend and bot packages (development mode keeps sources editable):
-
-   ```bash
-   pip install -e packages/job-agent-backend
-   pip install -e packages/telegram_bot
-   ```
-
-3. Install optional extras when contributing tests or tooling:
-
-   ```bash
-   pip install -e "packages/job-agent-backend[dev]"
-   pip install -e "packages/telegram_bot[dev]"
-   ```
-
-## Environment Configuration
-
-Create a `.env` file in the repository root (loaded by both backend scripts and the Telegram bot):
-
-```bash
-OPENAI_API_KEY=sk-your-openai-key
-TELEGRAM_BOT_TOKEN=1234567890:example
-DATABASE_URL=postgresql://user:password@localhost:5432/job_agent
-LANGCHAIN_API_KEY=optional-langsmith-key
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_PROJECT=job-agent
-# Additional scrapper service settings as required (see backend README)
-```
-
-Apply database migrations before running the bot when persistence is enabled:
-
-```bash
-cd packages/jobs-repository
-alembic upgrade head
-```
-
-## Running the Telegram Bot
-
-```bash
-python -m telegram_bot.main
-```
-
-Typical flow:
-
-1. Upload a CV as a PDF document to the bot (stored PII-free under `packages/job-agent-backend/src/data/cvs`).
-2. Trigger `/search salary=5000 employment=remote days=7` to scrape, filter, and process jobs.
-3. Use `/status` to monitor progress or `/cancel` to stop the current search.
-
-### Docker
-
-```bash
-cd packages/telegram_bot
-docker build -t job-agent-telegram-bot .
-docker run --env-file ../../.env job-agent-telegram-bot
-```
-
-The container entrypoint runs Alembic migrations before starting the bot.
 
 ## Repository Layout
 
