@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Callable, Iterator, Optional, Protocol, Sequence, cast
 
 from scrapper_service import ScrapperManager
-from jobs_repository import init_db
-from jobs_repository.container import get_job_repository
 from cvs_repository import CVRepository
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import (
@@ -49,9 +47,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         logger: Optional[Callable[[str], None]] = None,
         cv_repository_class: type[ICVRepository] = CVRepository,
         cv_loader: Optional[ICVLoader] = None,
-        job_repository_factory: Callable[[], IJobRepository] = get_job_repository,
+        job_repository_factory: Optional[Callable[[], IJobRepository]] = None,
         scrapper_manager: Optional[ScrapperManagerProtocol] = None,
         filter_service: Optional[IFilterService] = None,
+        database_initializer: Optional[Callable[[], None]] = None,
     ):
         """Initialize the orchestrator.
 
@@ -63,7 +62,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             cv_loader: Optional loader implementation for reading CV content.
                         Defaults to the built-in PDF/text loader.
             job_repository_factory: Factory for creating job repository instances.
-                                     Defaults to get_job_repository for backward compatibility.
+                                     Required for persisting workflow results.
             scrapper_manager: Optional scrapper manager instance.
                             If None, will create a new ScrapperManager().
             filter_service: Optional filter service instance. If not provided, the
@@ -72,9 +71,12 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger: Callable[[str], None] = logger or print
         self.cv_repository_class: type[ICVRepository] = cv_repository_class
         self.cv_loader: ICVLoader = cv_loader or cast(ICVLoader, CVLoader())
+        if job_repository_factory is None:
+            raise ValueError("job_repository_factory must be provided")
         self.job_repository_factory: Callable[[], IJobRepository] = job_repository_factory
         self.scrapper_manager: ScrapperManagerProtocol = scrapper_manager or ScrapperManager()
         self.filter_service: IFilterService = filter_service or FilterService()
+        self.database_initializer: Callable[[], None] = database_initializer or (lambda: None)
 
     def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
@@ -287,7 +289,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         """
         self.logger("Initializing database...")
         try:
-            init_db()
+            self.database_initializer()
             self.logger("Database initialized successfully")
         except Exception as e:
             self.logger(f"Warning: Database initialization failed: {e}")

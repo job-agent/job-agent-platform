@@ -4,14 +4,13 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from collections.abc import Mapping
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
 
 from job_agent_platform_contracts import IJobRepository
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
 
-from jobs_repository.container import get_job_repository
 from job_agent_backend.workflows.job_processing.node_names import JobProcessingNode
 from job_agent_backend.workflows.job_processing.nodes import (
     check_job_relevance_node,
@@ -96,20 +95,17 @@ def create_workflow(config: Optional[RunnableConfig] = None) -> CompiledStateGra
 def _resolve_dependencies(
     config: Optional[RunnableConfig],
 ) -> Callable[[], IJobRepository]:
-    job_repository_factory: Callable[[], IJobRepository] = get_job_repository
-
     if not config:
-        return job_repository_factory
+        raise ValueError("job_repository_factory dependency is not configured")
 
     if isinstance(config, Mapping):
-        candidate = config.get("configurable")
-        if isinstance(candidate, Mapping):
-            config_values: Mapping[str, object] = candidate
-        else:
-            config_values = config
+        config_values: Mapping[str, object] = config
+        configurable = config.get("configurable")
+        if isinstance(configurable, Mapping):
+            config_values = configurable
 
         override = config_values.get("job_repository_factory")
         if callable(override):
-            job_repository_factory = override
+            return cast(Callable[[], IJobRepository], override)
 
-    return job_repository_factory
+    raise ValueError("job_repository_factory dependency is not configured")

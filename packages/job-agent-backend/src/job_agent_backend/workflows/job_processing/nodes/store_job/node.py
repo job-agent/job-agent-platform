@@ -5,14 +5,13 @@ from typing import Callable
 from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
 
-from jobs_repository.container import get_job_repository
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
 from ...state import AgentState
 
 
 def create_store_job_node(
-    job_repository_factory: Callable[[], IJobRepository] = get_job_repository,
+    job_repository_factory: Callable[[], IJobRepository],
 ) -> Callable:
     """
     Factory function to create a store_job_node with injected dependencies.
@@ -74,4 +73,3 @@ def create_store_job_node(
         return {"status": status}
 
     return store_job_node
-store_job_node = create_store_job_node()

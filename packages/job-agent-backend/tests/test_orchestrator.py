@@ -19,13 +19,17 @@ class TestJobAgentOrchestrator:
     @pytest.fixture
     def orchestrator(self, app_container):
         """Create an orchestrator instance."""
-        return app_container.orchestrator()
+        return app_container.orchestrator(database_initializer=lambda: None)
 
     @pytest.fixture
     def orchestrator_with_logger(self, app_container):
         """Create an orchestrator with a mock logger."""
         mock_logger = MagicMock()
-        return app_container.orchestrator(logger=mock_logger), mock_logger
+        orchestrator = app_container.orchestrator(
+            logger=mock_logger,
+            database_initializer=lambda: None,
+        )
+        return orchestrator, mock_logger
 
     def test_orchestrator_initialization_default_logger(self, app_container):
         """Test orchestrator initializes with default logger."""
@@ -259,12 +263,10 @@ class TestJobAgentOrchestrator:
             job_repository_factory=mock_factory,
         )
 
-    @patch("job_agent_backend.core.orchestrator.init_db")
     @patch("job_agent_backend.core.orchestrator.run_job_processing")
     def test_run_complete_pipeline_integration(
         self,
         mock_run_job_processing,
-        mock_init_db,
         mock_scrapper_manager,
         sample_cv_content,
         app_container,
@@ -276,9 +278,12 @@ class TestJobAgentOrchestrator:
         mock_repo_instance.find.return_value = sample_cv_content
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
+        mock_initializer = MagicMock()
+
         orchestrator = app_container.orchestrator(
             cv_repository_class=mock_cv_repo_class,
             scrapper_manager=mock_scrapper_manager,
+            database_initializer=mock_initializer,
         )
 
         mock_run_job_processing.return_value = {
@@ -290,7 +295,7 @@ class TestJobAgentOrchestrator:
             user_id=user_id, salary=4000, employment="remote", timeout=30
         )
 
-        mock_init_db.assert_called_once()
+        mock_initializer.assert_called_once()
         mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once()
         mock_repo_instance.find.assert_called_once()
         mock_run_job_processing.assert_called_once()
@@ -299,10 +304,12 @@ class TestJobAgentOrchestrator:
         assert result["total_filtered"] == 1
         assert result["total_processed"] == 1
 
-    @patch("job_agent_backend.core.orchestrator.init_db")
     @patch("job_agent_backend.core.orchestrator.CVRepository")
     def test_run_complete_pipeline_raises_when_no_cv(
-        self, mock_cv_repo_class, mock_init_db, orchestrator, mock_scrapper_manager
+        self,
+        mock_cv_repo_class,
+        orchestrator,
+        mock_scrapper_manager,
     ):
         """Test pipeline raises error when user has no CV."""
         user_id = 2000
@@ -315,12 +322,10 @@ class TestJobAgentOrchestrator:
         with pytest.raises(ValueError, match="CV not found"):
             orchestrator.run_complete_pipeline(user_id=user_id)
 
-    @patch("job_agent_backend.core.orchestrator.init_db")
     @patch("job_agent_backend.core.orchestrator.run_job_processing")
     def test_run_complete_pipeline_with_filtering(
         self,
         mock_run_job_processing,
-        mock_init_db,
         sample_cv_content,
         app_container,
     ):
@@ -363,6 +368,7 @@ class TestJobAgentOrchestrator:
         orchestrator = app_container.orchestrator(
             cv_repository_class=mock_cv_repo_class,
             scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
         )
 
         orchestrator.filter_service.configure({"max_months_of_experience": 24})
@@ -377,13 +383,15 @@ class TestJobAgentOrchestrator:
 
         assert result["total_processed"] >= 1
 
-    @patch("job_agent_backend.core.orchestrator.init_db")
     def test_run_complete_pipeline_handles_db_init_failure(
-        self, mock_init_db, orchestrator_with_logger, mock_scrapper_manager
+        self,
+        orchestrator_with_logger,
+        mock_scrapper_manager,
     ):
         """Test pipeline continues when database initialization fails."""
         orchestrator, mock_logger = orchestrator_with_logger
-        mock_init_db.side_effect = Exception("Database connection failed")
+        mock_initializer = MagicMock(side_effect=Exception("Database connection failed"))
+        orchestrator.database_initializer = mock_initializer
 
         orchestrator.scrapper_manager = mock_scrapper_manager
 

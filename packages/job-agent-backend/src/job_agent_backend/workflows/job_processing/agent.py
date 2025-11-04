@@ -12,13 +12,12 @@ from job_scrapper_contracts import JobDict
 
 from .job_processing import create_workflow
 from .state import AgentState
-from jobs_repository.container import get_job_repository
 
 
 def run_job_processing(
     job: JobDict,
     cv_content: str,
-    job_repository_factory: Callable[[], IJobRepository] = get_job_repository,
+    job_repository_factory: Callable[[], IJobRepository],
 ) -> AgentState:
     """
     Run the workflows system on a single job.
@@ -58,6 +57,9 @@ def run_job_processing(
 
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
+
+    if not callable(job_repository_factory):
+        raise ValueError("job_repository_factory must be callable")
 
     workflow_config = {
         "configurable": {

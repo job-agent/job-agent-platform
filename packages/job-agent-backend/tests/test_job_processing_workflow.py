@@ -5,6 +5,29 @@ import pytest
 
 from job_agent_backend.workflows import run_job_processing
 from jobs_repository.models import Job
+from jobs_repository.repository.job_repository import JobRepository
+
+
+@pytest.fixture
+def job_repository_factory_stub():
+    """Provide a stub job repository factory."""
+
+    def factory():
+        repository = MagicMock()
+        repository.create.return_value = MagicMock(id=1)
+        return repository
+
+    return factory
+
+
+@pytest.fixture
+def job_repository_factory_with_session(db_session):
+    """Provide a job repository factory that reuses the test session."""
+
+    def factory():
+        return JobRepository(session=db_session)
+
+    return factory
 
 
 def create_mock_chat_openai(result_obj):
@@ -33,6 +56,7 @@ class TestJobProcessingWorkflow:
         mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test that relevant job goes through complete skill extraction."""
 
@@ -48,7 +72,11 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = ["Docker", "Kubernetes"]
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        result = run_job_processing(sample_job_dict, sample_cv_content)
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert result["is_relevant"] is True
         assert "extracted_must_have_skills" in result
@@ -61,6 +89,7 @@ class TestJobProcessingWorkflow:
         mock_relevance_chat,
         sample_irrelevant_job_dict,
         sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test that irrelevant job skips skill extraction."""
 
@@ -68,7 +97,11 @@ class TestJobProcessingWorkflow:
         mock_relevance_result.is_relevant = False
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
 
-        result = run_job_processing(sample_irrelevant_job_dict, sample_cv_content)
+        result = run_job_processing(
+            sample_irrelevant_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert result["is_relevant"] is False
         assert "extracted_must_have_skills" not in result
@@ -76,15 +109,31 @@ class TestJobProcessingWorkflow:
 
         assert result["status"] in ["started", "completed"]
 
-    def test_workflow_with_empty_cv_raises_error(self, sample_job_dict):
+    def test_workflow_with_empty_cv_raises_error(
+        self,
+        sample_job_dict,
+        job_repository_factory_stub,
+    ):
         """Test that empty CV raises ValueError."""
         with pytest.raises(ValueError, match="CV content is required"):
-            run_job_processing(sample_job_dict, "")
+            run_job_processing(
+                sample_job_dict,
+                "",
+                job_repository_factory=job_repository_factory_stub,
+            )
 
-    def test_workflow_with_none_cv_raises_error(self, sample_job_dict):
+    def test_workflow_with_none_cv_raises_error(
+        self,
+        sample_job_dict,
+        job_repository_factory_stub,
+    ):
         """Test that None CV raises ValueError."""
         with pytest.raises(ValueError, match="CV content is required"):
-            run_job_processing(sample_job_dict, None)
+            run_job_processing(
+                sample_job_dict,
+                None,
+                job_repository_factory=job_repository_factory_stub,
+            )
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
     @patch(
@@ -101,6 +150,7 @@ class TestJobProcessingWorkflow:
         sample_job_dict,
         sample_cv_content,
         db_session,
+        job_repository_factory_with_session,
     ):
         """Test that workflow stores job in database when session is provided."""
 
@@ -116,7 +166,11 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = ["Docker"]
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        run_job_processing(sample_job_dict, sample_cv_content, db_session)
+        run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_with_session,
+        )
 
         stored_job = (
             db_session.query(Job).filter_by(external_id=str(sample_job_dict["job_id"])).first()
@@ -137,10 +191,18 @@ class TestJobProcessingWorkflow:
         mock_relevance_result.is_relevant = False
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
 
-        result = run_job_processing(sample_irrelevant_job_dict, sample_cv_content, None)
+        factory = MagicMock()
+        factory.return_value = MagicMock()
+
+        result = run_job_processing(
+            sample_irrelevant_job_dict,
+            sample_cv_content,
+            job_repository_factory=factory,
+        )
 
         assert result["status"] in ["started", "completed"]
         assert result["is_relevant"] is False
+        factory.assert_not_called()
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
     @patch(
@@ -156,6 +218,7 @@ class TestJobProcessingWorkflow:
         mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test that final state includes original job data."""
 
@@ -171,7 +234,11 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = []
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        result = run_job_processing(sample_job_dict, sample_cv_content)
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert result["job"] == sample_job_dict
         assert result["cv_context"] == sample_cv_content
@@ -190,6 +257,7 @@ class TestJobProcessingWorkflow:
         mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test workflow handles empty skills extraction gracefully."""
 
@@ -205,7 +273,11 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = []
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        result = run_job_processing(sample_job_dict, sample_cv_content)
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert result["is_relevant"] is True
         assert result["extracted_must_have_skills"] == []
@@ -226,6 +298,7 @@ class TestJobProcessingWorkflow:
         mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test that CV context is passed to all workflow nodes."""
         mock_relevance_result = MagicMock()
@@ -240,7 +313,11 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = []
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        result = run_job_processing(sample_job_dict, sample_cv_content)
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert result["cv_context"] == sample_cv_content
 
@@ -257,6 +334,7 @@ class TestJobProcessingWorkflow:
         mock_must_chat,
         mock_relevance_chat,
         sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test workflow handles job without salary information."""
         job_without_salary = {
@@ -284,21 +362,33 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = []
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        result = run_job_processing(job_without_salary, sample_cv_content)
+        result = run_job_processing(
+            job_without_salary,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert result["status"] == "completed"
         assert result["is_relevant"] is True
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
     def test_workflow_returns_final_state_structure(
-        self, mock_relevance_chat, sample_job_dict, sample_cv_content
+        self,
+        mock_relevance_chat,
+        sample_job_dict,
+        sample_cv_content,
+        job_repository_factory_stub,
     ):
         """Test that workflow returns expected state structure."""
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = False
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
 
-        result = run_job_processing(sample_job_dict, sample_cv_content)
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory_stub,
+        )
 
         assert "job" in result
         assert "status" in result
