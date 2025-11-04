@@ -21,8 +21,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         state: Current agent state containing job and cv_context
 
     Returns:
-        Updated state with job status marked as "irrelevant" if not relevant,
-        otherwise status remains unchanged
+        State update containing the "is_relevant" flag based on the LLM decision
     """
     job = state["job"]
     job_id = job.get("job_id")

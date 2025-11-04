@@ -15,20 +15,20 @@ def print_jobs_node(state: AgentState) -> AgentState:
         state: Current agent state containing a single job
 
     Returns:
-        Updated agent state with completion status
+        State update containing the completion status for the current job
     """
     job = state["job"]
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Processing job:")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     for key, value in job.items():
         print(f"  {key}: {value}")
     print()
 
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print("Finished processing job")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     return {"status": "completed"}

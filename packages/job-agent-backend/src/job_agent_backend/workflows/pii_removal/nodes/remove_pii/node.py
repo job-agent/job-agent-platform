@@ -22,7 +22,8 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
         state: Current agent state containing cv_context
 
     Returns:
-        Updated state with cv_context replaced by professional information only
+        State update containing the sanitized cv_context when extraction succeeds,
+        or an empty dict when no changes are applied
     """
     cv_context = state.get("cv_context", "")
 
@@ -39,7 +40,6 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
         return {}
 
     try:
-
         base_llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0,

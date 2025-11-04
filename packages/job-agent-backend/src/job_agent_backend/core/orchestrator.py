@@ -63,10 +63,14 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
                    If None, will use print().
             cv_repository_class: CV repository class to use for creating instances.
                                 Defaults to CVRepository for backward compatibility.
+            cv_loader: Optional loader implementation for reading CV content.
+                        Defaults to the built-in PDF/text loader.
             job_repository_class: Job repository class to use for creating instances.
                                  Defaults to JobRepository for backward compatibility.
             scrapper_manager: Optional scrapper manager instance.
                             If None, will create a new ScrapperManager().
+            filter_service: Optional filter service instance. If not provided, the
+                            default configuration-based implementation is used.
         """
         self.logger: Callable[[str], None] = logger or print
         self.cv_repository_class: type[ICVRepository] = cv_repository_class

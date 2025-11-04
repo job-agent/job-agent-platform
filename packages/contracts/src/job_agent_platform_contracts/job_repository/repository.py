@@ -19,11 +19,10 @@ class IJobRepository(ABC):
     @abstractmethod
     def create(self, job_data: JobCreate) -> Job:
         """
-        Create a new job from job data.
+        Create a new job from a `JobCreate` payload.
 
         Args:
-            job_data: Job data dictionary containing all necessary fields.
-                     Can be JobDict, JobCreate, or similar contract format.
+            job_data: Typed dictionary describing the job to persist.
 
         Returns:
             Created job entity

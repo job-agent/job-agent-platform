@@ -21,7 +21,8 @@ class CVLoader:
             doesn't exist or cannot be read.
 
         Example:
-            >>> cv_content = CVLoader.load_from_text('data/cvs/cv_12345.txt')
+            >>> loader = CVLoader()
+            >>> cv_content = loader.load_from_text('data/cvs/cv_12345.txt')
             >>> if cv_content:
             ...     print(f"Loaded CV with {len(cv_content)} characters")
         """
@@ -43,15 +44,16 @@ class CVLoader:
         Load CV content from a PDF file.
 
         Args:
-            cv_path: Path to the CV PDF file. If not provided, defaults to
-                'data/cv.pdf' relative to the project root.
+            cv_path: Path to the CV PDF file. If not provided, the loader looks for
+                'job_agent_backend/data/cv.pdf' relative to this package.
 
         Returns:
             The extracted text content from the PDF, or None if the file
             doesn't exist or cannot be read.
 
         Example:
-            >>> cv_content = CVLoader.load_from_pdf()
+            >>> loader = CVLoader()
+            >>> cv_content = loader.load_from_pdf()
             >>> if cv_content:
             ...     print(f"Loaded CV with {len(cv_content)} characters")
         """

@@ -14,10 +14,11 @@ from .filter_config import FilterConfig
 
 class FilterService(IFilterService):
     """
-    Service for filtering unsuitable job posts based on configuration criteria.
+    Service for filtering job posts based on optional configuration.
 
     Args:
-        config: Optional configuration for filtering criteria.
+        config: Optional configuration for filtering criteria. When omitted,
+            a default policy limits experience and requires applications to be allowed.
     """
 
     def __init__(self, config: Optional[FilterConfig] = None) -> None:

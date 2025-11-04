@@ -1,15 +1,8 @@
-"""Repository pattern implementation for job operations.
+"""Repository implementation focused on persisting job listings.
 
-This repository follows a single-repository pattern where the Job entity is the primary
-concern, and reference entities (Company, Location, Category, Industry) are managed as
-supporting data that gets created automatically when storing jobs.
-
-Structure:
-    - Internal Helper Methods: get_or_create_* for reference data (companies, locations, etc.)
-    - Core CRUD Operations: create, get, update, delete operations
-    - Query & Search Methods: Specialized queries for finding jobs
-    - Bulk Operations: Efficient multi-record operations
-    - Utility Methods: Helper functions for common tasks
+The module provides helper utilities to ensure reference entities (company, location,
+category, industry) exist before a job is written, and exposes a small API for creating
+jobs and looking them up by external identifier.
 """
 
 from typing import Optional
@@ -30,15 +23,11 @@ from job_agent_platform_contracts.job_repository.exceptions import (
 
 
 class JobRepository(IJobRepository):
-    """
-    Repository for managing job database operations.
+    """Repository that persists jobs and manages related reference data.
 
-    This repository manages all job-related database operations including creating,
-    retrieving, updating, and deleting jobs. Reference entities (companies, locations,
-    categories, industries) are managed internally through get_or_create methods.
-
-    All job data flows through this single repository, ensuring consistency and
-    simplifying the API for consumers.
+    The repository currently supports creating job records and fetching them by
+    external identifier. Reference tables (companies, locations, categories,
+    industries) are populated transparently through the helper methods.
     """
 
     def __init__(self, session: Session):

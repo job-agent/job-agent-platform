@@ -33,15 +33,15 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
             state: Current agent state containing job and db_session
 
         Returns:
-            Updated agent state with storage status
+            State update containing the persistence status for the job
         """
         job: JobDict = state["job"]
         job_id = job.get("job_id")
         status = state.get("status", "in_progress")
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Storing job to database (ID: {job_id})...")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         db_session = state.get("db_session")
         if not db_session:
@@ -49,11 +49,10 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
             print(f"  State keys: {list(state.keys())}")
             print("  HINT: Make sure DATABASE_URL is set and database is running")
             print("  HINT: Ensure db_session is passed to run_job_processing()")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
             return {"status": status}
 
         try:
-
             job_repo = job_repository_class(db_session)
 
             job_create_data: JobCreate = {**job}
@@ -71,12 +70,12 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
 
         except Exception as e:
             print(f"  ERROR storing job: {e}")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
             return {"status": "error"}
 
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Finished storing job (ID: {job_id})")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         return {"status": status}
 

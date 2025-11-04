@@ -79,7 +79,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text(f"ℹ️ {message}")
 
         def sync_logger(message: str) -> None:
-            """Wrapper to call async logger from sync code."""
+            """Log workflow updates to stdout for orchestrator callbacks."""
             print(f"[Telegram Bot] {message}")
 
         orchestrator = dependencies.orchestrator_factory(logger=sync_logger)
