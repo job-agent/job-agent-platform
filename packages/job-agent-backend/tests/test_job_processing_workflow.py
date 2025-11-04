@@ -4,7 +4,6 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from job_agent_backend.workflows import run_job_processing
-from jobs_repository.models import Job
 from jobs_repository.repository.job_repository import JobRepository
 
 

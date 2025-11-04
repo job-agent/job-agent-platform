@@ -53,4 +53,3 @@ class SqliteTestDatabase:
 
     def dispose(self) -> None:
         self._engine.dispose()
-
