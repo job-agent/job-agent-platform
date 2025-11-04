@@ -7,6 +7,7 @@ This graph should be run once before processing multiple jobs.
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
+from .node_names import PIIRemovalNode
 from .nodes import remove_pii_node
 from .state import PIIRemovalState
 
@@ -25,10 +26,10 @@ def create_pii_removal_workflow() -> CompiledStateGraph:
     """
     workflow = StateGraph(PIIRemovalState)
 
-    workflow.add_node("remove_pii", remove_pii_node)
+    workflow.add_node(PIIRemovalNode.REMOVE_PII, remove_pii_node)
 
-    workflow.set_entry_point("remove_pii")
+    workflow.set_entry_point(PIIRemovalNode.REMOVE_PII)
 
-    workflow.add_edge("remove_pii", END)
+    workflow.add_edge(PIIRemovalNode.REMOVE_PII, END)
 
     return workflow.compile(name="PIIRemovalWorkflow")

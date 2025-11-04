@@ -9,6 +9,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
 from jobs_repository.repository import JobRepository
+from job_agent_backend.workflows.job_processing.node_names import JobProcessingNode
 from job_agent_backend.workflows.job_processing.nodes import (
     check_job_relevance_node,
     extract_must_have_skills_node,
@@ -49,41 +50,50 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
     workflow = StateGraph(AgentState)
 
     # Add the job relevance check node
-    workflow.add_node("check_job_relevance", check_job_relevance_node)
+    workflow.add_node(JobProcessingNode.CHECK_JOB_RELEVANCE, check_job_relevance_node)
 
     # Add the skill extraction nodes (will run in parallel)
-    workflow.add_node("extract_must_have_skills", extract_must_have_skills_node)
-    workflow.add_node("extract_nice_to_have_skills", extract_nice_to_have_skills_node)
+    workflow.add_node(JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS, extract_must_have_skills_node)
+    workflow.add_node(
+        JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
+        extract_nice_to_have_skills_node,
+    )
 
     # Create and add the store job node with injected repository
     store_job_node = create_store_job_node(job_repository_class)
-    workflow.add_node("store_job", store_job_node)
+    workflow.add_node(JobProcessingNode.STORE_JOB, store_job_node)
 
     # Add the processing node
-    workflow.add_node("process_jobs", print_jobs_node)
+    workflow.add_node(JobProcessingNode.PROCESS_JOBS, print_jobs_node)
 
     # Set the entry point to job relevance check
-    workflow.set_entry_point("check_job_relevance")
+    workflow.set_entry_point(JobProcessingNode.CHECK_JOB_RELEVANCE)
 
     # Add conditional edge after relevance check
     # When job is relevant, both extraction nodes run in parallel
     workflow.add_conditional_edges(
-        "check_job_relevance",
+        JobProcessingNode.CHECK_JOB_RELEVANCE,
         route_after_relevance_check,
         {
-            "extract_must_have_skills": "extract_must_have_skills",
-            "extract_nice_to_have_skills": "extract_nice_to_have_skills",
+            JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS: JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS,
+            JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS: JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
             "end": END,
         },
     )
 
     # Both extraction nodes converge to store_job
     # The framework waits for both to complete before proceeding
-    workflow.add_edge("extract_must_have_skills", "store_job")
-    workflow.add_edge("extract_nice_to_have_skills", "store_job")
+    workflow.add_edge(
+        JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS,
+        JobProcessingNode.STORE_JOB,
+    )
+    workflow.add_edge(
+        JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
+        JobProcessingNode.STORE_JOB,
+    )
 
     # Continue the workflow
-    workflow.add_edge("store_job", "process_jobs")
-    workflow.add_edge("process_jobs", END)
+    workflow.add_edge(JobProcessingNode.STORE_JOB, JobProcessingNode.PROCESS_JOBS)
+    workflow.add_edge(JobProcessingNode.PROCESS_JOBS, END)
 
     return workflow.compile(name="JobProcessingWorkflow")
