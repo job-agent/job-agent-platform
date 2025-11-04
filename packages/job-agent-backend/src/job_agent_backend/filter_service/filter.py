@@ -5,69 +5,67 @@ scrapper service before they are passed to the workflows system.
 """
 
 from typing import List, Optional
-from typing_extensions import TypedDict
 
 from job_scrapper_contracts import JobDict
+from job_agent_backend.contracts.filter_service import IFilterService
+
+from .filter_config import FilterConfig
 
 
-class FilterConfig(TypedDict, total=False):
+class FilterService(IFilterService):
     """
-    Configuration for job filtering.
-
-    Attributes:
-        max_months_of_experience: Maximum months of experience allowed (optional)
-        location_allows_to_apply: Whether location allows to apply (optional)
-    """
-
-    max_months_of_experience: int
-    location_allows_to_apply: bool
-
-
-def filter_jobs(jobs: List[JobDict], config: Optional[FilterConfig] = None) -> List[JobDict]:
-    """
-    Filter unsuitable job posts from the list based on configuration criteria.
-
-    If config is empty or None, all jobs are returned. Otherwise, jobs are
-    filtered based on the provided criteria:
-    - max_months_of_experience: Only includes jobs where experience_months <= max
-    - location_allows_to_apply: If True, only includes jobs where location.can_apply is True
+    Service for filtering unsuitable job posts based on configuration criteria.
 
     Args:
-        jobs: List of job dictionaries from the scrapper service
-        config: Optional configuration for filtering criteria
-
-    Returns:
-        List[JobDict]: Filtered list of job dictionaries
-
-    Example:
-        >>> jobs = [
-        ...     {"title": "Junior Dev", "experience_months": 12},
-        ...     {"title": "Senior Dev", "experience_months": 48}
-        ... ]
-        >>> config = {"max_months_of_experience": 24}
-        >>> filtered = filter_jobs(jobs, config)
-        >>> len(filtered)
-        1
+        config: Optional configuration for filtering criteria.
     """
-    if config is None or not config:
-        return jobs
 
-    filtered_jobs = []
+    def __init__(self, config: Optional[FilterConfig] = None) -> None:
+        self.config: FilterConfig = config or {}
 
-    for job in jobs:
-        # Check experience filter
-        if "max_months_of_experience" in config:
-            experience_months = job.get("experience_months", 0)
-            if experience_months > config["max_months_of_experience"]:
+    def configure(self, config: Optional[FilterConfig]) -> None:
+        self.config = config or {}
+
+    def filter(self, jobs: List[JobDict]) -> List[JobDict]:
+        """
+        Filter unsuitable job posts based on the configured criteria.
+
+        Args:
+            jobs: List of job dictionaries from the scrapper service.
+
+        Returns:
+            Filtered list of job dictionaries.
+        """
+
+        if not self.config:
+            return jobs
+
+        filtered_jobs: List[JobDict] = []
+
+        for job in jobs:
+            if not self._passes_experience(job):
                 continue
 
-        # Check location filter (only if explicitly set to True)
-        if config.get("location_allows_to_apply"):
-            location = job.get("location", {})
-            can_apply = location.get("can_apply", False)
-            if not can_apply:
+            if not self._passes_location(job):
                 continue
 
-        filtered_jobs.append(job)
+            filtered_jobs.append(job)
 
-    return filtered_jobs
+        return filtered_jobs
+
+    def _passes_experience(self, job: JobDict) -> bool:
+        if "max_months_of_experience" not in self.config:
+            return True
+
+        experience_months = job.get("experience_months", 0)
+
+        return experience_months <= self.config["max_months_of_experience"]
+
+    def _passes_location(self, job: JobDict) -> bool:
+        if not self.config.get("location_allows_to_apply"):
+            return True
+
+        location = job.get("location", {})
+        can_apply = location.get("can_apply", False)
+
+        return can_apply

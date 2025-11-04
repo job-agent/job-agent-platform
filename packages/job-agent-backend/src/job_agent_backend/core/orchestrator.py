@@ -15,9 +15,11 @@ from jobs_repository.database.session import get_db_session
 from jobs_repository.repository import JobRepository
 from cvs_repository import CVRepository
 from job_agent_platform_contracts import ICVRepository, IJobRepository, IJobAgentOrchestrator
-from job_agent_backend.filter_service import FilterConfig, filter_jobs
+from job_agent_backend.contracts import ICVLoader, IFilterService
+from job_agent_backend.cv_loader import CVLoader
+from job_agent_backend.filter_service.filter import FilterService
+from job_agent_backend.filter_service.filter_config import FilterConfig
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
-from job_agent_backend.utils import load_cv_from_pdf, load_cv_from_text
 
 
 class JobAgentOrchestrator(IJobAgentOrchestrator):
@@ -31,8 +33,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self,
         logger: Optional[Callable[[str], None]] = None,
         cv_repository_class: ICVRepository = CVRepository,
+        cv_loader: Optional[ICVLoader] = None,
         job_repository_class: IJobRepository = JobRepository,
         scrapper_manager: Optional[ScrapperManager] = None,
+        filter_service: Optional[IFilterService] = None,
     ):
         """Initialize the orchestrator.
 
@@ -48,8 +52,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         """
         self.logger = logger or print
         self.cv_repository_class = cv_repository_class
+        self.cv_loader = cv_loader or CVLoader()
         self.job_repository_class = job_repository_class
         self.scrapper_manager = scrapper_manager or ScrapperManager()
+        self.filter_service = filter_service or FilterService()
 
     def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
@@ -84,10 +90,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         # Determine file type and extract content
         if file_path_lower.endswith(".pdf"):
             self.logger(f"Processing PDF CV for user {user_id}")
-            cv_content = load_cv_from_pdf(file_path)
+            cv_content = self.cv_loader.load_from_pdf(file_path)
         elif file_path_lower.endswith(".txt"):
             self.logger(f"Processing text CV for user {user_id}")
-            cv_content = load_cv_from_text(file_path)
+            cv_content = self.cv_loader.load_from_text(file_path)
         else:
             # Unsupported file format
             extension = Path(file_path).suffix
@@ -206,7 +212,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         """
         self.logger("Filtering jobs...")
         filter_config = self._get_filter_config()
-        filtered_jobs = filter_jobs(jobs, filter_config)
+        self.filter_service.configure(filter_config)
+        filtered_jobs = self.filter_service.filter(jobs)
         self.logger(f"Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed")
         return filtered_jobs
 

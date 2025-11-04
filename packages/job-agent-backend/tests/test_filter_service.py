@@ -1,27 +1,33 @@
 """Integration tests for job filter service."""
 
-from job_agent_backend.filter_service import filter_jobs, FilterConfig
+from job_agent_backend.filter_service.filter import FilterService
+from job_agent_backend.filter_service.filter_config import FilterConfig
 
 
 class TestFilterService:
     """Test suite for job filtering functionality."""
 
+    def _apply_filter(self, jobs, config):
+        service = FilterService()
+        service.configure(config)
+        return service.filter(jobs)
+
     def test_filter_with_no_config_returns_all_jobs(self, sample_jobs_list):
         """Test that filtering with no config returns all jobs."""
-        result = filter_jobs(sample_jobs_list, None)
+        result = self._apply_filter(sample_jobs_list, None)
         assert len(result) == len(sample_jobs_list)
         assert result == sample_jobs_list
 
     def test_filter_with_empty_config_returns_all_jobs(self, sample_jobs_list):
         """Test that filtering with empty config returns all jobs."""
-        result = filter_jobs(sample_jobs_list, {})
+        result = self._apply_filter(sample_jobs_list, {})
         assert len(result) == len(sample_jobs_list)
         assert result == sample_jobs_list
 
     def test_filter_by_max_experience_months(self, sample_jobs_list):
         """Test filtering by maximum experience months."""
         config: FilterConfig = {"max_months_of_experience": 36}
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Should include jobs with 12 and 36 months experience
         assert len(result) == 2
@@ -32,7 +38,7 @@ class TestFilterService:
     def test_filter_by_max_experience_excludes_higher(self, sample_jobs_list):
         """Test that max experience filter excludes jobs with higher requirements."""
         config: FilterConfig = {"max_months_of_experience": 24}
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Should only include job with 12 months experience
         assert len(result) == 1
@@ -42,7 +48,7 @@ class TestFilterService:
     def test_filter_by_location_allows_to_apply(self, sample_jobs_list):
         """Test filtering by location allows to apply."""
         config: FilterConfig = {"location_allows_to_apply": True}
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Should exclude job_id 3 (can_apply=False)
         assert len(result) == 3
@@ -55,7 +61,7 @@ class TestFilterService:
             "max_months_of_experience": 36,
             "location_allows_to_apply": True,
         }
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Should only include jobs 1 and 2 (both meet both criteria)
         assert len(result) == 2
@@ -70,7 +76,7 @@ class TestFilterService:
             "max_months_of_experience": 15,
             "location_allows_to_apply": True,
         }
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Should only include job 1
         assert len(result) == 1
@@ -81,7 +87,7 @@ class TestFilterService:
         config: FilterConfig = {
             "max_months_of_experience": 0,  # No job has 0 experience requirement
         }
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         assert len(result) == 0
         assert result == []
@@ -95,7 +101,7 @@ class TestFilterService:
         ]
 
         config: FilterConfig = {"location_allows_to_apply": True}
-        result = filter_jobs(jobs, config)
+        result = self._apply_filter(jobs, config)
 
         # Should only include job 1
         assert len(result) == 1
@@ -109,7 +115,7 @@ class TestFilterService:
         ]
 
         config: FilterConfig = {"max_months_of_experience": 24}
-        result = filter_jobs(jobs, config)
+        result = self._apply_filter(jobs, config)
 
         # Should include both (missing experience defaults to 0)
         assert len(result) == 2
@@ -117,7 +123,7 @@ class TestFilterService:
     def test_filter_location_allows_false_keeps_jobs_when_not_required(self, sample_jobs_list):
         """Test that location_allows_to_apply=False doesn't filter anything."""
         config: FilterConfig = {"location_allows_to_apply": False}
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Should return all jobs (filter only active when True)
         assert len(result) == len(sample_jobs_list)
@@ -125,7 +131,7 @@ class TestFilterService:
     def test_filter_preserves_job_data_structure(self, sample_jobs_list):
         """Test that filtering preserves complete job data structure."""
         config: FilterConfig = {"max_months_of_experience": 36}
-        result = filter_jobs(sample_jobs_list, config)
+        result = self._apply_filter(sample_jobs_list, config)
 
         # Verify all fields are preserved
         for job in result:
@@ -144,7 +150,7 @@ class TestFilterService:
         ]
 
         config: FilterConfig = {"max_months_of_experience": 24}
-        result = filter_jobs(jobs, config)
+        result = self._apply_filter(jobs, config)
 
         # Should include jobs 1 and 2
         assert len(result) == 2
@@ -158,7 +164,7 @@ class TestFilterService:
             "max_months_of_experience": 48,
             "location_allows_to_apply": True,
         }
-        result = filter_jobs(jobs, config)
+        result = self._apply_filter(jobs, config)
 
         assert len(result) == 1
         assert result[0]["job_id"] == sample_job_dict["job_id"]
