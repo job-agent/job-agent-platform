@@ -24,7 +24,7 @@ from jobs_repository.repository import JobRepository
 from jobs_repository.mapper import JobMapper
 
 # Schemas
-from jobs_repository.schemas import JobCreate
+from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
 # Exceptions
 from jobs_repository.exceptions import (

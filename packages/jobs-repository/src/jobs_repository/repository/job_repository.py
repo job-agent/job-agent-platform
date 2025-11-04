@@ -12,16 +12,16 @@ Structure:
     - Utility Methods: Helper functions for common tasks
 """
 
-from typing import Dict, Any, Optional
+from typing import Optional
 
-from job_scrapper_contracts import JobDict
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select
 
+from job_agent_platform_contracts import IJobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
 from jobs_repository.mapper import JobMapper
-from jobs_repository.schemas import JobCreate
+from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from jobs_repository.exceptions import (
     JobAlreadyExistsError,
     TransactionError,
@@ -29,7 +29,7 @@ from jobs_repository.exceptions import (
 )
 
 
-class JobRepository:
+class JobRepository(IJobRepository):
     """
     Repository for managing job database operations.
 
@@ -151,7 +151,7 @@ class JobRepository:
     # Core CRUD Operations
     # ============================================================
 
-    def create(self, job_data: JobDict | JobCreate | Dict[str, Any]) -> Job:
+    def create(self, job_data: JobCreate) -> Job:
         """
         Create a new job from JobDict or JobCreate contract data.
 

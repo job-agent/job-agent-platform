@@ -23,7 +23,7 @@ services:
   telegram_bot:
     build:
       context: .
-      dockerfile: packages/telegram_bot/Dockerfile
+      dockerfile: packages/telegram-bot/Dockerfile
       # ⬇️ Enable BuildKit SSH mounts for private git+ssh deps
       ssh:
         - default

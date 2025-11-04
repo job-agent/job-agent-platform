@@ -1,7 +1,4 @@
-"""Schema definitions for job repository operations."""
-
-from typing import List
-from typing_extensions import TypedDict
+from typing import TypedDict, List
 
 
 class JobCreate(TypedDict, total=False):

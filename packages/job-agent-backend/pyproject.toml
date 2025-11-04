@@ -20,7 +20,8 @@ dependencies = [
 #    Mock service
 #    "scrapper-service @ git+ssh://git@github.com/job-agent/scrappers-mock.git@v0.1.0#subdirectory=packages/scrapper-service",
     "jobs-repository>=0.1.0",
-    "cvs-repository>=0.1.0"
+    "cvs-repository>=0.1.0",
+    "job-agent-platform-contracts>=0.1.0"
 ]
 
 [project.optional-dependencies]

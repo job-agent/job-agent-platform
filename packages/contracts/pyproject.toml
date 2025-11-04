@@ -3,20 +3,14 @@ requires = ["setuptools>=80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jobs-repository"
+name = "job-agent-platform-contracts"
 version = "0.1.0"
-description = "Jobs repository package for PostgreSQL database operations"
+description = "Shared contracts and data models for job-agent platform"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "sqlalchemy>=2.0.0",
-    "psycopg2-binary>=2.9.0",
-    "alembic>=1.13.0",
     "pydantic>=2.0.0",
-    "python-dotenv>=1.2.1",
-    "python-dateutil>=2.8.0",
     "job-scrapper-contracts @ git+https://github.com/job-agent/job-scrapper-contracts.git@v0.1.0",
-    "job-agent-platform-contracts>=0.1.0"
 ]
 
 [project.optional-dependencies]
@@ -24,7 +18,6 @@ dev = [
     "pytest>=8.4.2",
     "black>=25.9.0",
     "ruff>=0.14.3",
-    "pytest-asyncio>=0.23.0",
 ]
 
 [tool.setuptools.packages.find]

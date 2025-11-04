@@ -6,8 +6,10 @@ This repository provides methods for managing a single CV stored in a file.
 from typing import Optional
 from pathlib import Path
 
+from job_agent_platform_contracts import ICVRepository
 
-class CVRepository:
+
+class CVRepository(ICVRepository):
     """
     Repository for managing CV operations.
 

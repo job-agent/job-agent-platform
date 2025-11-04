@@ -3,7 +3,7 @@
 from job_scrapper_contracts import JobDict
 
 from jobs_repository.repository import JobRepository
-from jobs_repository.schemas import JobCreate
+from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
 from ...state import AgentState
 

@@ -18,7 +18,7 @@ From the monorepo root:
 pip install -e packages/job-agent-backend
 
 # Then install telegram bot
-pip install -e packages/telegram_bot
+pip install -e packages/telegram-bot
 ```
 
 Or with development dependencies:
@@ -42,14 +42,14 @@ Get a bot token from [@BotFather](https://t.me/botfather) on Telegram.
 Run the bot:
 
 ```bash
-python -m telegram_bot.main
+python -m telegram-bot.main
 ```
 
 Or from the package directory:
 
 ```bash
-cd packages/telegram_bot
-python src/telegram_bot/main.py
+cd packages/telegram-bot
+python src/telegram-bot/main.py
 ```
 
 ## Available Commands

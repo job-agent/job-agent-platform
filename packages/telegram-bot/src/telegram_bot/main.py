@@ -1,10 +1,10 @@
 """Entry point for running the Telegram bot.
 
 Run this module to start the Telegram bot interface:
-    python -m telegram_bot.main
+    python -m telegram-bot.main
 
 Or from the package directory:
-    python src/telegram_bot/main.py
+    python src/telegram-bot/main.py
 """
 
 from dotenv import load_dotenv
