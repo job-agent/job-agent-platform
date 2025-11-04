@@ -187,39 +187,6 @@ class TestJobAgentOrchestrator:
         with pytest.raises(ValueError, match="CV not found"):
             orchestrator.load_cv(user_id)
 
-    def test_get_filter_config_empty_when_no_env(self, orchestrator, monkeypatch):
-        """Test filter config is empty when no environment variables set."""
-        monkeypatch.delenv("FILTER_MAX_MONTHS_OF_EXPERIENCE", raising=False)
-        monkeypatch.delenv("FILTER_LOCATION_ALLOWS_TO_APPLY", raising=False)
-
-        config = orchestrator._get_filter_config()
-
-        assert config == {}
-
-    def test_get_filter_config_with_max_experience(self, orchestrator, monkeypatch):
-        """Test filter config includes max experience from env."""
-        monkeypatch.setenv("FILTER_MAX_MONTHS_OF_EXPERIENCE", "36")
-
-        config = orchestrator._get_filter_config()
-
-        assert config["max_months_of_experience"] == 36
-
-    def test_get_filter_config_with_location_allows(self, orchestrator, monkeypatch):
-        """Test filter config includes location_allows_to_apply from env."""
-        monkeypatch.setenv("FILTER_LOCATION_ALLOWS_TO_APPLY", "true")
-
-        config = orchestrator._get_filter_config()
-
-        assert config["location_allows_to_apply"] is True
-
-    def test_get_filter_config_location_allows_false(self, orchestrator, monkeypatch):
-        """Test filter config handles false values for location_allows_to_apply."""
-        monkeypatch.setenv("FILTER_LOCATION_ALLOWS_TO_APPLY", "false")
-
-        config = orchestrator._get_filter_config()
-
-        assert config["location_allows_to_apply"] is False
-
     def test_scrape_jobs(self, orchestrator, mock_scrapper_manager):
         """Test scrape_jobs calls scrapper manager correctly."""
         orchestrator.scrapper_manager = mock_scrapper_manager
@@ -244,9 +211,9 @@ class TestJobAgentOrchestrator:
         call_kwargs = mock_scrapper_manager.scrape_jobs_as_dicts.call_args[1]
         assert call_kwargs["posted_after"] == posted_after
 
-    def test_filter_jobs_list(self, orchestrator, sample_jobs_list, monkeypatch):
+    def test_filter_jobs_list(self, orchestrator, sample_jobs_list):
         """Test filter_jobs_list filters jobs correctly."""
-        monkeypatch.setenv("FILTER_MAX_MONTHS_OF_EXPERIENCE", "36")
+        orchestrator.filter_service.configure({"max_months_of_experience": 36})
 
         result = orchestrator.filter_jobs_list(sample_jobs_list)
 
@@ -368,14 +335,10 @@ class TestJobAgentOrchestrator:
         mock_get_db_session,
         mock_init_db,
         sample_cv_content,
-        monkeypatch,
         app_container,
     ):
         """Test complete pipeline with job filtering."""
         user_id = 3000
-
-        # Set filter config
-        monkeypatch.setenv("FILTER_MAX_MONTHS_OF_EXPERIENCE", "24")
 
         # Mock scrapper to return multiple jobs with complete structure
         mock_scrapper = MagicMock()
@@ -417,6 +380,8 @@ class TestJobAgentOrchestrator:
             cv_repository_class=mock_cv_repo_class,
             scrapper_manager=mock_scrapper,
         )
+
+        orchestrator.filter_service.configure({"max_months_of_experience": 24})
 
         # Mock DB session
         mock_session = MagicMock()

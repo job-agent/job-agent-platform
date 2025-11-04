@@ -21,7 +21,10 @@ class FilterService(IFilterService):
     """
 
     def __init__(self, config: Optional[FilterConfig] = None) -> None:
-        self.config: FilterConfig = config or {}
+        self.config: FilterConfig = config or {
+            "max_months_of_experience": 60,
+            "location_allows_to_apply": True,
+        }
 
     def configure(self, config: Optional[FilterConfig]) -> None:
         self.config = config or {}

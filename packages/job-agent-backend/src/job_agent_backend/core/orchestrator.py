@@ -4,7 +4,6 @@ This module contains the business logic for scraping, filtering, and processing 
 It can be used by any interface (CLI, Telegram, Web, etc.).
 """
 
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable
@@ -154,26 +153,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger(f"CV loaded successfully for user {user_id}")
         return cv_content
 
-    def _get_filter_config(self) -> FilterConfig:
-        """Build filter configuration from environment variables.
-
-        Returns:
-            FilterConfig dictionary with filtering parameters
-        """
-        filter_config: FilterConfig = {}
-
-        if os.getenv("FILTER_MAX_MONTHS_OF_EXPERIENCE"):
-            filter_config["max_months_of_experience"] = int(
-                os.getenv("FILTER_MAX_MONTHS_OF_EXPERIENCE")
-            )
-
-        if os.getenv("FILTER_LOCATION_ALLOWS_TO_APPLY"):
-            filter_config["location_allows_to_apply"] = os.getenv(
-                "FILTER_LOCATION_ALLOWS_TO_APPLY"
-            ).lower() in ("true", "1", "yes")
-
-        return filter_config
-
     def scrape_jobs(
         self,
         salary: int = 4000,
@@ -211,8 +190,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             Filtered list of jobs
         """
         self.logger("Filtering jobs...")
-        filter_config = self._get_filter_config()
-        self.filter_service.configure(filter_config)
         filtered_jobs = self.filter_service.filter(jobs)
         self.logger(f"Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed")
         return filtered_jobs
