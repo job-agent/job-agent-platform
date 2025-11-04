@@ -37,8 +37,6 @@ Place required settings in a `.env` file at the repository root (loaded automati
 
 ```bash
 TELEGRAM_BOT_TOKEN=123456:example-token-from-botfather
-OPENAI_API_KEY=sk-example
-DATABASE_URL=postgresql://user:password@localhost:5432/job_agent
 # Additional scrapper service variables as required by job-agent-backend
 ```
 

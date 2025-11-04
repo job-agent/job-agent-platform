@@ -9,11 +9,14 @@ RUN mkdir -p -m 0700 /root/.ssh && \
 
 WORKDIR /app
 
-COPY packages/jobs-repository /app/packages/jobs-repository
-RUN pip install --no-cache-dir /app/packages/jobs-repository
+COPY packages/contracts /app/packages/contracts
+RUN pip install --no-cache-dir /app/packages/contracts
 
 COPY packages/cvs-repository /app/packages/cvs-repository
 RUN pip install --no-cache-dir /app/packages/cvs-repository
+
+COPY packages/jobs-repository /app/packages/jobs-repository
+RUN pip install --no-cache-dir /app/packages/jobs-repository
 
 RUN --mount=type=ssh ssh -T git@github.com || true
 
