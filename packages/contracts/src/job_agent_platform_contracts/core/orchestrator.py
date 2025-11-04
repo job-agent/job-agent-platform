@@ -3,7 +3,14 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Iterable, Optional, Sequence
+
+from sqlalchemy.orm import Session
+
+from job_scrapper_contracts import JobDict
+
+from job_agent_platform_contracts.core.job_processing_result import JobProcessingResult
+from job_agent_platform_contracts.core.pipeline_summary import PipelineSummary
 
 
 class IJobAgentOrchestrator(ABC):
@@ -32,28 +39,28 @@ class IJobAgentOrchestrator(ABC):
         employment: str = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[JobDict]:
         """Retrieve job listings matching the provided filters."""
 
     @abstractmethod
-    def filter_jobs_list(self, jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def filter_jobs_list(self, jobs: Sequence[JobDict]) -> list[JobDict]:
         """Filter job listings according to the configured rules."""
 
     @abstractmethod
     def process_job(
         self,
-        job: Dict[str, Any],
+        job: JobDict,
         cv_content: str,
-        db_session: Optional[Any] = None,
-    ) -> Dict[str, Any]:
+        db_session: Optional[Session] = None,
+    ) -> JobProcessingResult:
         """Execute processing workflows for a single job and return the results."""
 
     @abstractmethod
     def process_jobs_iterator(
         self,
-        jobs: List[Dict[str, Any]],
+        jobs: Sequence[JobDict],
         cv_content: str,
-    ) -> Iterable[Tuple[int, int, Dict[str, Any]]]:
+    ) -> Iterable[tuple[int, int, JobProcessingResult]]:
         """Yield processing results for each job alongside progress metadata."""
 
     @abstractmethod
@@ -64,5 +71,5 @@ class IJobAgentOrchestrator(ABC):
         employment: str = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> PipelineSummary:
         """Execute the end-to-end job processing workflow and return summary data."""

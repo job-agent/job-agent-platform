@@ -6,19 +6,38 @@ It can be used by any interface (CLI, Telegram, Web, etc.).
 
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Callable
+from typing import Callable, Iterator, Optional, Protocol, Sequence, cast
+
+from sqlalchemy.orm import Session
 
 from scrapper_service import ScrapperManager
 from jobs_repository import init_db
 from jobs_repository.database.session import get_db_session
 from jobs_repository.repository import JobRepository
 from cvs_repository import CVRepository
-from job_agent_platform_contracts import ICVRepository, IJobRepository, IJobAgentOrchestrator
+from job_scrapper_contracts import JobDict
+from job_agent_platform_contracts import (
+    ICVRepository,
+    IJobRepository,
+    IJobAgentOrchestrator,
+    JobProcessingResult,
+    PipelineSummary,
+)
 from job_agent_backend.contracts import ICVLoader, IFilterService
 from job_agent_backend.cv_loader import CVLoader
 from job_agent_backend.filter_service.filter import FilterService
-from job_agent_backend.filter_service.filter_config import FilterConfig
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
+from job_agent_backend.workflows.job_processing.state import AgentState
+
+
+class ScrapperManagerProtocol(Protocol):
+    def scrape_jobs_as_dicts(
+        self,
+        salary: int,
+        employment: str,
+        posted_after: Optional[datetime],
+        timeout: int,
+    ) -> list[JobDict]: ...
 
 
 class JobAgentOrchestrator(IJobAgentOrchestrator):
@@ -31,10 +50,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
     def __init__(
         self,
         logger: Optional[Callable[[str], None]] = None,
-        cv_repository_class: ICVRepository = CVRepository,
+        cv_repository_class: type[ICVRepository] = CVRepository,
         cv_loader: Optional[ICVLoader] = None,
-        job_repository_class: IJobRepository = JobRepository,
-        scrapper_manager: Optional[ScrapperManager] = None,
+        job_repository_class: type[IJobRepository] = JobRepository,
+        scrapper_manager: Optional[ScrapperManagerProtocol] = None,
         filter_service: Optional[IFilterService] = None,
     ):
         """Initialize the orchestrator.
@@ -49,12 +68,12 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             scrapper_manager: Optional scrapper manager instance.
                             If None, will create a new ScrapperManager().
         """
-        self.logger = logger or print
-        self.cv_repository_class = cv_repository_class
-        self.cv_loader = cv_loader or CVLoader()
-        self.job_repository_class = job_repository_class
-        self.scrapper_manager = scrapper_manager or ScrapperManager()
-        self.filter_service = filter_service or FilterService()
+        self.logger: Callable[[str], None] = logger or print
+        self.cv_repository_class: type[ICVRepository] = cv_repository_class
+        self.cv_loader: ICVLoader = cv_loader or cast(ICVLoader, CVLoader())
+        self.job_repository_class: type[IJobRepository] = job_repository_class
+        self.scrapper_manager: ScrapperManagerProtocol = scrapper_manager or ScrapperManager()
+        self.filter_service: IFilterService = filter_service or FilterService()
 
     def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
@@ -159,7 +178,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         employment: str = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[JobDict]:
         """Scrape jobs using the scrapper service.
 
         Automatically paginates through all pages until reaching the date cutoff.
@@ -180,7 +199,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger(f"Scraped {len(jobs)} jobs")
         return jobs
 
-    def filter_jobs_list(self, jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def filter_jobs_list(self, jobs: Sequence[JobDict]) -> list[JobDict]:
         """Filter jobs based on configuration.
 
         Args:
@@ -190,11 +209,16 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             Filtered list of jobs
         """
         self.logger("Filtering jobs...")
-        filtered_jobs = self.filter_service.filter(jobs)
+        filtered_jobs = self.filter_service.filter(list(jobs))
         self.logger(f"Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed")
         return filtered_jobs
 
-    def process_job(self, job: Dict[str, Any], cv_content: str, db_session=None) -> Dict[str, Any]:
+    def process_job(
+        self,
+        job: JobDict,
+        cv_content: str,
+        db_session: Optional[Session] = None,
+    ) -> JobProcessingResult:
         """Process a single job with the workflows system.
 
         Args:
@@ -210,12 +234,16 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             - status: Final workflow status
             - job: Original job dictionary
         """
-        result = run_job_processing(
+        result: AgentState = run_job_processing(
             job, cv_content, db_session, job_repository_class=self.job_repository_class
         )
-        return result
+        return cast(JobProcessingResult, result)
 
-    def process_jobs_iterator(self, jobs: List[Dict[str, Any]], cv_content: str):
+    def process_jobs_iterator(
+        self,
+        jobs: Sequence[JobDict],
+        cv_content: str,
+    ) -> Iterator[tuple[int, int, JobProcessingResult]]:
         """Process jobs one at a time, yielding results as they complete.
 
         This method manages the database session internally and yields results
@@ -229,8 +257,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             Tuple of (job_index, total_jobs, result_dict) for each processed job
         """
         # Create database session (migrations run automatically on container startup)
-        db_gen = get_db_session()
-        db_session = next(db_gen)
+        db_generator = get_db_session()
+        db_session = next(db_generator)
 
         try:
             for idx, job in enumerate(jobs, 1):
@@ -247,7 +275,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         employment: str = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
-    ) -> Dict[str, Any]:
+    ) -> PipelineSummary:
         """Run the complete job processing pipeline.
 
         This is the main entry point that:
@@ -292,15 +320,15 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger(f"Processing {len(filtered_jobs)} jobs with workflows system...")
 
         # Create a database session for all jobs
-        db_gen = get_db_session()
-        db_session = next(db_gen)
+        db_generator = get_db_session()
+        db_session = next(db_generator)
 
         try:
             for idx, job in enumerate(filtered_jobs, 1):
                 self.logger(f"\nProcessing job {idx}/{len(filtered_jobs)}")
                 self.process_job(job, cleaned_cv, db_session)
 
-            results = {
+            results: PipelineSummary = {
                 "total_scraped": len(jobs),
                 "total_filtered": len(filtered_jobs),
                 "total_processed": len(filtered_jobs),

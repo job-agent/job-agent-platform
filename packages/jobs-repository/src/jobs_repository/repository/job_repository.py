@@ -22,7 +22,7 @@ from job_agent_platform_contracts import IJobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
 from jobs_repository.mapper import JobMapper
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
-from jobs_repository.exceptions import (
+from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
     TransactionError,
     ValidationError,

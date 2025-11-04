@@ -1,18 +1,19 @@
-"""Exceptions module - custom exceptions."""
+"""Jobs repository exception exports."""
 
-from jobs_repository.exceptions.base import JobRepositoryError
-from jobs_repository.exceptions.job import JobNotFoundError, JobAlreadyExistsError
-from jobs_repository.exceptions.database import (
+from job_agent_platform_contracts.job_repository.exceptions import (
+    JobRepositoryError,
+    JobAlreadyExistsError,
+    JobNotFoundError,
     DatabaseConnectionError,
+    ValidationError,
     TransactionError,
 )
-from jobs_repository.exceptions.validation import ValidationError
 
 __all__ = [
     "JobRepositoryError",
-    "JobNotFoundError",
     "JobAlreadyExistsError",
+    "JobNotFoundError",
     "DatabaseConnectionError",
-    "TransactionError",
     "ValidationError",
+    "TransactionError",
 ]

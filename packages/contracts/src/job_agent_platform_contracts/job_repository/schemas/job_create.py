@@ -1,31 +1,34 @@
-from typing import TypedDict, List
+from typing import List, TypedDict
+
+from .company_payload import CompanyPayload
+from .location_payload import LocationPayload
+from .salary_payload import SalaryPayload
+
+ISODateString = str
 
 
 class JobCreate(TypedDict, total=False):
-    """Schema for creating a job with all fields including skills.
+    """Schema for creating a job including skill annotations.
 
-    This schema extends the basic job data with additional fields like
-    must_have_skills and nice_to_have_skills that are populated during
-    job processing workflows.
+    Required fields provide the core job record, optional fields extend the
+    original job dictionary, and skill fields capture enrichment results from
+    processing workflows.
     """
 
-    # Required fields (when total=False, these are still effectively required by business logic)
     job_id: int
     title: str
     url: str
     description: str
-    company: dict  # CompanyDict from job_scrapper_contracts
+    company: CompanyPayload
     category: str
-    date_posted: str  # ISO format datetime string
-    valid_through: str  # ISO format datetime string
+    date_posted: ISODateString
+    valid_through: ISODateString
     employment_type: str
 
-    # Optional fields from JobDict
-    salary: dict  # SalaryDict from job_scrapper_contracts
+    salary: SalaryPayload
     experience_months: float
-    location: dict  # LocationDict from job_scrapper_contracts
+    location: LocationPayload
     industry: str
 
-    # Additional fields for job creation with skills
     must_have_skills: List[str]
     nice_to_have_skills: List[str]

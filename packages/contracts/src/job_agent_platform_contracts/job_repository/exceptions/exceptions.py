@@ -13,7 +13,13 @@ class RepositoryError(JobAgentError):
     pass
 
 
-class JobAlreadyExistsError(RepositoryError):
+class JobRepositoryError(RepositoryError):
+    """Base exception for job repository-specific errors."""
+
+    pass
+
+
+class JobAlreadyExistsError(JobRepositoryError):
     """Raised when attempting to create a job that already exists."""
 
     def __init__(self, external_id: str, source: str):
@@ -24,7 +30,7 @@ class JobAlreadyExistsError(RepositoryError):
         )
 
 
-class JobNotFoundError(RepositoryError):
+class JobNotFoundError(JobRepositoryError):
     """Raised when a requested job cannot be found."""
 
     def __init__(self, identifier: str | int, identifier_type: str = "id"):
@@ -33,17 +39,10 @@ class JobNotFoundError(RepositoryError):
         super().__init__(f"Job with {identifier_type} '{identifier}' not found")
 
 
-class ValidationError(RepositoryError):
+class ValidationError(JobRepositoryError):
     """Raised when data validation fails."""
 
     def __init__(self, field: str, message: str):
         self.field = field
         self.message = message
         super().__init__(f"Validation error on field '{field}': {message}")
-
-
-class TransactionError(RepositoryError):
-    """Raised when a database transaction fails."""
-
-    def __init__(self, message: str):
-        super().__init__(f"Transaction error: {message}")

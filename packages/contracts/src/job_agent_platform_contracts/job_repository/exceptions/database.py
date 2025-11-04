@@ -1,6 +1,6 @@
 """Database-related exceptions."""
 
-from jobs_repository.exceptions.base import JobRepositoryError
+from .exceptions import JobRepositoryError
 
 
 class DatabaseConnectionError(JobRepositoryError):
