@@ -42,13 +42,10 @@ def in_memory_engine():
         "sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False}
     )
 
-    # Remove schema from all tables for SQLite compatibility
-    # and replace ARRAY types with JSONArray
     for table in Base.metadata.tables.values():
         table.schema = None
         for column in table.columns:
             if hasattr(column.type, "__class__") and column.type.__class__.__name__ == "ARRAY":
-                # Replace PostgreSQL ARRAY with our JSONArray type for SQLite
                 column.type = JSONArray()
 
     Base.metadata.create_all(engine)

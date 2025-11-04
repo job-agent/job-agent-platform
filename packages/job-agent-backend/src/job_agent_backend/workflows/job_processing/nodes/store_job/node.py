@@ -43,7 +43,6 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
         print(f"Storing job to database (ID: {job_id})...")
         print(f"{'='*60}\n")
 
-        # Get database session from state
         db_session = state.get("db_session")
         if not db_session:
             print("  ERROR: No database session available in state")
@@ -54,13 +53,11 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
             return {"status": status}
 
         try:
-            # Create repository instance using injected class
+
             job_repo = job_repository_class(db_session)
 
-            # Create JobCreate dict with job data and extracted skills
-            job_create_data: JobCreate = {**job}  # type: ignore
+            job_create_data: JobCreate = {**job}
 
-            # Add extracted skills from state to the job data
             if extracted_must_have_skills := state.get("extracted_must_have_skills"):
                 job_create_data["must_have_skills"] = extracted_must_have_skills
                 print(f"  Added {len(extracted_must_have_skills)} must-have skills")
@@ -86,5 +83,4 @@ def create_store_job_node(job_repository_class: Type[Any] = JobRepository) -> Ca
     return store_job_node
 
 
-# Default store_job_node for backward compatibility
 store_job_node = create_store_job_node()

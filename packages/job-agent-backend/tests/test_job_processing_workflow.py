@@ -35,25 +35,21 @@ class TestJobProcessingWorkflow:
         sample_cv_content,
     ):
         """Test that relevant job goes through complete skill extraction."""
-        # Mock relevance check - job is relevant
+
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
 
-        # Mock must-have skills extraction
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python", "Django", "PostgreSQL"]
         mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
 
-        # Mock nice-to-have skills extraction
         mock_nice_result = MagicMock()
         mock_nice_result.skills = ["Docker", "Kubernetes"]
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        # Run the workflow
         result = run_job_processing(sample_job_dict, sample_cv_content)
 
-        # Verify the result
         assert result["is_relevant"] is True
         assert "extracted_must_have_skills" in result
         assert "extracted_nice_to_have_skills" in result
@@ -67,19 +63,17 @@ class TestJobProcessingWorkflow:
         sample_cv_content,
     ):
         """Test that irrelevant job skips skill extraction."""
-        # Mock relevance check - job is NOT relevant
+
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = False
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
 
-        # Run the workflow
         result = run_job_processing(sample_irrelevant_job_dict, sample_cv_content)
 
-        # Verify the result
         assert result["is_relevant"] is False
         assert "extracted_must_have_skills" not in result
         assert "extracted_nice_to_have_skills" not in result
-        # Note: when job is irrelevant, workflow stops early so status may be "started"
+
         assert result["status"] in ["started", "completed"]
 
     def test_workflow_with_empty_cv_raises_error(self, sample_job_dict):
@@ -109,7 +103,7 @@ class TestJobProcessingWorkflow:
         db_session,
     ):
         """Test that workflow stores job in database when session is provided."""
-        # Mock all responses for relevant job
+
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
@@ -122,10 +116,8 @@ class TestJobProcessingWorkflow:
         mock_nice_result.skills = ["Docker"]
         mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
 
-        # Run the workflow with database session
         run_job_processing(sample_job_dict, sample_cv_content, db_session)
 
-        # Verify job was stored in database
         stored_job = (
             db_session.query(Job).filter_by(external_id=str(sample_job_dict["job_id"])).first()
         )
@@ -145,11 +137,8 @@ class TestJobProcessingWorkflow:
         mock_relevance_result.is_relevant = False
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
 
-        # Run without db_session
         result = run_job_processing(sample_irrelevant_job_dict, sample_cv_content, None)
 
-        # Should complete successfully
-        # Note: when job is irrelevant, workflow stops early so status may be "started"
         assert result["status"] in ["started", "completed"]
         assert result["is_relevant"] is False
 
@@ -169,7 +158,7 @@ class TestJobProcessingWorkflow:
         sample_cv_content,
     ):
         """Test that final state includes original job data."""
-        # Setup mocks
+
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
@@ -184,7 +173,6 @@ class TestJobProcessingWorkflow:
 
         result = run_job_processing(sample_job_dict, sample_cv_content)
 
-        # Verify original job data is preserved
         assert result["job"] == sample_job_dict
         assert result["cv_context"] == sample_cv_content
 
@@ -204,7 +192,7 @@ class TestJobProcessingWorkflow:
         sample_cv_content,
     ):
         """Test workflow handles empty skills extraction gracefully."""
-        # Job is relevant but no skills found
+
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
@@ -219,7 +207,6 @@ class TestJobProcessingWorkflow:
 
         result = run_job_processing(sample_job_dict, sample_cv_content)
 
-        # Should complete successfully with empty skill lists
         assert result["is_relevant"] is True
         assert result["extracted_must_have_skills"] == []
         assert result["extracted_nice_to_have_skills"] == []
@@ -255,7 +242,6 @@ class TestJobProcessingWorkflow:
 
         result = run_job_processing(sample_job_dict, sample_cv_content)
 
-        # Verify CV context is in final state
         assert result["cv_context"] == sample_cv_content
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
@@ -286,7 +272,6 @@ class TestJobProcessingWorkflow:
             "location": {"region": "Remote", "is_remote": True},
         }
 
-        # Setup mocks
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
         mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
@@ -301,7 +286,6 @@ class TestJobProcessingWorkflow:
 
         result = run_job_processing(job_without_salary, sample_cv_content)
 
-        # Should complete successfully
         assert result["status"] == "completed"
         assert result["is_relevant"] is True
 
@@ -316,7 +300,6 @@ class TestJobProcessingWorkflow:
 
         result = run_job_processing(sample_job_dict, sample_cv_content)
 
-        # Verify required fields are present
         assert "job" in result
         assert "status" in result
         assert "cv_context" in result

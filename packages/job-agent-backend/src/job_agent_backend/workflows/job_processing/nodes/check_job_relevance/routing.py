@@ -15,7 +15,7 @@ def route_after_relevance_check(state: AgentState) -> str | List[str]:
     Returns:
         List of node names to execute in parallel if relevant, "end" if irrelevant
     """
-    is_relevant = state.get("is_relevant", True)  # Default to True if not set
+    is_relevant = state.get("is_relevant", True)
     if not is_relevant:
         return "end"
     return [

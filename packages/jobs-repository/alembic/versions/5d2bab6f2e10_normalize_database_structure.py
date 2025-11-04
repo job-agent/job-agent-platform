@@ -12,7 +12,6 @@ from alembic import op
 import sqlalchemy as sa
 
 
-# revision identifiers, used by Alembic.
 revision: str = "5d2bab6f2e10"
 down_revision: Union[str, None] = "de9ecbbf34c7"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -22,7 +21,6 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create normalized tables and migrate existing data."""
 
-    # Create companies table
     op.create_table(
         "companies",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -38,7 +36,6 @@ def upgrade() -> None:
         op.f("ix_jobs_companies_name"), "companies", ["name"], unique=True, schema="jobs"
     )
 
-    # Create locations table
     op.create_table(
         "locations",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -54,7 +51,6 @@ def upgrade() -> None:
         op.f("ix_jobs_locations_region"), "locations", ["region"], unique=True, schema="jobs"
     )
 
-    # Create categories table
     op.create_table(
         "categories",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -72,7 +68,6 @@ def upgrade() -> None:
         op.f("ix_jobs_categories_name"), "categories", ["name"], unique=True, schema="jobs"
     )
 
-    # Create industries table
     op.create_table(
         "industries",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -90,7 +85,6 @@ def upgrade() -> None:
         op.f("ix_jobs_industries_name"), "industries", ["name"], unique=True, schema="jobs"
     )
 
-    # Add new columns to jobs table
     op.add_column("jobs", sa.Column("company_id", sa.Integer(), nullable=True), schema="jobs")
     op.add_column("jobs", sa.Column("location_id", sa.Integer(), nullable=True), schema="jobs")
     op.add_column("jobs", sa.Column("category_id", sa.Integer(), nullable=True), schema="jobs")
@@ -99,7 +93,6 @@ def upgrade() -> None:
         "jobs", sa.Column("experience_months", sa.Integer(), nullable=True), schema="jobs"
     )
 
-    # Create foreign key constraints
     op.create_foreign_key(
         "fk_jobs_company_id",
         "jobs",
@@ -137,7 +130,6 @@ def upgrade() -> None:
         referent_schema="jobs",
     )
 
-    # Create indexes on foreign key columns
     op.create_index(
         op.f("ix_jobs_jobs_company_id"), "jobs", ["company_id"], unique=False, schema="jobs"
     )
@@ -151,10 +143,8 @@ def upgrade() -> None:
         op.f("ix_jobs_jobs_industry_id"), "jobs", ["industry_id"], unique=False, schema="jobs"
     )
 
-    # Migrate existing data using raw SQL
     connection = op.get_bind()
 
-    # Migrate companies
     connection.execute(
         sa.text(
             """
@@ -167,7 +157,6 @@ def upgrade() -> None:
         )
     )
 
-    # Migrate locations
     connection.execute(
         sa.text(
             """
@@ -180,7 +169,6 @@ def upgrade() -> None:
         )
     )
 
-    # Migrate categories from extra_data
     connection.execute(
         sa.text(
             """
@@ -193,7 +181,6 @@ def upgrade() -> None:
         )
     )
 
-    # Migrate industries from extra_data
     connection.execute(
         sa.text(
             """
@@ -206,7 +193,6 @@ def upgrade() -> None:
         )
     )
 
-    # Update jobs table with foreign keys
     connection.execute(
         sa.text(
             """
@@ -251,7 +237,6 @@ def upgrade() -> None:
         )
     )
 
-    # Migrate experience_months from extra_data (cast to FLOAT first, then INTEGER)
     connection.execute(
         sa.text(
             """
@@ -262,33 +247,28 @@ def upgrade() -> None:
         )
     )
 
-    # Make company column nullable (for backward compatibility)
     op.alter_column("jobs", "company", nullable=True, schema="jobs")
 
 
 def downgrade() -> None:
     """Revert database normalization."""
 
-    # Remove indexes
     op.drop_index(op.f("ix_jobs_jobs_industry_id"), table_name="jobs", schema="jobs")
     op.drop_index(op.f("ix_jobs_jobs_category_id"), table_name="jobs", schema="jobs")
     op.drop_index(op.f("ix_jobs_jobs_location_id"), table_name="jobs", schema="jobs")
     op.drop_index(op.f("ix_jobs_jobs_company_id"), table_name="jobs", schema="jobs")
 
-    # Remove foreign key constraints
     op.drop_constraint("fk_jobs_industry_id", "jobs", type_="foreignkey", schema="jobs")
     op.drop_constraint("fk_jobs_category_id", "jobs", type_="foreignkey", schema="jobs")
     op.drop_constraint("fk_jobs_location_id", "jobs", type_="foreignkey", schema="jobs")
     op.drop_constraint("fk_jobs_company_id", "jobs", type_="foreignkey", schema="jobs")
 
-    # Remove new columns from jobs table
     op.drop_column("jobs", "experience_months", schema="jobs")
     op.drop_column("jobs", "industry_id", schema="jobs")
     op.drop_column("jobs", "category_id", schema="jobs")
     op.drop_column("jobs", "location_id", schema="jobs")
     op.drop_column("jobs", "company_id", schema="jobs")
 
-    # Drop normalized tables
     op.drop_index(op.f("ix_jobs_industries_name"), table_name="industries", schema="jobs")
     op.drop_index(op.f("ix_jobs_industries_id"), table_name="industries", schema="jobs")
     op.drop_table("industries", schema="jobs")
@@ -305,5 +285,4 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_jobs_companies_id"), table_name="companies", schema="jobs")
     op.drop_table("companies", schema="jobs")
 
-    # Make company column not nullable again
     op.alter_column("jobs", "company", nullable=False, schema="jobs")

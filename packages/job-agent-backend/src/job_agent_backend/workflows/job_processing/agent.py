@@ -48,7 +48,7 @@ def run_job_processing(
         >>> if result.get("is_relevant"):
         >>>     print(f"Relevant job with skills: {result.get('extracted_must_have_skills')}")
     """
-    # Check if LangSmith tracing is enabled
+
     tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
     project_name = os.getenv("LANGCHAIN_PROJECT", "default")
 
@@ -56,28 +56,23 @@ def run_job_processing(
         print(f"🔍 LangSmith tracing enabled - Project: {project_name}")
         print("   View traces at: https://smith.langchain.com/\n")
 
-    # Validate CV content
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
 
-    # Create the workflow with injected repository class
     if job_repository_class is not None:
         workflow = create_workflow(job_repository_class=job_repository_class)
     else:
         workflow = create_workflow()
 
-    # Initialize state for this job
     initial_state: AgentState = {
         "job": job,
         "status": "started",
         "cv_context": cv_content,
     }
 
-    # Add db_session if provided
     if db_session:
         initial_state["db_session"] = db_session
 
-    # Run the workflow
     final_state = workflow.invoke(initial_state)
 
     print(f"Workflow completed with status: {final_state['status']}")

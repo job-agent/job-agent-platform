@@ -84,7 +84,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Returns:
             Path object for the user's CV file
         """
-        # Store CVs in data/cvs/ directory relative to package root
         package_root = Path(__file__).parent.parent.parent
         cv_dir = package_root / "data" / "cvs"
         cv_dir.mkdir(parents=True, exist_ok=True)
@@ -105,7 +104,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         """
         file_path_lower = file_path.lower()
 
-        # Determine file type and extract content
         if file_path_lower.endswith(".pdf"):
             self.logger(f"Processing PDF CV for user {user_id}")
             cv_content = self.cv_loader.load_from_pdf(file_path)
@@ -113,19 +111,16 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             self.logger(f"Processing text CV for user {user_id}")
             cv_content = self.cv_loader.load_from_text(file_path)
         else:
-            # Unsupported file format
             extension = Path(file_path).suffix
             raise ValueError(f"Unsupported file format: {extension}. Supported formats: .pdf, .txt")
 
         if not cv_content:
             raise ValueError("Failed to extract content from CV file")
 
-        # Remove PII from CV content
         self.logger(f"Removing PII from CV for user {user_id}")
         cleaned_cv_content = run_pii_removal(cv_content)
         self.logger(f"PII removed from CV for user {user_id}")
 
-        # Save the cleaned CV content
         cv_path = self.get_cv_path(user_id)
         cv_repository = self.cv_repository_class(cv_path)
         cv_repository.create(cleaned_cv_content)
@@ -256,7 +251,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Yields:
             Tuple of (job_index, total_jobs, result_dict) for each processed job
         """
-        # Create database session (migrations run automatically on container startup)
         db_generator = get_db_session()
         db_session = next(db_generator)
 
@@ -265,7 +259,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
                 result = self.process_job(job, cv_content, db_session)
                 yield idx, len(jobs), result
         finally:
-            # Always close the database session
             db_session.close()
 
     def run_complete_pipeline(
@@ -298,7 +291,6 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Raises:
             ValueError: If user CV is not found or cannot be loaded
         """
-        # Step 0: Initialize database (create tables if they don't exist)
         self.logger("Initializing database...")
         try:
             init_db()
@@ -307,19 +299,14 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             self.logger(f"Warning: Database initialization failed: {e}")
             self.logger("Continuing without database storage...")
 
-        # Step 1: Scrape jobs
         jobs = self.scrape_jobs(salary, employment, posted_after, timeout)
 
-        # Step 2: Filter jobs
         filtered_jobs = self.filter_jobs_list(jobs)
 
-        # Step 3: Load CV from repository (already cleaned of PII)
         cleaned_cv = self.load_cv(user_id)
 
-        # Step 4: Process jobs with database session
         self.logger(f"Processing {len(filtered_jobs)} jobs with workflows system...")
 
-        # Create a database session for all jobs
         db_generator = get_db_session()
         db_session = next(db_generator)
 
@@ -337,5 +324,4 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             self.logger(f"\nPipeline completed - Processed {len(filtered_jobs)} jobs")
             return results
         finally:
-            # Close the database session
             db_session.close()

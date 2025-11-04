@@ -32,16 +32,13 @@ class JobMapper:
         """
         mapped_data: Dict[str, Any] = {}
 
-        # Map simple fields
         self._map_simple_fields(job_data, mapped_data)
 
-        # Handle nested objects and relationships
         self._map_company(job_data, mapped_data)
         self._map_location(job_data, mapped_data)
         self._map_category(job_data, mapped_data)
         self._map_industry(job_data, mapped_data)
 
-        # Handle complex fields
         self._map_salary(job_data, mapped_data)
         self._map_datetime_fields(job_data, mapped_data)
 
@@ -53,12 +50,11 @@ class JobMapper:
         """Map simple scalar fields from JobDict to Job model."""
         mapped_data["title"] = job_data.get("title")
         mapped_data["description"] = job_data.get("description")
-        mapped_data["external_id"] = str(job_data.get("job_id"))  # job_id -> external_id
-        mapped_data["source_url"] = job_data.get("url")  # url -> source_url
-        mapped_data["job_type"] = job_data.get("employment_type")  # employment_type -> job_type
+        mapped_data["external_id"] = str(job_data.get("job_id"))
+        mapped_data["source_url"] = job_data.get("url")
+        mapped_data["job_type"] = job_data.get("employment_type")
         mapped_data["experience_months"] = job_data.get("experience_months")
 
-        # Map skills arrays
         if must_have_skills := job_data.get("must_have_skills"):
             mapped_data["must_have_skills"] = must_have_skills
         if nice_to_have_skills := job_data.get("nice_to_have_skills"):

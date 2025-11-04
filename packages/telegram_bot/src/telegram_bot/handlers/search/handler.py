@@ -29,7 +29,6 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     dependencies = get_dependencies(context)
     orchestrator = dependencies.orchestrator_factory()
 
-    # Check if user already has an active search
     if active_searches.get(user_id, False):
         await update.message.reply_text(
             "⚠️ You already have a search running. Please wait for it to complete "
@@ -37,16 +36,13 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
 
-    # Parse arguments
     args = context.args or []
     params = {"salary": 4000, "employment": "remote", "days": 1, "timeout": 30}
 
-    # Parse key=value arguments
     for arg in args:
         if "=" in arg:
             key, value = arg.split("=", 1)
             if key in params:
-                # Convert to appropriate type
                 if key in ("salary", "days", "timeout"):
                     try:
                         params[key] = int(value)
@@ -58,12 +54,10 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 else:
                     params[key] = value
 
-    # Calculate posted_after date if days parameter provided
     posted_after = None
     if params["days"] is not None:
         posted_after = datetime.now(timezone.utc) - timedelta(days=params["days"])
 
-    # Check if user has uploaded a CV
     if not orchestrator.has_cv(user_id):
         await update.message.reply_text(
             "❌ No CV found!\n\n"
@@ -72,29 +66,24 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
 
-    # Send initial confirmation
     await update.message.reply_text(
         formatter.format_search_parameters(params["salary"], params["employment"], params["days"])
     )
 
-    # Mark search as active
     active_searches[user_id] = True
 
     try:
-        # Create logger that sends messages to telegram
+
         async def telegram_logger(message: str) -> None:
             """Send log messages to the user."""
             await update.message.reply_text(f"ℹ️ {message}")
 
-        # Create orchestrator with telegram logger
         def sync_logger(message: str) -> None:
             """Wrapper to call async logger from sync code."""
-            # We'll collect messages and send them in batches
             print(f"[Telegram Bot] {message}")
 
         orchestrator = dependencies.orchestrator_factory(logger=sync_logger)
 
-        # Run the pipeline in a separate thread to avoid blocking
         loop = asyncio.get_event_loop()
 
         await update.message.reply_text(
@@ -127,26 +116,21 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         relevant_jobs = []
 
-        # Process jobs using orchestrator iterator (handles DB session internally)
         for idx, total, result in await loop.run_in_executor(
             None, lambda: list(orchestrator.process_jobs_iterator(filtered_jobs, cleaned_cv))
         ):
-            # Check if user cancelled
             if not active_searches.get(user_id, False):
                 await update.message.reply_text("🛑 Search cancelled by user.")
                 return
 
-            # Collect relevant jobs
             if result.get("is_relevant"):
                 relevant_jobs.append(result)
 
-            # Send progress update every 3 jobs
             if idx % 3 == 0 or idx == total:
                 await update.message.reply_text(
                     f"⏳ Processed {idx}/{total} jobs... ({len(relevant_jobs)} relevant)"
                 )
 
-        # Send final results summary
         await update.message.reply_text(
             formatter.format_search_summary(
                 total_scraped=len(jobs),
@@ -156,7 +140,6 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
         )
 
-        # Send each relevant job to the user
         for idx, result in enumerate(relevant_jobs, 1):
             message = formatter.format_job_message(result, idx, len(relevant_jobs))
             await update.message.reply_text(message)
@@ -178,5 +161,4 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         traceback.print_exc()
 
     finally:
-        # Mark search as inactive
         active_searches[user_id] = False

@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, Engine, text
 from jobs_repository.database.config import get_database_config
 from jobs_repository.exceptions import DatabaseConnectionError
 
-# Global engine (initialized lazily)
+
 _engine: Optional[Engine] = None
 
 
@@ -32,7 +32,7 @@ def get_engine() -> Engine:
                 max_overflow=config.max_overflow,
                 echo=config.echo,
             )
-            # Test connection
+
             with _engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
         except Exception as e:

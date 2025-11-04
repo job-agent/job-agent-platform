@@ -13,7 +13,6 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 
-# revision identifiers, used by Alembic.
 revision: str = "de9ecbbf34c7"
 down_revision: Union[str, None] = "05690e29e15e"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -21,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create jobs table in the jobs schema
+
     op.create_table(
         "jobs",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
@@ -49,7 +48,6 @@ def upgrade() -> None:
         schema="jobs",
     )
 
-    # Create indexes
     op.create_index("ix_jobs_id", "jobs", ["id"], schema="jobs")
     op.create_index("ix_jobs_title", "jobs", ["title"], schema="jobs")
     op.create_index("ix_jobs_company", "jobs", ["company"], schema="jobs")
@@ -60,5 +58,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Drop the jobs table
+
     op.drop_table("jobs", schema="jobs")

@@ -13,7 +13,6 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ARRAY
 
 
-# revision identifiers, used by Alembic.
 revision: str = "a361684797bf"
 down_revision: Union[str, None] = "32bbf7298a3a"
 branch_labels: Union[str, Sequence[str], None] = None

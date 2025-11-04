@@ -51,10 +51,6 @@ class JobRepository(IJobRepository):
         self.session = session
         self.mapper = JobMapper()
 
-    # ============================================================
-    # Internal Helper Methods
-    # ============================================================
-
     def _get_or_create_company(self, name: str) -> Company:
         """
         Get existing company or create new one.
@@ -65,17 +61,15 @@ class JobRepository(IJobRepository):
         Returns:
             Company instance
         """
-        # Try to find existing company
         stmt = select(Company).where(Company.name == name)
         company = self.session.scalar(stmt)
 
         if company:
             return company
 
-        # Create new company
         company = Company(name=name)
         self.session.add(company)
-        self.session.flush()  # Flush to get the ID without committing
+        self.session.flush()
         return company
 
     def _get_or_create_location(self, region: str) -> Location:
@@ -88,17 +82,15 @@ class JobRepository(IJobRepository):
         Returns:
             Location instance
         """
-        # Try to find existing location
         stmt = select(Location).where(Location.region == region)
         location = self.session.scalar(stmt)
 
         if location:
             return location
 
-        # Create new location
         location = Location(region=region)
         self.session.add(location)
-        self.session.flush()  # Flush to get the ID without committing
+        self.session.flush()
         return location
 
     def _get_or_create_category(self, name: str) -> Category:
@@ -111,17 +103,15 @@ class JobRepository(IJobRepository):
         Returns:
             Category instance
         """
-        # Try to find existing category
         stmt = select(Category).where(Category.name == name)
         category = self.session.scalar(stmt)
 
         if category:
             return category
 
-        # Create new category
         category = Category(name=name)
         self.session.add(category)
-        self.session.flush()  # Flush to get the ID without committing
+        self.session.flush()
         return category
 
     def _get_or_create_industry(self, name: str) -> Industry:
@@ -134,22 +124,16 @@ class JobRepository(IJobRepository):
         Returns:
             Industry instance
         """
-        # Try to find existing industry
         stmt = select(Industry).where(Industry.name == name)
         industry = self.session.scalar(stmt)
 
         if industry:
             return industry
 
-        # Create new industry
         industry = Industry(name=name)
         self.session.add(industry)
-        self.session.flush()  # Flush to get the ID without committing
+        self.session.flush()
         return industry
-
-    # ============================================================
-    # Core CRUD Operations
-    # ============================================================
 
     def create(self, job_data: JobCreate) -> Job:
         """
@@ -172,10 +156,8 @@ class JobRepository(IJobRepository):
             TransactionError: If database transaction fails
         """
         try:
-            # Use mapper to transform JobDict to Job model fields
             mapped_data = self.mapper.map_to_model(job_data)
 
-            # Handle reference entity creation and get their IDs
             if company_name := mapped_data.pop("company_name", None):
                 company = self._get_or_create_company(company_name)
                 mapped_data["company_id"] = company.id
@@ -192,7 +174,6 @@ class JobRepository(IJobRepository):
                 industry = self._get_or_create_industry(industry_name)
                 mapped_data["industry_id"] = industry.id
 
-            # Check if job already exists
             existing_job = self.get_by_external_id(
                 mapped_data["external_id"], mapped_data.get("source")
             )
@@ -203,7 +184,6 @@ class JobRepository(IJobRepository):
                     source=mapped_data.get("source", "unknown"),
                 )
 
-            # Create Job instance with mapped data
             job = Job(**mapped_data)
             self.session.add(job)
             self.session.commit()

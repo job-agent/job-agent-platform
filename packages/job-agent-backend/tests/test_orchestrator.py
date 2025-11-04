@@ -44,9 +44,8 @@ class TestJobAgentOrchestrator:
         user_id = 12345
         cv_path = orchestrator.get_cv_path(user_id)
 
-        # Verify path structure and that directory was created
         assert cv_path.name == f"cv_{user_id}.txt"
-        assert cv_path.parent.exists()  # Directory should be created
+        assert cv_path.parent.exists()
 
     def test_get_cv_path_returns_correct_path(self, orchestrator):
         """Test that get_cv_path returns correct path format."""
@@ -71,20 +70,17 @@ class TestJobAgentOrchestrator:
         mock_load_text.return_value = sample_cv_content
         mock_pii_removal.return_value = "Cleaned CV content"
 
-        # Create mock repository class and instance
         mock_repo_instance = MagicMock()
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        # Create orchestrator with injected mock repository
         orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
 
         orchestrator.upload_cv(user_id, str(sample_temp_cv_file))
 
-        # Verify text loader was called
         mock_load_text.assert_called_once_with(str(sample_temp_cv_file))
-        # Verify PII removal was called
+
         mock_pii_removal.assert_called_once_with(sample_cv_content)
-        # Verify CV was saved
+
         mock_repo_instance.create.assert_called_once_with("Cleaned CV content")
 
     @patch("job_agent_backend.core.orchestrator.run_pii_removal")
@@ -96,20 +92,17 @@ class TestJobAgentOrchestrator:
         mock_load_pdf.return_value = "PDF CV content"
         mock_pii_removal.return_value = "Cleaned PDF content"
 
-        # Create mock repository class and instance
         mock_repo_instance = MagicMock()
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        # Create orchestrator with injected mock repository
         orchestrator = app_container.orchestrator(cv_repository_class=mock_cv_repo_class)
 
         orchestrator.upload_cv(user_id, pdf_path)
 
-        # Verify PDF loader was called
         mock_load_pdf.assert_called_once_with(pdf_path)
-        # Verify PII removal was called
+
         mock_pii_removal.assert_called_once_with("PDF CV content")
-        # Verify CV was saved
+
         mock_repo_instance.create.assert_called_once_with("Cleaned PDF content")
 
     def test_upload_cv_unsupported_format_raises_error(self, orchestrator):
@@ -193,7 +186,6 @@ class TestJobAgentOrchestrator:
 
         result = orchestrator.scrape_jobs(salary=5000, employment="remote", timeout=30)
 
-        # Verify scrapper was called with correct parameters
         mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once_with(
             salary=5000, employment="remote", posted_after=None, timeout=30
         )
@@ -217,7 +209,6 @@ class TestJobAgentOrchestrator:
 
         result = orchestrator.filter_jobs_list(sample_jobs_list)
 
-        # Should filter out jobs with > 36 months experience
         assert len(result) == 2
         assert all(job["experience_months"] <= 36 for job in result)
 
@@ -272,39 +263,32 @@ class TestJobAgentOrchestrator:
         """Test complete pipeline integration."""
         user_id = 1000
 
-        # Mock CV repository
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = sample_cv_content
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        # Create orchestrator with mocked dependencies
         orchestrator = app_container.orchestrator(
             cv_repository_class=mock_cv_repo_class,
             scrapper_manager=mock_scrapper_manager,
         )
 
-        # Mock database session
         mock_session = MagicMock()
         mock_get_db_session.return_value = iter([mock_session])
 
-        # Mock job processing workflow
         mock_run_job_processing.return_value = {
             "is_relevant": True,
             "status": "completed",
         }
 
-        # Run complete pipeline
         result = orchestrator.run_complete_pipeline(
             user_id=user_id, salary=4000, employment="remote", timeout=30
         )
 
-        # Verify all steps were called
         mock_init_db.assert_called_once()
         mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once()
         mock_repo_instance.find.assert_called_once()
         mock_run_job_processing.assert_called_once()
 
-        # Verify results
         assert result["total_scraped"] == 1
         assert result["total_filtered"] == 1
         assert result["total_processed"] == 1
@@ -318,7 +302,6 @@ class TestJobAgentOrchestrator:
         user_id = 2000
         orchestrator.scrapper_manager = mock_scrapper_manager
 
-        # Mock CV not found
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = None
         mock_cv_repo_class.return_value = mock_repo_instance
@@ -340,7 +323,6 @@ class TestJobAgentOrchestrator:
         """Test complete pipeline with job filtering."""
         user_id = 3000
 
-        # Mock scrapper to return multiple jobs with complete structure
         mock_scrapper = MagicMock()
         jobs_data = [
             {
@@ -370,12 +352,10 @@ class TestJobAgentOrchestrator:
         ]
         mock_scrapper.scrape_jobs_as_dicts.return_value = jobs_data
 
-        # Mock CV repository
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = sample_cv_content
         mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
 
-        # Create orchestrator with mocked dependencies
         orchestrator = app_container.orchestrator(
             cv_repository_class=mock_cv_repo_class,
             scrapper_manager=mock_scrapper,
@@ -383,21 +363,17 @@ class TestJobAgentOrchestrator:
 
         orchestrator.filter_service.configure({"max_months_of_experience": 24})
 
-        # Mock DB session
         mock_session = MagicMock()
         mock_get_db_session.return_value = iter([mock_session])
 
-        # Mock processing
         mock_run_job_processing.return_value = {"status": "completed"}
 
         result = orchestrator.run_complete_pipeline(user_id=user_id)
 
-        # Should have filtered out the senior job (60 months > 24 months limit)
         assert result["total_scraped"] == 2
-        # After filtering by max 24 months experience, only job with 12 months should remain
+
         assert result["total_filtered"] == 1
-        # Note: Processing still iterates through filtered jobs
-        # The number processed equals the number of filtered jobs
+
         assert result["total_processed"] >= 1
 
     @patch("job_agent_backend.core.orchestrator.init_db")
@@ -410,10 +386,8 @@ class TestJobAgentOrchestrator:
 
         orchestrator.scrapper_manager = mock_scrapper_manager
 
-        # Should not raise, but log warning
-        # Will fail later when trying to load CV, but DB init failure is handled
         try:
             orchestrator.run_complete_pipeline(user_id=1)
         except Exception as e:
-            # Expected to fail at CV loading, not DB init
+
             assert "Database connection failed" not in str(e)

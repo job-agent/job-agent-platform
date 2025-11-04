@@ -31,7 +31,7 @@ def run_pii_removal(cv_content: str) -> str:
         >>> print(cleaned_cv)
         "My name is [REDACTED], email: [REDACTED]..."
     """
-    # Check if LangSmith tracing is enabled
+
     tracing_enabled = os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
     project_name = os.getenv("LANGCHAIN_PROJECT", "default")
 
@@ -39,17 +39,13 @@ def run_pii_removal(cv_content: str) -> str:
         print(f"🔍 LangSmith tracing enabled - Project: {project_name}")
         print("   View traces at: https://smith.langchain.com/\n")
 
-    # Validate CV content
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
 
-    # Create the workflow
     workflow = create_pii_removal_workflow()
 
-    # Initialize state
     initial_state: PIIRemovalState = {"cv_context": cv_content}
 
-    # Run the workflow
     final_state = workflow.invoke(initial_state)
 
     print("PII removal completed successfully")

@@ -46,31 +46,23 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
     Returns:
         Configured StateGraph ready for execution
     """
-    # Initialize the graph with our state schema
     workflow = StateGraph(AgentState)
 
-    # Add the job relevance check node
     workflow.add_node(JobProcessingNode.CHECK_JOB_RELEVANCE, check_job_relevance_node)
 
-    # Add the skill extraction nodes (will run in parallel)
     workflow.add_node(JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS, extract_must_have_skills_node)
     workflow.add_node(
         JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
         extract_nice_to_have_skills_node,
     )
 
-    # Create and add the store job node with injected repository
     store_job_node = create_store_job_node(job_repository_class)
     workflow.add_node(JobProcessingNode.STORE_JOB, store_job_node)
 
-    # Add the processing node
     workflow.add_node(JobProcessingNode.PROCESS_JOBS, print_jobs_node)
 
-    # Set the entry point to job relevance check
     workflow.set_entry_point(JobProcessingNode.CHECK_JOB_RELEVANCE)
 
-    # Add conditional edge after relevance check
-    # When job is relevant, both extraction nodes run in parallel
     workflow.add_conditional_edges(
         JobProcessingNode.CHECK_JOB_RELEVANCE,
         route_after_relevance_check,
@@ -81,8 +73,6 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
         },
     )
 
-    # Both extraction nodes converge to store_job
-    # The framework waits for both to complete before proceeding
     workflow.add_edge(
         JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS,
         JobProcessingNode.STORE_JOB,
@@ -92,7 +82,6 @@ def create_workflow(job_repository_class: Type[Any] = JobRepository) -> Compiled
         JobProcessingNode.STORE_JOB,
     )
 
-    # Continue the workflow
     workflow.add_edge(JobProcessingNode.STORE_JOB, JobProcessingNode.PROCESS_JOBS)
     workflow.add_edge(JobProcessingNode.PROCESS_JOBS, END)
 

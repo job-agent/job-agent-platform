@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from jobs_repository.database.connection import get_engine
 from jobs_repository.exceptions import TransactionError
 
-# Global session factory (initialized lazily)
+
 _SessionLocal: Optional[sessionmaker] = None
 
 
@@ -38,7 +38,6 @@ def get_db_session() -> Generator[Session, None, None]:
     Example:
         >>> session = next(get_db_session())
         >>> try:
-        ...     # Use session
         ...     pass
         ... finally:
         ...     session.close()
@@ -71,7 +70,6 @@ def transaction() -> Generator[Session, None, None]:
         >>> with transaction() as session:
         ...     job = Job(title="Software Engineer")
         ...     session.add(job)
-        ...     # Automatically commits on success
     """
     SessionLocal = get_session_factory()
     session = SessionLocal()

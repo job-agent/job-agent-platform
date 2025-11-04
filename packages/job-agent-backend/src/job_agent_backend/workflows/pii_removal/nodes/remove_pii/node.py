@@ -26,7 +26,6 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
     """
     cv_context = state.get("cv_context", "")
 
-    # Get job info if available (for logging purposes only)
     job = state.get("job")
     job_id = job.get("job_id") if job else "N/A"
 
@@ -34,14 +33,13 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
     print(f"Extracting professional info from CV (job ID: {job_id})...")
     print("=" * 60 + "\n")
 
-    # If no CV context available, skip extraction
     if not cv_context:
         print("  No CV context available, skipping professional info extraction")
         print("=" * 60 + "\n")
         return {}
 
     try:
-        # Initialize LLM with structured output
+
         base_llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0,
@@ -49,12 +47,10 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
         )
         structured_llm = base_llm.with_structured_output(ProfessionalInfo)
 
-        # Prepare and invoke the prompt
         messages = REMOVE_PII_PROMPT.invoke({"cv_content": cv_context})
 
         result: ProfessionalInfo = structured_llm.invoke(messages)
 
-        # Log the result
         print(f"  Original CV length: {len(cv_context)} characters")
         print(f"  Professional info length: {len(result.professional_content)} characters\n")
 
@@ -73,5 +69,4 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
         print(f"Failed to extract professional info for job ID {job_id}")
         print("=" * 60 + "\n")
 
-        # Return empty dict to keep original cv_context
         return {}

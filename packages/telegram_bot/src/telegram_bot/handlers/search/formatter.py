@@ -18,12 +18,10 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
     must_have_skills = result.get("extracted_must_have_skills", [])
     nice_to_have_skills = result.get("extracted_nice_to_have_skills", [])
 
-    # Build message
     message = f"📋 Job {job_number}/{total_jobs}\n\n"
     message += f"🏢 {job.get('title', 'N/A')}\n"
     message += f"🏭 Company: {job.get('company', {}).get('name', 'N/A')}\n"
 
-    # Add salary if available
     if job.get("salary"):
         salary = job["salary"]
         message += f"💰 Salary: {salary.get('currency', '')} {salary.get('min_value', 'N/A')}"
@@ -31,7 +29,6 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
             message += f" - {salary.get('max_value')}"
         message += "\n"
 
-    # Add location if available
     if job.get("location"):
         location = job["location"]
         message += f"📍 Location: {location.get('region', 'N/A')}"
@@ -39,11 +36,9 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
             message += " (Remote)"
         message += "\n"
 
-    # Add employment type if available
     if job.get("employment_type"):
         message += f"⏰ Type: {job['employment_type']}\n"
 
-    # Add must-have skills if available
     if must_have_skills:
         skills_text = ", ".join(must_have_skills[:10])
         message += f"\n🔧 Must-have skills: {skills_text}"
@@ -51,7 +46,6 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
             message += f" ... and {len(must_have_skills) - 10} more"
         message += "\n"
 
-    # Add nice-to-have skills if available
     if nice_to_have_skills:
         skills_text = ", ".join(nice_to_have_skills[:10])
         message += f"\n✨ Nice-to-have skills: {skills_text}"
@@ -59,7 +53,6 @@ def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int)
             message += f" ... and {len(nice_to_have_skills) - 10} more"
         message += "\n"
 
-    # Add URL
     message += f"\n🔗 URL: {job.get('url', 'N/A')}"
 
     return message

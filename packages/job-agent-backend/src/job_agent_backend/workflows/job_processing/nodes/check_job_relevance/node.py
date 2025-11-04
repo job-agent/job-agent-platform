@@ -32,7 +32,6 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
     print(f"Checking relevance for job ID {job_id}...")
     print("=" * 60 + "\n")
 
-    # If no CV context available, skip the check and assume relevant
     if not cv_context:
         print(f"  Job (ID: {job_id}): No CV context available, assuming relevant")
         print("=" * 60 + "\n")
@@ -40,7 +39,6 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
             "is_relevant": True,
         }
 
-    # Extract job details
     job_title = job.get("title", "Unknown")
     job_company = job.get("company", "Unknown")
     job_description = job.get("description", "")
@@ -53,7 +51,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         }
 
     try:
-        # Initialize LLM with structured output
+
         base_llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0,
@@ -61,7 +59,6 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         )
         structured_llm = base_llm.with_structured_output(JobRelevance)
 
-        # Prepare and invoke the prompt
         messages = CHECK_JOB_RELEVANCE_PROMPT.invoke(
             {
                 "cv_content": cv_context,
@@ -73,7 +70,6 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
 
         result: JobRelevance = structured_llm.invoke(messages)
 
-        # Log the result
         relevance_status = "RELEVANT" if result.is_relevant else "IRRELEVANT"
         print(f"  Job (ID: {job_id}): {relevance_status}")
 

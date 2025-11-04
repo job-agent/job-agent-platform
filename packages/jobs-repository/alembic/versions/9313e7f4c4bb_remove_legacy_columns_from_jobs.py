@@ -13,7 +13,6 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 
-# revision identifiers, used by Alembic.
 revision: str = "9313e7f4c4bb"
 down_revision: Union[str, None] = "5d2bab6f2e10"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -23,10 +22,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Remove legacy columns from jobs table."""
 
-    # Drop indexes on legacy columns (if they exist)
     connection = op.get_bind()
 
-    # Check if index exists before dropping
     result = connection.execute(
         sa.text(
             """
@@ -39,7 +36,6 @@ def upgrade() -> None:
     if result:
         op.drop_index("ix_jobs_jobs_company", table_name="jobs", schema="jobs")
 
-    # Drop legacy columns
     op.drop_column("jobs", "company", schema="jobs")
     op.drop_column("jobs", "location", schema="jobs")
     op.drop_column("jobs", "extra_data", schema="jobs")
@@ -48,7 +44,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Restore legacy columns to jobs table."""
 
-    # Add back legacy columns
     op.add_column("jobs", sa.Column("company", sa.String(length=300), nullable=True), schema="jobs")
     op.add_column(
         "jobs", sa.Column("location", sa.String(length=300), nullable=True), schema="jobs"
@@ -59,10 +54,8 @@ def downgrade() -> None:
         schema="jobs",
     )
 
-    # Recreate index
     op.create_index("ix_jobs_jobs_company", "jobs", ["company"], unique=False, schema="jobs")
 
-    # Restore data from normalized tables
     connection = op.get_bind()
 
     connection.execute(
@@ -87,7 +80,6 @@ def downgrade() -> None:
         )
     )
 
-    # Restore extra_data with category, industry, and experience_months
     connection.execute(
         sa.text(
             """

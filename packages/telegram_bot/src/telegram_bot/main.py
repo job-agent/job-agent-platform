@@ -14,10 +14,8 @@ from telegram_bot.bot import create_bot
 
 def main() -> None:
     """Main entry point for the Telegram bot."""
-    # Load environment variables
     load_dotenv()
 
-    # Create and run the bot
     bot = create_bot()
     bot.run()
 

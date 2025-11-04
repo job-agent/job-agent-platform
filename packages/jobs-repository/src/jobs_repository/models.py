@@ -17,7 +17,6 @@ class Company(Base):
     name = Column(String(300), nullable=False, unique=True, index=True)
     website = Column(String(500), nullable=True)
 
-    # Relationships
     jobs = relationship("Job", back_populates="company_rel")
 
     def __repr__(self) -> str:
@@ -34,7 +33,6 @@ class Location(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     region = Column(String(300), nullable=False, unique=True, index=True)
 
-    # Relationships
     jobs = relationship("Job", back_populates="location_rel")
 
     def __repr__(self) -> str:
@@ -51,7 +49,6 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(200), nullable=False, unique=True, index=True)
 
-    # Relationships
     jobs = relationship("Job", back_populates="category_rel")
 
     def __repr__(self) -> str:
@@ -68,7 +65,6 @@ class Industry(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(200), nullable=False, unique=True, index=True)
 
-    # Relationships
     jobs = relationship("Job", back_populates="industry_rel")
 
     def __repr__(self) -> str:
@@ -82,39 +78,32 @@ class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = {"schema": "jobs"}
 
-    # Primary key
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
-    # Job basic information
     title = Column(String(500), nullable=False, index=True)
     description = Column(Text, nullable=True)
     must_have_skills = Column(ARRAY(String), nullable=True)
     nice_to_have_skills = Column(ARRAY(String), nullable=True)
 
-    # Foreign keys to normalized tables
     company_id = Column(Integer, ForeignKey("jobs.companies.id"), nullable=True, index=True)
     location_id = Column(Integer, ForeignKey("jobs.locations.id"), nullable=True, index=True)
     category_id = Column(Integer, ForeignKey("jobs.categories.id"), nullable=True, index=True)
     industry_id = Column(Integer, ForeignKey("jobs.industries.id"), nullable=True, index=True)
 
-    # Job details
-    job_type = Column(String(100), nullable=True)  # e.g., "Full-time", "Part-time", "Contract"
-    experience_months = Column(Integer, nullable=True)  # Required experience in months
+    job_type = Column(String(100), nullable=True)
+    experience_months = Column(Integer, nullable=True)
     salary_min = Column(Float, nullable=True)
     salary_max = Column(Float, nullable=True)
     salary_currency = Column(String(10), nullable=True, default="USD")
 
-    # External references
     external_id = Column(String(300), unique=True, index=True, nullable=True)
-    source = Column(String(100), nullable=True, index=True)  # e.g., "LinkedIn", "Indeed"
+    source = Column(String(100), nullable=True, index=True)
     source_url = Column(Text, nullable=True)
 
-    # Status and metadata
     is_remote = Column(Boolean, default=False, index=True)
     posted_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=True)
 
-    # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
@@ -123,7 +112,6 @@ class Job(Base):
         nullable=False,
     )
 
-    # Relationships
     company_rel = relationship("Company", back_populates="jobs")
     location_rel = relationship("Location", back_populates="jobs")
     category_rel = relationship("Category", back_populates="jobs")

@@ -43,14 +43,12 @@ class JobAgentBot:
         if not self.application:
             raise RuntimeError("Application not initialized")
 
-        # Register command handlers
         self.application.add_handler(CommandHandler("start", start_handler))
         self.application.add_handler(CommandHandler("help", help_handler))
         self.application.add_handler(CommandHandler("search", search_jobs_handler))
         self.application.add_handler(CommandHandler("status", status_handler))
         self.application.add_handler(CommandHandler("cancel", cancel_handler))
 
-        # Register document handler for CV uploads
         self.application.add_handler(MessageHandler(filters.Document.PDF, upload_cv_handler))
 
     async def post_init(self, application: Application) -> None:
@@ -90,7 +88,6 @@ class JobAgentBot:
         print("Bot is running. Press Ctrl+C to stop.")
         print("=" * 60)
 
-        # Run the bot until stopped
         self.application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

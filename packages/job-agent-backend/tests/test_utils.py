@@ -31,7 +31,6 @@ class TestLoadCVFromText:
 
         result = load_cv_from_text(str(empty_file))
 
-        # Should return empty string, not None
         assert result == ""
 
     def test_load_cv_with_unicode_content(self, temp_cv_dir):
@@ -55,7 +54,7 @@ class TestLoadCVFromText:
         result = load_cv_from_text(str(long_cv))
 
         assert result is not None
-        assert len(result) > 10000  # Should be quite long
+        assert len(result) > 10000
         assert "Line 999" in result
 
     def test_load_cv_with_special_characters(self, temp_cv_dir):
@@ -90,9 +89,8 @@ class TestLoadCVFromPDF:
     def test_load_cv_from_existing_pdf(self, mock_pdf_reader, temp_cv_dir):
         """Test loading CV from an existing PDF file."""
         pdf_file = temp_cv_dir / "test.pdf"
-        pdf_file.touch()  # Create empty file
+        pdf_file.touch()
 
-        # Mock PDF reader
         mock_reader_instance = MagicMock()
         mock_page = MagicMock()
         mock_page.extract_text.return_value = "PDF CV content with Python experience"
@@ -119,7 +117,6 @@ class TestLoadCVFromPDF:
         pdf_file = temp_cv_dir / "multipage.pdf"
         pdf_file.touch()
 
-        # Mock PDF reader with multiple pages
         mock_reader_instance = MagicMock()
         mock_page1 = MagicMock()
         mock_page1.extract_text.return_value = "Page 1 content"
@@ -136,7 +133,7 @@ class TestLoadCVFromPDF:
         assert "Page 1 content" in result
         assert "Page 2 content" in result
         assert "Page 3 content" in result
-        # Pages should be separated by double newlines
+
         assert "\n\n" in result
 
     @patch("job_agent_backend.utils.PdfReader")
@@ -145,12 +142,11 @@ class TestLoadCVFromPDF:
         pdf_file = temp_cv_dir / "empty_pages.pdf"
         pdf_file.touch()
 
-        # Mock PDF reader with some empty pages
         mock_reader_instance = MagicMock()
         mock_page1 = MagicMock()
         mock_page1.extract_text.return_value = "Page 1 content"
         mock_page2 = MagicMock()
-        mock_page2.extract_text.return_value = ""  # Empty page
+        mock_page2.extract_text.return_value = ""
         mock_page3 = MagicMock()
         mock_page3.extract_text.return_value = "Page 3 content"
         mock_reader_instance.pages = [mock_page1, mock_page2, mock_page3]
@@ -161,7 +157,6 @@ class TestLoadCVFromPDF:
         assert result is not None
         assert "Page 1 content" in result
         assert "Page 3 content" in result
-        # Empty page should not add content
 
     @patch("job_agent_backend.utils.PdfReader")
     def test_load_cv_pdf_with_unicode(self, mock_pdf_reader, temp_cv_dir):
@@ -207,16 +202,13 @@ class TestLoadCVFromPDF:
 
         result = load_cv_from_pdf(str(pdf_file))
 
-        # Should handle exception and return None
         assert result is None
 
     def test_load_cv_pdf_default_path(self, temp_cv_dir):
         """Test loading PDF with default path returns None when file not found."""
-        # Call without path - will use default path which doesn't exist
+
         result = load_cv_from_pdf(None)
 
-        # Should return None when default path doesn't exist
-        # Note: the result might be empty string if Path operations succeed but file is empty
         assert result is None or result == ""
 
     @patch("job_agent_backend.utils.PdfReader")
@@ -231,7 +223,6 @@ class TestLoadCVFromPDF:
         mock_reader_instance.pages = [mock_page]
         mock_pdf_reader.return_value = mock_reader_instance
 
-        # Pass as Path object
         result = load_cv_from_pdf(str(pdf_file))
 
         assert result is not None
@@ -245,7 +236,6 @@ class TestUtilsIntegration:
         """Test that both loaders return similar structure."""
         content = "Professional Experience:\n- Python development\n- API design"
 
-        # Create text file
         text_file = temp_cv_dir / "test.txt"
         text_file.write_text(content)
 

@@ -12,7 +12,7 @@ class TestPIIRemovalWorkflow:
     @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.ChatOpenAI")
     def test_pii_removal_with_valid_cv(self, mock_chat_openai, sample_cv_with_pii):
         """Test PII removal with valid CV content."""
-        # Mock the OpenAI model response
+
         mock_llm_instance = MagicMock()
         mock_structured_llm = MagicMock()
         mock_result = MagicMock()
@@ -30,33 +30,28 @@ class TestPIIRemovalWorkflow:
         mock_llm_instance.with_structured_output.return_value = mock_structured_llm
         mock_chat_openai.return_value = mock_llm_instance
 
-        # Run the workflow
         result = run_pii_removal(sample_cv_with_pii)
 
-        # Verify the result
         assert isinstance(result, str)
         assert len(result) > 0
         assert "[REDACTED]" in result or "[COMPANY]" in result
 
-        # Verify OpenAI was called
         mock_structured_llm.invoke.assert_called_once()
 
     @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.ChatOpenAI")
     def test_pii_removal_preserves_professional_content(self, mock_chat_openai, sample_cv_content):
         """Test that PII removal preserves professional content."""
-        # Mock the OpenAI model response to return similar content
+
         mock_llm_instance = MagicMock()
         mock_structured_llm = MagicMock()
         mock_result = MagicMock()
-        mock_result.professional_content = sample_cv_content  # No PII to remove
+        mock_result.professional_content = sample_cv_content
         mock_structured_llm.invoke.return_value = mock_result
         mock_llm_instance.with_structured_output.return_value = mock_structured_llm
         mock_chat_openai.return_value = mock_llm_instance
 
-        # Run the workflow
         result = run_pii_removal(sample_cv_content)
 
-        # Verify professional content is preserved
         assert "Python" in result
         assert "Django" in result or "development" in result
         assert len(result) > 0
@@ -100,10 +95,8 @@ class TestPIIRemovalWorkflow:
         mock_llm_instance.with_structured_output.return_value = mock_structured_llm
         mock_chat_openai.return_value = mock_llm_instance
 
-        # Run workflow and verify it completes
         result = run_pii_removal(sample_cv_content)
 
-        # Should return cleaned content
         assert result == "Cleaned CV content"
         mock_structured_llm.invoke.assert_called_once()
 
@@ -195,7 +188,6 @@ class TestPIIRemovalWorkflow:
 
         run_pii_removal(sample_cv_with_pii)
 
-        # Verify model was called
         assert mock_structured_llm.invoke.called
 
     @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.ChatOpenAI")
@@ -211,6 +203,5 @@ class TestPIIRemovalWorkflow:
 
         result = run_pii_removal(sample_cv_content)
 
-        # Should return string directly, not state dict
         assert isinstance(result, str)
         assert result == "Cleaned content"
