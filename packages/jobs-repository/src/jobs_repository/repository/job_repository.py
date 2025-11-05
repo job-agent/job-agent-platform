@@ -6,11 +6,12 @@ jobs and looking them up by external identifier.
 """
 
 from contextlib import contextmanager
+from datetime import datetime, UTC
 from typing import Callable, Generator, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import select
+from sqlalchemy import select, or_
 
 from job_agent_platform_contracts import IJobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
@@ -229,3 +230,20 @@ class JobRepository(IJobRepository):
                 if self._close_session:
                     session.expunge(job)
             return job
+
+    def has_active_job_with_title_and_company(self, title: str, company_name: str) -> bool:
+        reference_time = datetime.now(UTC)
+        expires_column = Job.__table__.c.expires_at
+        if not getattr(expires_column.type, "timezone", False):
+            reference_time = reference_time.replace(tzinfo=None)
+
+        with self._session_scope(commit=False) as session:
+            stmt = (
+                select(Job.id)
+                .join(Company)
+                .where(Job.title == title)
+                .where(Company.name == company_name)
+                .where(or_(Job.expires_at.is_(None), Job.expires_at >= reference_time))
+                .limit(1)
+            )
+            return session.scalar(stmt) is not None

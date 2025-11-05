@@ -159,3 +159,48 @@ class TestFilterService:
         assert len(result) == 1
         assert result[0]["job_id"] == sample_job_dict["job_id"]
         assert result[0]["title"] == sample_job_dict["title"]
+
+    def test_filter_excludes_jobs_present_in_repository(self):
+        class StubRepository:
+            def __init__(self):
+                self.external_ids = {"100"}
+                self.active_pairs = {("Duplicate Title", "Company A")}
+
+            def get_by_external_id(self, external_id, source=None):
+                if external_id in self.external_ids:
+                    return {"external_id": external_id}
+                return None
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                return (title, company_name) in self.active_pairs
+
+        service = FilterService(job_repository_factory=lambda: StubRepository())
+
+        jobs = [
+            {
+                "job_id": 50,
+                "title": "First Job",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Company X"},
+            },
+            {
+                "job_id": 100,
+                "title": "Duplicate External",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Company Y"},
+            },
+            {
+                "job_id": 200,
+                "title": "Duplicate Title",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Company A"},
+            },
+        ]
+
+        result = service.filter(jobs)
+
+        assert len(result) == 1
+        assert result[0]["job_id"] == 50

@@ -5,6 +5,7 @@ from datetime import datetime, UTC
 import sys
 
 import pytest
+from dependency_injector import providers
 
 
 sys.modules["scrapper_service"] = MagicMock()
@@ -13,6 +14,7 @@ sys.modules["djinni_scrapper.scrapper"] = MagicMock()
 
 
 from job_agent_backend.container import ApplicationContainer  # noqa: E402
+from job_agent_backend.filter_service.filter import FilterService  # noqa: E402
 
 
 class TestJobAgentOrchestrator:
@@ -21,7 +23,25 @@ class TestJobAgentOrchestrator:
     @pytest.fixture
     def app_container(self):
         """Provide a fresh dependency container per test."""
-        return ApplicationContainer()
+        container = ApplicationContainer()
+
+        class StubRepository:
+            def get_by_external_id(self, external_id, source=None):
+                return None
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                return False
+
+        container.job_repository_factory.override(providers.Object(lambda: StubRepository()))
+
+        container.filter_service.override(
+            providers.Singleton(
+                FilterService,
+                job_repository_factory=container.job_repository_factory,
+            )
+        )
+
+        return container
 
     @pytest.fixture
     def orchestrator(self, app_container):

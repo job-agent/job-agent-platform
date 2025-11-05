@@ -47,3 +47,17 @@ class IJobRepository(ABC):
             Job entity if found, None otherwise
         """
         pass
+
+    @abstractmethod
+    def has_active_job_with_title_and_company(self, title: str, company_name: str) -> bool:
+        """
+        Determine if an active job exists for the given title and company.
+
+        Args:
+            title: Job title to match
+            company_name: Company name to match
+
+        Returns:
+            True when an active job exists, False otherwise
+        """
+        pass

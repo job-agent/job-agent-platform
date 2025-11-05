@@ -4,10 +4,11 @@ This module provides filtering capabilities for job posts coming from the
 scrapper service before they are passed to the workflows system.
 """
 
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from job_scrapper_contracts import JobDict
 from job_agent_backend.contracts.filter_service import IFilterService
+from job_agent_platform_contracts import IJobRepository
 
 from .filter_config import FilterConfig
 
@@ -21,11 +22,16 @@ class FilterService(IFilterService):
             a default policy limits experience and requires applications to be allowed.
     """
 
-    def __init__(self, config: Optional[FilterConfig] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[FilterConfig] = None,
+        job_repository_factory: Optional[Callable[[], IJobRepository]] = None,
+    ) -> None:
         self.config: FilterConfig = config or {
             "max_months_of_experience": 60,
             "location_allows_to_apply": True,
         }
+        self._job_repository_factory = job_repository_factory
 
     def configure(self, config: Optional[FilterConfig]) -> None:
         self.config = config or {}
@@ -41,10 +47,8 @@ class FilterService(IFilterService):
             Filtered list of job dictionaries.
         """
 
-        if not self.config:
-            return jobs
-
         filtered_jobs: List[JobDict] = []
+        repository = self._resolve_repository()
 
         for job in jobs:
             if not self._passes_experience(job):
@@ -53,9 +57,57 @@ class FilterService(IFilterService):
             if not self._passes_location(job):
                 continue
 
+            if repository and self._is_existing_job(repository, job):
+                continue
+
             filtered_jobs.append(job)
 
         return filtered_jobs
+
+    def _resolve_repository(self) -> Optional[IJobRepository]:
+        if self._job_repository_factory is None:
+            return None
+
+        return self._job_repository_factory()
+
+    def _is_existing_job(self, repository: IJobRepository, job: JobDict) -> bool:
+        external_id = self._extract_external_id(job)
+        source = job.get("source")
+
+        if external_id and repository.get_by_external_id(external_id, source):
+            return True
+
+        title = job.get("title")
+        company_name = self._extract_company_name(job)
+
+        if not title or not company_name:
+            return False
+
+        return repository.has_active_job_with_title_and_company(title, company_name)
+
+    def _extract_external_id(self, job: JobDict) -> Optional[str]:
+        job_id = job.get("job_id")
+        if job_id is not None:
+            return str(job_id)
+
+        external_id = job.get("external_id")
+        if external_id is not None:
+            return str(external_id)
+
+        return None
+
+    def _extract_company_name(self, job: JobDict) -> Optional[str]:
+        company = job.get("company")
+        if isinstance(company, dict):
+            name = company.get("name")
+            if name:
+                return str(name)
+
+        company_name = job.get("company_name")
+        if company_name:
+            return str(company_name)
+
+        return None
 
     def _passes_experience(self, job: JobDict) -> bool:
         if "max_months_of_experience" not in self.config:

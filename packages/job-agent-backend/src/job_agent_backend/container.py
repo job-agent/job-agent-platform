@@ -21,7 +21,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
     cv_repository_class = providers.Object(CVRepository)
     cv_loader = providers.Singleton(CVLoader)
     job_repository_factory = providers.Object(get_job_repository)
-    filter_service = providers.Singleton(FilterService)
+    filter_service = providers.Singleton(
+        FilterService,
+        job_repository_factory=job_repository_factory,
+    )
     database_initializer = providers.Object(init_db)
 
     orchestrator = providers.Factory(
