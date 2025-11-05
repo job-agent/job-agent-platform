@@ -44,22 +44,6 @@ services:
       - job-agent-network
     restart: unless-stopped
 
-  scrapper_service:
-    build:
-      context: ../scrappers
-      dockerfile: packages/scrapper-service/Dockerfile
-      ssh:
-        - default
-    container_name: scrapper-service
-    environment:
-      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672${RABBITMQ_VHOST}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - job-agent-network
-    restart: unless-stopped
-
   telegram_bot:
     build:
       context: .
@@ -92,4 +76,5 @@ volumes:
 
 networks:
   job-agent-network:
+    name: job-agent-network
     driver: bridge
