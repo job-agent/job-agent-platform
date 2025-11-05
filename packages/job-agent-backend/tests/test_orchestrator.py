@@ -9,8 +9,6 @@ from dependency_injector import providers
 
 
 sys.modules["scrapper_service"] = MagicMock()
-sys.modules["djinni_scrapper"] = MagicMock()
-sys.modules["djinni_scrapper.scrapper"] = MagicMock()
 
 
 from job_agent_backend.container import ApplicationContainer  # noqa: E402

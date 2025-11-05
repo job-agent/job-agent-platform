@@ -6,9 +6,9 @@ from cvs_repository import CVRepository
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from job_agent_backend.cv_loader import CVLoader
 from job_agent_backend.filter_service.filter import FilterService
+from job_agent_backend.messaging import ScrapperClient
 from jobs_repository import init_db
 from jobs_repository.container import get_job_repository
-from scrapper_service import ScrapperManager
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
@@ -16,7 +16,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
 
     config = providers.Configuration()
 
-    scrapper_manager = providers.Singleton(ScrapperManager)
+    scrapper_manager = providers.Singleton(ScrapperClient)
 
     cv_repository_class = providers.Object(CVRepository)
     cv_loader = providers.Singleton(CVLoader)

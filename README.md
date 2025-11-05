@@ -76,7 +76,7 @@ Monorepo for the Job Agent ecosystem: a LangGraph-powered backend that sanitizes
 - `packages/telegram_bot` — Telegram client that guides users through uploading CVs, triggering searches, and reviewing relevant jobs.
 - `packages/jobs-repository` — SQLAlchemy and Alembic powered persistence layer for storing job metadata.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
-- `packages/contracts` — Shared Pydantic models and interfaces consumed across services.
+- `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
 
 ## Prerequisites
 

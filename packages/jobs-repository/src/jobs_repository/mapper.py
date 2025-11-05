@@ -25,7 +25,7 @@ class JobMapper:
         Transform JobDict contract data to Job model field dictionary.
 
         Args:
-            job_data: Job data in JobDict format from contracts
+            job_data: Job data in JobDict format from job-agent-platform-contracts
 
         Returns:
             Dictionary with fields mapped to Job model format

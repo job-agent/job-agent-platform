@@ -1,4 +1,4 @@
-"""Shared contracts and data models for job-agent platform."""
+"""Shared job-agent-platform-contracts and data models for job-agent platform."""
 
 from job_agent_platform_contracts.job_repository import (
     IJobRepository,

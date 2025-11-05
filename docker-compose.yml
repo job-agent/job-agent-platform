@@ -3,18 +3,18 @@ services:
     image: postgres:16-alpine
     container_name: job-agent-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-jobagent}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobagent}
-      POSTGRES_DB: ${POSTGRES_DB:-jobs}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-jobagent} -d ${POSTGRES_DB:-postgres}",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
         ]
       interval: 10s
       timeout: 5s
@@ -23,25 +23,62 @@ services:
       - job-agent-network
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: job-agent-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - job-agent-network
+    restart: unless-stopped
+
+  scrapper_service:
+    build:
+      context: ../scrappers
+      dockerfile: packages/scrapper-service/Dockerfile
+      ssh:
+        - default
+    container_name: scrapper-service
+    environment:
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672${RABBITMQ_VHOST}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - job-agent-network
+    restart: unless-stopped
+
   telegram_bot:
     build:
       context: .
       dockerfile: packages/telegram_bot/Dockerfile
-      # ⬇️ Enable BuildKit SSH mounts for private git+ssh deps
       ssh:
         - default
-        # Or, to point at a specific key (replace with your full absolute path):
-        # - id=github,src=/home/youruser/.ssh/id_github
     container_name: telegram-bot
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-jobagent}:${POSTGRES_PASSWORD:-jobagent}@postgres:5432/${POSTGRES_DB:-jobs}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672${RABBITMQ_VHOST}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      LANGSMITH_TRACING_V2: ${LANGSMITH_TRACING_V2:-false}
-      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-telegram-bot}
-      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_TRACING_V2: ${LANGSMITH_TRACING_V2}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - job-agent-network
@@ -49,6 +86,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  rabbitmq_data:
     driver: local
 
 networks:

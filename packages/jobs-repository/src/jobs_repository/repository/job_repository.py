@@ -152,7 +152,7 @@ class JobRepository(IJobRepository):
         then creates the job record with all related entities.
 
         Args:
-            job_data: Job data in JobDict or JobCreate format from contracts.
+            job_data: Job data in JobDict or JobCreate format from job-agent-platform-contracts.
                      JobCreate includes additional fields like must_have_skills
                      and nice_to_have_skills.
 
