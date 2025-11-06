@@ -27,16 +27,16 @@ class ScrapperClient:
 
     def scrape_jobs_as_dicts(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> list[JobDict]:
         """Scrape jobs via RabbitMQ message broker.
 
         Args:
-            salary: Minimum salary requirement
-            employment: Employment type (e.g., "remote", "full-time")
+            min_salary: Minimum salary requirement
+            employment_location: Employment type or location (e.g., "remote", "on-site")
             posted_after: Only include jobs posted after this date
             timeout: Request timeout in seconds
 
@@ -51,14 +51,14 @@ class ScrapperClient:
         posted_after_str = posted_after.isoformat() if posted_after else None
 
         self.logger.info(
-            f"Sending scrape request: salary={salary}, employment={employment}, "
+            f"Sending scrape request: min_salary={min_salary}, employment_location={employment_location}, "
             f"posted_after={posted_after_str}, timeout={timeout}"
         )
 
         # Send request via RabbitMQ
         response = self.producer.send_scrape_request(
-            salary=salary,
-            employment=employment,
+            min_salary=min_salary,
+            employment_location=employment_location,
             posted_after=posted_after_str,
             timeout=timeout,
         )
@@ -69,8 +69,8 @@ class ScrapperClient:
 
     def scrape_jobs_streaming(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> Iterator[tuple[list[JobDict], int]]:
@@ -80,8 +80,8 @@ class ScrapperClient:
         allowing for incremental processing instead of waiting for all pages.
 
         Args:
-            salary: Minimum salary requirement
-            employment: Employment type (e.g., "remote", "full-time")
+            min_salary: Minimum salary requirement
+            employment_location: Employment type or location (e.g., "remote", "on-site")
             posted_after: Only include jobs posted after this date
             timeout: Request timeout in seconds
 
@@ -96,14 +96,14 @@ class ScrapperClient:
         posted_after_str = posted_after.isoformat() if posted_after else None
 
         self.logger.info(
-            f"Sending streaming scrape request: salary={salary}, employment={employment}, "
+            f"Sending streaming scrape request: min_salary={min_salary}, employment_location={employment_location}, "
             f"posted_after={posted_after_str}, timeout={timeout}"
         )
 
         # Stream batches via RabbitMQ
         for response in self.producer.scrape_jobs_streaming(
-            salary=salary,
-            employment=employment,
+            min_salary=min_salary,
+            employment_location=employment_location,
             posted_after=posted_after_str,
             timeout=timeout,
         ):

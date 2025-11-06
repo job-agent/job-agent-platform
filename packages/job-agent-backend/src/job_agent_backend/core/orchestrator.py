@@ -28,8 +28,8 @@ CVRepositoryFactory = Callable[[str | Path], ICVRepository]
 class ScrapperManagerProtocol(Protocol):
     def scrape_jobs_as_dicts(
         self,
-        salary: int,
-        employment: str,
+        min_salary: Optional[int],
+        employment_location: Optional[str],
         posted_after: Optional[datetime],
         timeout: int,
     ) -> list[JobDict]: ...
@@ -173,8 +173,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
 
     def scrape_jobs(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> list[JobDict]:
@@ -183,8 +183,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Automatically paginates through all pages until reaching the date cutoff.
 
         Args:
-            salary: Minimum salary filter
-            employment: Employment type filter
+            min_salary: Minimum salary filter
+            employment_location: Employment type or location filter
             posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
             timeout: Request timeout in seconds
 
@@ -193,15 +193,18 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         """
         self.logger("Scraping jobs...")
         jobs = self.scrapper_manager.scrape_jobs_as_dicts(
-            salary=salary, employment=employment, posted_after=posted_after, timeout=timeout
+            min_salary=min_salary,
+            employment_location=employment_location,
+            posted_after=posted_after,
+            timeout=timeout,
         )
         self.logger(f"Scraped {len(jobs)} jobs")
         return jobs
 
     def scrape_jobs_streaming(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> Iterator[tuple[list[JobDict], int, int]]:
@@ -211,8 +214,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         yielding each batch as soon as it's received from the scrapper.
 
         Args:
-            salary: Minimum salary filter
-            employment: Employment type filter
+            min_salary: Minimum salary filter
+            employment_location: Employment type or location filter
             posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
             timeout: Request timeout in seconds
 
@@ -225,7 +228,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         # Check if scrapper_manager has streaming method
         if hasattr(self.scrapper_manager, "scrape_jobs_streaming"):
             for batch_jobs, page_number in self.scrapper_manager.scrape_jobs_streaming(
-                salary=salary, employment=employment, posted_after=posted_after, timeout=timeout
+                min_salary=min_salary,
+                employment_location=employment_location,
+                posted_after=posted_after,
+                timeout=timeout,
             ):
                 total_jobs += len(batch_jobs)
                 self.logger(
@@ -236,7 +242,10 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             # Fallback to non-streaming if scrapper_manager doesn't support it
             self.logger("Scrapper manager doesn't support streaming, falling back to batch mode")
             jobs = self.scrapper_manager.scrape_jobs_as_dicts(
-                salary=salary, employment=employment, posted_after=posted_after, timeout=timeout
+                min_salary=min_salary,
+                employment_location=employment_location,
+                posted_after=posted_after,
+                timeout=timeout,
             )
             total_jobs = len(jobs)
             self.logger(f"Scraped {total_jobs} jobs")
@@ -307,8 +316,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
     def run_complete_pipeline(
         self,
         user_id: int,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> PipelineSummary:
@@ -323,8 +332,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
 
         Args:
             user_id: User identifier to load their CV
-            salary: Minimum salary filter
-            employment: Employment type filter
+            min_salary: Minimum salary filter
+            employment_location: Employment type or location filter
             posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
             timeout: Request timeout in seconds
 
@@ -342,7 +351,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             self.logger(f"Warning: Database initialization failed: {e}")
             self.logger("Continuing without database storage...")
 
-        jobs = self.scrape_jobs(salary, employment, posted_after, timeout)
+        jobs = self.scrape_jobs(min_salary, employment_location, posted_after, timeout)
 
         filtered_jobs = self.filter_jobs_list(jobs)
 

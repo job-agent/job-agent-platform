@@ -35,8 +35,8 @@ class IJobAgentOrchestrator(ABC):
     @abstractmethod
     def scrape_jobs(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: int = 4000,
+        employment_location: str = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> list[JobDict]:
@@ -67,8 +67,8 @@ class IJobAgentOrchestrator(ABC):
     def run_complete_pipeline(
         self,
         user_id: int,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: int = 4000,
+        employment_location: str = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
     ) -> PipelineSummary:

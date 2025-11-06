@@ -6,7 +6,7 @@ import uuid
 from typing import Iterator, Optional
 
 import pika
-from job_scrapper_contracts import ScrapeJobsRequest, ScrapeJobsResponse
+from job_scrapper_contracts import ScrapeJobsFilter, ScrapeJobsRequest, ScrapeJobsResponse
 
 from job_agent_backend.messaging.connection import RabbitMQConnection
 
@@ -35,16 +35,16 @@ class ScrapperProducer:
 
     def send_scrape_request(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[str] = None,
         timeout: int = 30,
     ) -> ScrapeJobsResponse:
         """Send a scrape jobs request and wait for response.
 
         Args:
-            salary: Minimum salary requirement
-            employment: Employment type
+            min_salary: Minimum salary requirement
+            employment_location: Employment type or location
             posted_after: ISO format datetime string for filtering by post date
             timeout: Scraper timeout in seconds
 
@@ -72,13 +72,17 @@ class ScrapperProducer:
             auto_ack=True,
         )
 
-        request: ScrapeJobsRequest = {
-            "salary": salary,
-            "employment": employment,
-            "timeout": timeout,
-        }
+        filter_payload: ScrapeJobsFilter = {}
+        if min_salary is not None:
+            filter_payload["min_salary"] = min_salary
+        if employment_location is not None:
+            filter_payload["employment_location"] = employment_location
         if posted_after:
-            request["posted_after"] = posted_after
+            filter_payload["posted_after"] = posted_after
+
+        request: ScrapeJobsRequest = {"timeout": timeout}
+        if filter_payload:
+            request["filter"] = filter_payload
 
         self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id}")
 
@@ -169,8 +173,8 @@ class ScrapperProducer:
 
     def scrape_jobs_streaming(
         self,
-        salary: int = 4000,
-        employment: str = "remote",
+        min_salary: Optional[int] = 4000,
+        employment_location: Optional[str] = "remote",
         posted_after: Optional[str] = None,
         timeout: int = 30,
     ) -> Iterator[ScrapeJobsResponse]:
@@ -180,8 +184,8 @@ class ScrapperProducer:
         allowing for incremental processing instead of waiting for all pages.
 
         Args:
-            salary: Minimum salary requirement
-            employment: Employment type
+            min_salary: Minimum salary requirement
+            employment_location: Employment type or location
             posted_after: ISO format datetime string for filtering by post date
             timeout: Scraper timeout in seconds
 
@@ -209,13 +213,17 @@ class ScrapperProducer:
             auto_ack=True,
         )
 
-        request: ScrapeJobsRequest = {
-            "salary": salary,
-            "employment": employment,
-            "timeout": timeout,
-        }
+        filter_payload: ScrapeJobsFilter = {}
+        if min_salary is not None:
+            filter_payload["min_salary"] = min_salary
+        if employment_location is not None:
+            filter_payload["employment_location"] = employment_location
         if posted_after:
-            request["posted_after"] = posted_after
+            filter_payload["posted_after"] = posted_after
+
+        request: ScrapeJobsRequest = {"timeout": timeout}
+        if filter_payload:
+            request["filter"] = filter_payload
 
         self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id}")
 

@@ -223,10 +223,15 @@ class TestJobAgentOrchestrator:
         """Test scrape_jobs calls scrapper manager correctly."""
         orchestrator.scrapper_manager = mock_scrapper_manager
 
-        result = orchestrator.scrape_jobs(salary=5000, employment="remote", timeout=30)
+        result = orchestrator.scrape_jobs(
+            min_salary=5000, employment_location="remote", timeout=30
+        )
 
         mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once_with(
-            salary=5000, employment="remote", posted_after=None, timeout=30
+            min_salary=5000,
+            employment_location="remote",
+            posted_after=None,
+            timeout=30,
         )
         assert len(result) == 1
         assert result[0]["title"] == "Python Developer"
@@ -236,7 +241,7 @@ class TestJobAgentOrchestrator:
         orchestrator.scrapper_manager = mock_scrapper_manager
         posted_after = datetime(2024, 1, 1, tzinfo=UTC)
 
-        orchestrator.scrape_jobs(salary=4000, posted_after=posted_after)
+        orchestrator.scrape_jobs(min_salary=4000, posted_after=posted_after)
 
         mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once()
         call_kwargs = mock_scrapper_manager.scrape_jobs_as_dicts.call_args[1]
@@ -326,7 +331,7 @@ class TestJobAgentOrchestrator:
         }
 
         result = orchestrator.run_complete_pipeline(
-            user_id=user_id, salary=4000, employment="remote", timeout=30
+            user_id=user_id, min_salary=4000, employment_location="remote", timeout=30
         )
 
         mock_initializer.assert_called_once()
