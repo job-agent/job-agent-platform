@@ -23,9 +23,7 @@ class RabbitMQConnection:
         Args:
             rabbitmq_url: AMQP connection URL. If None, reads from RABBITMQ_URL env var
         """
-        self.rabbitmq_url = rabbitmq_url or os.getenv(
-            "RABBITMQ_URL", "amqp://jobagent:jobagent@localhost:5672/"
-        )
+        self.rabbitmq_url = rabbitmq_url or os.getenv("RABBITMQ_URL")
         self.connection: Optional[BlockingConnection] = None
         self.channel: Optional[BlockingChannel] = None
         self.logger = logging.getLogger(__name__)

@@ -74,10 +74,6 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     try:
 
-        async def telegram_logger(message: str) -> None:
-            """Send log messages to the user."""
-            await update.message.reply_text(f"ℹ️ {message}")
-
         def sync_logger(message: str) -> None:
             """Log workflow updates to stdout for orchestrator callbacks."""
             print(f"[Telegram Bot] {message}")
@@ -87,64 +83,105 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         loop = asyncio.get_event_loop()
 
         await update.message.reply_text(
-            "📊 Step 1/4: Scraping jobs (will paginate through all pages)..."
-        )
-        jobs = await loop.run_in_executor(
-            None,
-            orchestrator.scrape_jobs,
-            params["salary"],
-            params["employment"],
-            posted_after,
-            params["timeout"],
+            "📊 Starting job search...\n" "Jobs will be displayed as they're found and processed."
         )
 
-        await update.message.reply_text(
-            f"✅ Found {len(jobs)} jobs\n\n📊 Step 2/4: Filtering jobs..."
-        )
-        filtered_jobs = await loop.run_in_executor(None, orchestrator.filter_jobs_list, jobs)
-
-        await update.message.reply_text(
-            f"✅ {len(filtered_jobs)}/{len(jobs)} jobs passed filters\n\n"
-            f"📊 Step 3/4: Loading your CV..."
-        )
         cleaned_cv = await loop.run_in_executor(None, orchestrator.load_cv, user_id)
+        await update.message.reply_text("✅ CV loaded")
 
-        await update.message.reply_text(
-            f"✅ CV ready\n\n📊 Step 4/4: Processing {len(filtered_jobs)} jobs...\n"
-            f"This may take a while..."
-        )
+        total_scraped = 0
+        total_filtered = 0
+        total_processed = 0
+        relevant_count = 0
+        sent_job_count = 0
 
-        relevant_jobs = []
+        def create_streaming_generator():
+            return orchestrator.scrape_jobs_streaming(
+                params["salary"],
+                params["employment"],
+                posted_after,
+                params["timeout"],
+            )
 
-        for idx, total, result in await loop.run_in_executor(
-            None, lambda: list(orchestrator.process_jobs_iterator(filtered_jobs, cleaned_cv))
-        ):
+        streaming_gen = await loop.run_in_executor(None, create_streaming_generator)
+
+        def get_next_batch(gen):
+            try:
+                return next(gen), False
+            except StopIteration:
+                return None, True
+
+        while True:
+            batch_result, is_done = await loop.run_in_executor(None, get_next_batch, streaming_gen)
+
+            if is_done:
+                break
+
+            batch_jobs, page_number, total_jobs_so_far = batch_result
+
             if not active_searches.get(user_id, False):
                 await update.message.reply_text("🛑 Search cancelled by user.")
                 return
 
-            if result.get("is_relevant"):
-                relevant_jobs.append(result)
+            total_scraped = total_jobs_so_far
+            await update.message.reply_text(
+                f"📄 Page {page_number}: Scraped {len(batch_jobs)} jobs (total: {total_scraped})"
+            )
 
-            if idx % 3 == 0 or idx == total:
+            filtered_batch = await loop.run_in_executor(
+                None, orchestrator.filter_jobs_list, batch_jobs
+            )
+            total_filtered += len(filtered_batch)
+
+            if not filtered_batch:
                 await update.message.reply_text(
-                    f"⏳ Processed {idx}/{total} jobs... ({len(relevant_jobs)} relevant)"
+                    f"⏭️  Page {page_number}: No jobs passed filters, continuing..."
+                )
+                continue
+
+            await update.message.reply_text(
+                f"🔍 Page {page_number}: {len(filtered_batch)} jobs passed filters, processing..."
+            )
+
+            batch_relevant = []
+            for idx, total_batch, result in await loop.run_in_executor(
+                None,
+                lambda fb=filtered_batch: list(orchestrator.process_jobs_iterator(fb, cleaned_cv)),
+            ):
+                if not active_searches.get(user_id, False):
+                    await update.message.reply_text("🛑 Search cancelled by user.")
+                    return
+
+                total_processed += 1
+
+                if result.get("is_relevant"):
+                    batch_relevant.append(result)
+                    relevant_count += 1
+
+            if batch_relevant:
+                await update.message.reply_text(
+                    f"✨ Page {page_number}: Found {len(batch_relevant)} relevant job(s)!"
+                )
+
+                for result in batch_relevant:
+                    sent_job_count += 1
+                    message = formatter.format_job_message(result, sent_job_count, relevant_count)
+                    await update.message.reply_text(message)
+            else:
+                await update.message.reply_text(
+                    f"⏭️  Page {page_number}: Processed {len(filtered_batch)} jobs, none relevant"
                 )
 
         await update.message.reply_text(
             formatter.format_search_summary(
-                total_scraped=len(jobs),
-                passed_filters=len(filtered_jobs),
-                processed=len(filtered_jobs),
-                relevant=len(relevant_jobs),
+                total_scraped=total_scraped,
+                passed_filters=total_filtered,
+                processed=total_processed,
+                relevant=relevant_count,
             )
         )
 
-        for idx, result in enumerate(relevant_jobs, 1):
-            message = formatter.format_job_message(result, idx, len(relevant_jobs))
-            await update.message.reply_text(message)
-
-        if not relevant_jobs:
+        if relevant_count == 0:
             await update.message.reply_text(
                 "😔 No relevant jobs found matching your CV.\n"
                 "Try adjusting your search parameters or check back later."

@@ -198,6 +198,52 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger(f"Scraped {len(jobs)} jobs")
         return jobs
 
+    def scrape_jobs_streaming(
+        self,
+        salary: int = 4000,
+        employment: str = "remote",
+        posted_after: Optional[datetime] = None,
+        timeout: int = 30,
+    ) -> Iterator[tuple[list[JobDict], int, int]]:
+        """Scrape jobs using the scrapper service, yielding batches as they arrive.
+
+        Automatically paginates through all pages until reaching the date cutoff,
+        yielding each batch as soon as it's received from the scrapper.
+
+        Args:
+            salary: Minimum salary filter
+            employment: Employment type filter
+            posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
+            timeout: Request timeout in seconds
+
+        Yields:
+            tuple[list[JobDict], int, int]: (batch_jobs, page_number, total_jobs_so_far)
+        """
+        self.logger("Starting streaming job scrape...")
+        total_jobs = 0
+
+        # Check if scrapper_manager has streaming method
+        if hasattr(self.scrapper_manager, "scrape_jobs_streaming"):
+            for batch_jobs, page_number in self.scrapper_manager.scrape_jobs_streaming(
+                salary=salary, employment=employment, posted_after=posted_after, timeout=timeout
+            ):
+                total_jobs += len(batch_jobs)
+                self.logger(
+                    f"Scraped page {page_number}: {len(batch_jobs)} jobs (total: {total_jobs})"
+                )
+                yield batch_jobs, page_number, total_jobs
+        else:
+            # Fallback to non-streaming if scrapper_manager doesn't support it
+            self.logger("Scrapper manager doesn't support streaming, falling back to batch mode")
+            jobs = self.scrapper_manager.scrape_jobs_as_dicts(
+                salary=salary, employment=employment, posted_after=posted_after, timeout=timeout
+            )
+            total_jobs = len(jobs)
+            self.logger(f"Scraped {total_jobs} jobs")
+            yield jobs, 1, total_jobs
+
+        self.logger(f"Completed scraping: {total_jobs} total jobs")
+
     def filter_jobs_list(self, jobs: Sequence[JobDict]) -> list[JobDict]:
         """Filter jobs based on configuration.
 

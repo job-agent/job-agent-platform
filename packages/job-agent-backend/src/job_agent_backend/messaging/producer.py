@@ -3,7 +3,7 @@
 import json
 import logging
 import uuid
-from typing import Optional
+from typing import Iterator, Optional
 
 import pika
 from job_scrapper_contracts import ScrapeJobsRequest, ScrapeJobsResponse
@@ -29,7 +29,8 @@ class ScrapperProducer:
         """
         self.rabbitmq_connection = RabbitMQConnection(rabbitmq_url)
         self.logger = logging.getLogger(__name__)
-        self.response: Optional[ScrapeJobsResponse] = None
+        self.responses: list[ScrapeJobsResponse] = []
+        self.is_complete: bool = False
         self.correlation_id: Optional[str] = None
 
     def send_scrape_request(
@@ -56,25 +57,21 @@ class ScrapperProducer:
         """
         channel = self.rabbitmq_connection.connect()
 
-        # Declare request queue (idempotent)
         channel.queue_declare(queue=self.REQUEST_QUEUE, durable=True)
 
-        # Create temporary reply queue
         result = channel.queue_declare(queue="", exclusive=True)
         reply_queue = result.method.queue
 
-        # Generate correlation ID for matching request/response
         self.correlation_id = str(uuid.uuid4())
-        self.response = None
+        self.responses = []
+        self.is_complete = False
 
-        # Setup consumer for reply queue
         channel.basic_consume(
             queue=reply_queue,
             on_message_callback=self._on_response,
             auto_ack=True,
         )
 
-        # Build request
         request: ScrapeJobsRequest = {
             "salary": salary,
             "employment": employment,
@@ -83,10 +80,7 @@ class ScrapperProducer:
         if posted_after:
             request["posted_after"] = posted_after
 
-        # Send request
-        self.logger.info(
-            f"Sending scrape request with correlation_id={self.correlation_id}"
-        )
+        self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id}")
 
         channel.basic_publish(
             exchange="",
@@ -95,36 +89,44 @@ class ScrapperProducer:
                 reply_to=reply_queue,
                 correlation_id=self.correlation_id,
                 content_type="application/json",
-                delivery_mode=2,  # Make message persistent
+                delivery_mode=2,
             ),
             body=json.dumps(request).encode("utf-8"),
         )
 
-        # Wait for response with timeout
         connection = self.rabbitmq_connection.connection
         timeout_counter = 0
-        while self.response is None and timeout_counter < self.RESPONSE_TIMEOUT:
+        while not self.is_complete and timeout_counter < self.RESPONSE_TIMEOUT:
             connection.process_data_events(time_limit=1)
             timeout_counter += 1
 
-        if self.response is None:
+        if not self.is_complete:
             self.rabbitmq_connection.close()
             raise TimeoutError(
-                f"No response received within {self.RESPONSE_TIMEOUT} seconds"
+                f"No completion response received within {self.RESPONSE_TIMEOUT} seconds"
             )
 
-        response = self.response
         self.rabbitmq_connection.close()
 
-        # Check for errors in response
-        if not response["success"]:
-            raise Exception(f"Scraper error: {response.get('error', 'Unknown error')}")
+        all_jobs = []
+        for response in self.responses:
+            if response.get("jobs"):
+                all_jobs.extend(response["jobs"])
+            if not response["success"]:
+                raise Exception(f"Scraper error: {response.get('error', 'Unknown error')}")
+
+        aggregated_response: ScrapeJobsResponse = {
+            "jobs": all_jobs,
+            "success": True,
+            "error": None,
+            "jobs_count": len(all_jobs),
+        }
 
         self.logger.info(
-            f"Received response with {response['jobs_count']} jobs for correlation_id={self.correlation_id}"
+            f"Received {len(self.responses)} responses with {len(all_jobs)} total jobs for correlation_id={self.correlation_id}"
         )
 
-        return response
+        return aggregated_response
 
     def _on_response(
         self,
@@ -141,6 +143,122 @@ class ScrapperProducer:
             properties: Message properties
             body: Message body
         """
-        if properties.correlation_id == self.correlation_id:
-            self.response = json.loads(body.decode("utf-8"))
-            self.logger.debug(f"Received response for correlation_id={self.correlation_id}")
+        message_payload = body.decode("utf-8")
+        is_expected_message = properties.correlation_id == self.correlation_id
+        self.logger.info(
+            "Received message from queue with correlation_id=%s expected=%s payload=%s",
+            properties.correlation_id,
+            is_expected_message,
+            message_payload,
+        )
+        if is_expected_message:
+            response = json.loads(message_payload)
+            self.responses.append(response)
+
+            if response.get("is_complete", False):
+                self.is_complete = True
+                self.logger.debug(
+                    f"Received completion response for correlation_id={self.correlation_id}"
+                )
+            else:
+                page_number = response.get("page_number", "unknown")
+                jobs_count = response.get("jobs_count", 0)
+                self.logger.info(
+                    f"Received page {page_number} response with {jobs_count} jobs for correlation_id={self.correlation_id}"
+                )
+
+    def scrape_jobs_streaming(
+        self,
+        salary: int = 4000,
+        employment: str = "remote",
+        posted_after: Optional[str] = None,
+        timeout: int = 30,
+    ) -> Iterator[ScrapeJobsResponse]:
+        """Send a scrape jobs request and yield responses as they arrive.
+
+        This method yields each batch of jobs as soon as it's received from the scrapper,
+        allowing for incremental processing instead of waiting for all pages.
+
+        Args:
+            salary: Minimum salary requirement
+            employment: Employment type
+            posted_after: ISO format datetime string for filtering by post date
+            timeout: Scraper timeout in seconds
+
+        Yields:
+            ScrapeJobsResponse: Each page response containing a batch of jobs
+
+        Raises:
+            TimeoutError: If no response is received within RESPONSE_TIMEOUT
+            Exception: If any response indicates an error
+        """
+        channel = self.rabbitmq_connection.connect()
+
+        channel.queue_declare(queue=self.REQUEST_QUEUE, durable=True)
+
+        result = channel.queue_declare(queue="", exclusive=True)
+        reply_queue = result.method.queue
+
+        self.correlation_id = str(uuid.uuid4())
+        self.responses = []
+        self.is_complete = False
+
+        channel.basic_consume(
+            queue=reply_queue,
+            on_message_callback=self._on_response,
+            auto_ack=True,
+        )
+
+        request: ScrapeJobsRequest = {
+            "salary": salary,
+            "employment": employment,
+            "timeout": timeout,
+        }
+        if posted_after:
+            request["posted_after"] = posted_after
+
+        self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id}")
+
+        channel.basic_publish(
+            exchange="",
+            routing_key=self.REQUEST_QUEUE,
+            properties=pika.BasicProperties(
+                reply_to=reply_queue,
+                correlation_id=self.correlation_id,
+                content_type="application/json",
+                delivery_mode=2,
+            ),
+            body=json.dumps(request).encode("utf-8"),
+        )
+
+        connection = self.rabbitmq_connection.connection
+        timeout_counter = 0
+        last_yielded_index = 0
+
+        while not self.is_complete and timeout_counter < self.RESPONSE_TIMEOUT:
+            connection.process_data_events(time_limit=1)
+            timeout_counter += 1
+
+            while last_yielded_index < len(self.responses):
+                response = self.responses[last_yielded_index]
+                last_yielded_index += 1
+
+                if response.get("is_complete", False):
+                    continue
+
+                if not response["success"]:
+                    self.rabbitmq_connection.close()
+                    raise Exception(f"Scraper error: {response.get('error', 'Unknown error')}")
+
+                yield response
+
+        if not self.is_complete:
+            self.rabbitmq_connection.close()
+            raise TimeoutError(
+                f"No completion response received within {self.RESPONSE_TIMEOUT} seconds"
+            )
+
+        self.rabbitmq_connection.close()
+        self.logger.info(
+            f"Streaming completed: {len(self.responses) - 1} batches for correlation_id={self.correlation_id}"
+        )
