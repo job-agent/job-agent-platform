@@ -21,9 +21,9 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     Examples:
         /search
-        /search salary=5000
-        /search salary=6000 employment=remote
-        /search salary=5000 days=7  # Get jobs from last 7 days
+        /search min_salary=5000
+        /search min_salary=6000 employment_location=remote
+        /search min_salary=5000 days=7  # Get jobs from last 7 days
     """
     user_id = update.effective_user.id
     dependencies = get_dependencies(context)
@@ -37,13 +37,18 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     args = context.args or []
-    params = {"salary": 4000, "employment": "remote", "days": 1, "timeout": 30}
+    params = {"min_salary": 4000, "employment_location": "remote", "days": 1, "timeout": 30}
 
     for arg in args:
         if "=" in arg:
             key, value = arg.split("=", 1)
+            if key == "salary":
+                await update.message.reply_text(
+                    "❌ The parameter 'salary' is no longer supported. Please use 'min_salary'."
+                )
+                return
             if key in params:
-                if key in ("salary", "days", "timeout"):
+                if key in ("min_salary", "days", "timeout"):
                     try:
                         params[key] = int(value)
                     except ValueError:
@@ -67,7 +72,9 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     await update.message.reply_text(
-        formatter.format_search_parameters(params["salary"], params["employment"], params["days"])
+        formatter.format_search_parameters(
+            params["min_salary"], params["employment_location"], params["days"]
+        )
     )
 
     active_searches[user_id] = True
@@ -83,7 +90,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         loop = asyncio.get_event_loop()
 
         await update.message.reply_text(
-            "📊 Starting job search...\n" "Jobs will be displayed as they're found and processed."
+            "📊 Starting job search...\nJobs will be displayed as they're found and processed."
         )
 
         cleaned_cv = await loop.run_in_executor(None, orchestrator.load_cv, user_id)
@@ -97,8 +104,8 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         def create_streaming_generator():
             return orchestrator.scrape_jobs_streaming(
-                params["salary"],
-                params["employment"],
+                params["min_salary"],
+                params["employment_location"],
                 posted_after,
                 params["timeout"],
             )
@@ -117,7 +124,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             if is_done:
                 break
 
-            batch_jobs, page_number, total_jobs_so_far = batch_result
+            batch_jobs, total_jobs_so_far = batch_result
 
             if not active_searches.get(user_id, False):
                 await update.message.reply_text("🛑 Search cancelled by user.")
@@ -125,7 +132,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
             total_scraped = total_jobs_so_far
             await update.message.reply_text(
-                f"📄 Page {page_number}: Scraped {len(batch_jobs)} jobs (total: {total_scraped})"
+                f"📄 Scraped {len(batch_jobs)} jobs (total: {total_scraped})"
             )
 
             filtered_batch = await loop.run_in_executor(
@@ -135,12 +142,12 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
             if not filtered_batch:
                 await update.message.reply_text(
-                    f"⏭️  Page {page_number}: No jobs passed filters, continuing..."
+                    f"⏭️  No jobs passed filters, continuing..."
                 )
                 continue
 
             await update.message.reply_text(
-                f"🔍 Page {page_number}: {len(filtered_batch)} jobs passed filters, processing..."
+                f"🔍 {len(filtered_batch)} jobs passed filters, processing..."
             )
 
             batch_relevant = []
@@ -160,7 +167,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
             if batch_relevant:
                 await update.message.reply_text(
-                    f"✨ Page {page_number}: Found {len(batch_relevant)} relevant job(s)!"
+                    f"✨ Found {len(batch_relevant)} relevant job(s)!"
                 )
 
                 for result in batch_relevant:
@@ -169,7 +176,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     await update.message.reply_text(message)
             else:
                 await update.message.reply_text(
-                    f"⏭️  Page {page_number}: Processed {len(filtered_batch)} jobs, none relevant"
+                    f"⏭️  Processed {len(filtered_batch)} jobs, none relevant"
                 )
 
         await update.message.reply_text(

@@ -165,10 +165,9 @@ class ScrapperProducer:
                     f"Received completion response for correlation_id={self.correlation_id}"
                 )
             else:
-                page_number = response.get("page_number", "unknown")
                 jobs_count = response.get("jobs_count", 0)
                 self.logger.info(
-                    f"Received page {page_number} response with {jobs_count} jobs for correlation_id={self.correlation_id}"
+                    f"Received batch response with {jobs_count} jobs for correlation_id={self.correlation_id}"
                 )
 
     def scrape_jobs_streaming(

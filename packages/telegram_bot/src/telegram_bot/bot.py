@@ -58,7 +58,7 @@ class JobAgentBot:
             [
                 ("start", "Start the bot and see welcome message"),
                 ("help", "Show help message with available commands"),
-                ("search", "Search for jobs (e.g., /search salary=5000)"),
+                ("search", "Search for jobs (e.g., /search min_salary=5000)"),
                 ("status", "Check current search status"),
                 ("cancel", "Cancel current job search"),
             ]

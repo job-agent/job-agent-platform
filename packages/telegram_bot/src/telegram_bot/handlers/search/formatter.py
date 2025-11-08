@@ -86,12 +86,12 @@ def format_search_summary(
     )
 
 
-def format_search_parameters(salary: int, employment: str, days: int | None) -> str:
+def format_search_parameters(min_salary: int, employment_location: str, days: int | None) -> str:
     """Format search parameters message.
 
     Args:
-        salary: Minimum salary requirement
-        employment: Employment type (e.g., 'remote')
+        min_salary: Minimum salary requirement
+        employment_location: Employment type (e.g., 'remote')
         days: Number of days to look back (None for all jobs)
 
     Returns:
@@ -101,8 +101,8 @@ def format_search_parameters(salary: int, employment: str, days: int | None) -> 
     return (
         f"🔍 Starting job search...\n\n"
         f"Parameters:\n"
-        f"• Salary: {salary}\n"
-        f"• Employment: {employment}\n"
+        f"• Min salary: {min_salary}\n"
+        f"• Employment: {employment_location}\n"
         f"{date_info}\n"
         f"This may take a few minutes. I'll send you updates as I progress."
     )

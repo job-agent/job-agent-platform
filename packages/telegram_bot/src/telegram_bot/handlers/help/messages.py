@@ -21,17 +21,17 @@ Your CV will be stored securely and used to match you with relevant job opportun
 🔍 Search Examples:
 
 /search
-  → Search with default parameters (salary=4000, remote)
+  → Search with default parameters (min_salary=4000, remote)
 
-/search salary=5000
+/search min_salary=5000
   → Search for jobs with minimum salary of 5000
 
-/search salary=6000 employment=remote days=7
+/search min_salary=6000 employment_location=remote days=7
   → Custom search with multiple parameters
 
 ⚙️ Available Parameters:
-- salary: Minimum salary (default: 4000)
-- employment: Employment type (default: "remote")
+- min_salary: Minimum salary (default: 4000)
+- employment_location: Employment type (default: "remote")
 - days: Number of days to look back (default: 1)
 - timeout: Request timeout in seconds (default: 30)
 

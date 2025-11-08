@@ -73,7 +73,7 @@ class ScrapperClient:
         employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
-    ) -> Iterator[tuple[list[JobDict], int]]:
+    ) -> Iterator[list[JobDict]]:
         """Scrape jobs via RabbitMQ, yielding batches as they arrive.
 
         This method yields each batch of jobs as soon as it's received from the scrapper,
@@ -86,7 +86,7 @@ class ScrapperClient:
             timeout: Request timeout in seconds
 
         Yields:
-            tuple[list[JobDict], int]: Tuple of (batch_jobs, page_number) for each page
+            list[JobDict]: Batch of jobs for each batch
 
         Raises:
             TimeoutError: If no response is received
@@ -107,10 +107,9 @@ class ScrapperClient:
             posted_after=posted_after_str,
             timeout=timeout,
         ):
-            page_number = response.get("page_number", 0)
             jobs = response.get("jobs", [])
             jobs_count = len(jobs)
 
-            self.logger.info(f"Yielding batch: page {page_number} with {jobs_count} jobs")
+            self.logger.info(f"Yielding batch: {jobs_count} jobs")
 
-            yield jobs, page_number
+            yield jobs

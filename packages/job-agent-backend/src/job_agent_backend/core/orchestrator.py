@@ -207,7 +207,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         employment_location: Optional[str] = "remote",
         posted_after: Optional[datetime] = None,
         timeout: int = 30,
-    ) -> Iterator[tuple[list[JobDict], int, int]]:
+    ) -> Iterator[tuple[list[JobDict], int]]:
         """Scrape jobs using the scrapper service, yielding batches as they arrive.
 
         Automatically paginates through all pages until reaching the date cutoff,
@@ -220,14 +220,14 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             timeout: Request timeout in seconds
 
         Yields:
-            tuple[list[JobDict], int, int]: (batch_jobs, page_number, total_jobs_so_far)
+            tuple[list[JobDict], int]: (batch_jobs, total_jobs_so_far)
         """
         self.logger("Starting streaming job scrape...")
         total_jobs = 0
 
         # Check if scrapper_manager has streaming method
         if hasattr(self.scrapper_manager, "scrape_jobs_streaming"):
-            for batch_jobs, page_number in self.scrapper_manager.scrape_jobs_streaming(
+            for batch_jobs in self.scrapper_manager.scrape_jobs_streaming(
                 min_salary=min_salary,
                 employment_location=employment_location,
                 posted_after=posted_after,
@@ -235,9 +235,9 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             ):
                 total_jobs += len(batch_jobs)
                 self.logger(
-                    f"Scraped page {page_number}: {len(batch_jobs)} jobs (total: {total_jobs})"
+                    f"Scraped batch: {len(batch_jobs)} jobs (total: {total_jobs})"
                 )
-                yield batch_jobs, page_number, total_jobs
+                yield batch_jobs, total_jobs
         else:
             # Fallback to non-streaming if scrapper_manager doesn't support it
             self.logger("Scrapper manager doesn't support streaming, falling back to batch mode")
@@ -249,7 +249,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             )
             total_jobs = len(jobs)
             self.logger(f"Scraped {total_jobs} jobs")
-            yield jobs, 1, total_jobs
+            yield jobs, total_jobs
 
         self.logger(f"Completed scraping: {total_jobs} total jobs")
 
