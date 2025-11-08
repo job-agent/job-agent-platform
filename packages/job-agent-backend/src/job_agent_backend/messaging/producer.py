@@ -250,9 +250,6 @@ class ScrapperProducer:
                 response = self.responses[last_yielded_index]
                 last_yielded_index += 1
 
-                if response.get("is_complete", False):
-                    continue
-
                 if not response["success"]:
                     self.rabbitmq_connection.close()
                     raise Exception(f"Scraper error: {response.get('error', 'Unknown error')}")
