@@ -82,7 +82,7 @@ class ScrapperProducer:
 
         request: ScrapeJobsRequest = {"timeout": timeout}
         if filter_payload:
-            request["filter"] = filter_payload
+            request["filters"] = filter_payload
 
         self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id}")
 
@@ -222,7 +222,7 @@ class ScrapperProducer:
 
         request: ScrapeJobsRequest = {"timeout": timeout}
         if filter_payload:
-            request["filter"] = filter_payload
+            request["filters"] = filter_payload
 
         self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id}")
 
