@@ -52,7 +52,7 @@ class JobMapper:
         mapped_data["description"] = job_data.get("description")
         mapped_data["external_id"] = str(job_data.get("job_id"))
         mapped_data["source_url"] = job_data.get("url")
-        mapped_data["source"] = job_data.get("source")  # Extract job board source
+        mapped_data["source"] = job_data.get("source")
         mapped_data["job_type"] = job_data.get("employment_type")
         mapped_data["experience_months"] = job_data.get("experience_months")
 
