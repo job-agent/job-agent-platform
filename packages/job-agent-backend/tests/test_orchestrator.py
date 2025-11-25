@@ -222,12 +222,17 @@ class TestJobAgentOrchestrator:
     def test_scrape_jobs(self, orchestrator, mock_scrapper_manager):
         """Test scrape_jobs calls scrapper manager correctly."""
         orchestrator.scrapper_manager = mock_scrapper_manager
+        
+        # Mock streaming to return a list of lists (batches)
+        mock_scrapper_manager.scrape_jobs_streaming.return_value = iter([
+            [{"title": "Python Developer"}]
+        ])
 
         result = orchestrator.scrape_jobs(
             min_salary=5000, employment_location="remote", timeout=30
         )
 
-        mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once_with(
+        mock_scrapper_manager.scrape_jobs_streaming.assert_called_once_with(
             min_salary=5000,
             employment_location="remote",
             posted_after=None,
@@ -240,11 +245,13 @@ class TestJobAgentOrchestrator:
         """Test scrape_jobs with posted_after date."""
         orchestrator.scrapper_manager = mock_scrapper_manager
         posted_after = datetime(2024, 1, 1, tzinfo=UTC)
+        
+        mock_scrapper_manager.scrape_jobs_streaming.return_value = iter([])
 
         orchestrator.scrape_jobs(min_salary=4000, posted_after=posted_after)
 
-        mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once()
-        call_kwargs = mock_scrapper_manager.scrape_jobs_as_dicts.call_args[1]
+        mock_scrapper_manager.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper_manager.scrape_jobs_streaming.call_args[1]
         assert call_kwargs["posted_after"] == posted_after
 
     def test_filter_jobs_list(self, orchestrator, sample_jobs_list):
@@ -329,13 +336,30 @@ class TestJobAgentOrchestrator:
             "is_relevant": True,
             "status": "completed",
         }
+        
+        # Mock streaming to return one batch with one valid job
+        valid_job = {
+            "job_id": 1,
+            "title": "Python Developer",
+            "url": "https://example.com/1",
+            "description": "Python dev position",
+            "company": {"name": "TechCo", "website": "https://techco.com"},
+            "category": "Software Development",
+            "date_posted": "2024-01-15T10:00:00Z",
+            "valid_through": "2024-02-15T10:00:00Z",
+            "employment_type": "FULL_TIME",
+            "experience_months": 24.0,
+            "location": {"region": "Remote", "is_remote": True, "can_apply": True},
+            "industry": "Technology",
+        }
+        mock_scrapper_manager.scrape_jobs_streaming.return_value = iter([[valid_job]])
 
         result = orchestrator.run_complete_pipeline(
             user_id=user_id, min_salary=4000, employment_location="remote", timeout=30
         )
 
         mock_initializer.assert_called_once()
-        mock_scrapper_manager.scrape_jobs_as_dicts.assert_called_once()
+        mock_scrapper_manager.scrape_jobs_streaming.assert_called_once()
         mock_repo_instance.find.assert_called_once()
         mock_run_job_processing.assert_called_once()
 
@@ -398,7 +422,7 @@ class TestJobAgentOrchestrator:
                 "employment_type": "FULL_TIME",
             },
         ]
-        mock_scrapper.scrape_jobs_as_dicts.return_value = jobs_data
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([jobs_data])
 
         mock_repo_instance = MagicMock()
         mock_repo_instance.find.return_value = sample_cv_content

@@ -6,7 +6,7 @@ jobs and looking them up by external identifier.
 """
 
 from contextlib import contextmanager
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 from typing import Callable, Generator, Optional
 
 from sqlalchemy.orm import Session
@@ -144,6 +144,24 @@ class JobRepository(IJobRepository):
             stmt = stmt.where(Job.source == source)
         return session.scalar(stmt)
 
+    def _get_job_by_source_url(
+        self, session: Session, source_url: str, source: Optional[str]
+    ) -> Optional[Job]:
+        """Find job by source URL and optional source.
+
+        Args:
+            session: SQLAlchemy session
+            source_url: The URL where the job was originally scraped from
+            source: Optional job source (e.g., 'djinni', 'linkedin')
+
+        Returns:
+            Job instance if found, None otherwise
+        """
+        stmt = select(Job).where(Job.source_url == source_url)
+        if source:
+            stmt = stmt.where(Job.source == source)
+        return session.scalar(stmt)
+
     def create(self, job_data: JobCreate) -> Job:
         """
         Create a new job from JobDict or JobCreate contract data.
@@ -187,6 +205,12 @@ class JobRepository(IJobRepository):
                 existing_job = self._get_job_by_external_id(
                     session, mapped_data["external_id"], mapped_data.get("source")
                 )
+
+                if not existing_job and mapped_data.get("source_url"):
+                    existing_job = self._get_job_by_source_url(
+                        session, mapped_data["source_url"], mapped_data.get("source")
+                    )
+
                 if existing_job:
                     raise JobAlreadyExistsError(
                         external_id=mapped_data["external_id"],
@@ -247,3 +271,35 @@ class JobRepository(IJobRepository):
                 .limit(1)
             )
             return session.scalar(stmt) is not None
+
+    def get_existing_urls_by_source(self, source: str, days: Optional[int] = None) -> list[str]:
+        """
+        Get existing job URLs for a given source, optionally filtered by time window.
+
+        Args:
+            source: Job source (e.g., 'djinni', 'linkedin')
+            days: Optional number of days to look back. If provided, only returns URLs
+                  for jobs posted within the last N days. If None, returns all URLs.
+
+        Returns:
+            List of URLs for jobs from the specified source
+        """
+        with self._session_scope(commit=False) as session:
+            stmt = select(Job.source_url).where(
+                Job.source == source,
+                Job.source_url.isnot(None)
+            )
+
+            # Apply time-window filter if specified
+            if days is not None:
+                cutoff_date = datetime.now(UTC) - timedelta(days=days)
+
+                # Handle timezone-aware vs timezone-naive comparison
+                posted_at_column = Job.__table__.c.posted_at
+                if not getattr(posted_at_column.type, "timezone", False):
+                    cutoff_date = cutoff_date.replace(tzinfo=None)
+
+                stmt = stmt.where(Job.posted_at >= cutoff_date)
+
+            results = session.execute(stmt).scalars().all()
+            return list(results)

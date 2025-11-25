@@ -61,3 +61,18 @@ class IJobRepository(ABC):
             True when an active job exists, False otherwise
         """
         pass
+
+    @abstractmethod
+    def get_existing_urls_by_source(self, source: str, days: Optional[int] = None) -> list[str]:
+        """
+        Get existing job URLs for a given source, optionally filtered by time window.
+
+        Args:
+            source: Job source (e.g., 'djinni', 'linkedin')
+            days: Optional number of days to look back. If provided, only returns URLs
+                  for jobs posted within the last N days. If None, returns all URLs.
+
+        Returns:
+            List of URLs for jobs from the specified source
+        """
+        pass

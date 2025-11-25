@@ -26,13 +26,13 @@ CVRepositoryFactory = Callable[[str | Path], ICVRepository]
 
 
 class ScrapperManagerProtocol(Protocol):
-    def scrape_jobs_as_dicts(
+    def scrape_jobs_streaming(
         self,
         min_salary: Optional[int],
         employment_location: Optional[str],
         posted_after: Optional[datetime],
         timeout: int,
-    ) -> list[JobDict]: ...
+    ) -> Iterator[list[JobDict]]: ...
 
 
 class JobAgentOrchestrator(IJobAgentOrchestrator):
@@ -192,14 +192,17 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             List of job dictionaries
         """
         self.logger("Scraping jobs...")
-        jobs = self.scrapper_manager.scrape_jobs_as_dicts(
+        all_jobs = []
+        for batch_jobs in self.scrapper_manager.scrape_jobs_streaming(
             min_salary=min_salary,
             employment_location=employment_location,
             posted_after=posted_after,
             timeout=timeout,
-        )
-        self.logger(f"Scraped {len(jobs)} jobs")
-        return jobs
+        ):
+            all_jobs.extend(batch_jobs)
+
+        self.logger(f"Scraped {len(all_jobs)} jobs")
+        return all_jobs
 
     def scrape_jobs_streaming(
         self,
@@ -225,31 +228,17 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger("Starting streaming job scrape...")
         total_jobs = 0
 
-        # Check if scrapper_manager has streaming method
-        if hasattr(self.scrapper_manager, "scrape_jobs_streaming"):
-            for batch_jobs in self.scrapper_manager.scrape_jobs_streaming(
-                min_salary=min_salary,
-                employment_location=employment_location,
-                posted_after=posted_after,
-                timeout=timeout,
-            ):
-                total_jobs += len(batch_jobs)
-                self.logger(
-                    f"Scraped batch: {len(batch_jobs)} jobs (total: {total_jobs})"
-                )
-                yield batch_jobs, total_jobs
-        else:
-            # Fallback to non-streaming if scrapper_manager doesn't support it
-            self.logger("Scrapper manager doesn't support streaming, falling back to batch mode")
-            jobs = self.scrapper_manager.scrape_jobs_as_dicts(
-                min_salary=min_salary,
-                employment_location=employment_location,
-                posted_after=posted_after,
-                timeout=timeout,
+        for batch_jobs in self.scrapper_manager.scrape_jobs_streaming(
+            min_salary=min_salary,
+            employment_location=employment_location,
+            posted_after=posted_after,
+            timeout=timeout,
+        ):
+            total_jobs += len(batch_jobs)
+            self.logger(
+                f"Scraped batch: {len(batch_jobs)} jobs (total: {total_jobs})"
             )
-            total_jobs = len(jobs)
-            self.logger(f"Scraped {total_jobs} jobs")
-            yield jobs, total_jobs
+            yield batch_jobs, total_jobs
 
         self.logger(f"Completed scraping: {total_jobs} total jobs")
 

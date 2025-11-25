@@ -16,11 +16,14 @@ class ApplicationContainer(containers.DeclarativeContainer):
 
     config = providers.Configuration()
 
-    scrapper_manager = providers.Singleton(ScrapperClient)
-
     cv_repository_class = providers.Object(CVRepository)
     cv_loader = providers.Singleton(CVLoader)
     job_repository_factory = providers.Object(get_job_repository)
+
+    scrapper_manager = providers.Singleton(
+        ScrapperClient,
+        job_repository_factory=job_repository_factory,
+    )
     filter_service = providers.Singleton(
         FilterService,
         job_repository_factory=job_repository_factory,
