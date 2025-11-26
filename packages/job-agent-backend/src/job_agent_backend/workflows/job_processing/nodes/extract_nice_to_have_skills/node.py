@@ -1,9 +1,6 @@
 """Extract nice-to-have skills node implementation."""
 
-import os
-
-from langchain_openai import ChatOpenAI
-
+from .....model_providers import get_model
 from ...state import AgentState
 from ..extract_must_have_skills.schemas import SkillsExtraction
 from .prompts import EXTRACT_NICE_TO_HAVE_SKILLS_PROMPT
@@ -35,16 +32,14 @@ def extract_nice_to_have_skills_node(state: AgentState) -> AgentState:
         }
 
     try:
-        base_llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
-        structured_llm = base_llm.with_structured_output(SkillsExtraction)
+        # Get model using configuration (defaults to "default" model if configured)
+        # You can override by setting model_id to a specific configured model
+        base_model = get_model(model_id="default", temperature=0)
+        structured_model = base_model.with_structured_output(SkillsExtraction)
         prompt = EXTRACT_NICE_TO_HAVE_SKILLS_PROMPT
 
         messages = prompt.invoke({"job_description": description})
-        result: SkillsExtraction = structured_llm.invoke(messages)
+        result: SkillsExtraction = structured_model.invoke(messages)
 
         skills = (result.skills or []) if hasattr(result, "skills") else []
 

@@ -1,9 +1,6 @@
 """Check job relevance node implementation."""
 
-import os
-
-from langchain_openai import ChatOpenAI
-
+from .....model_providers import get_model
 from ...state import AgentState
 from .schemas import JobRelevance
 from .prompts import CHECK_JOB_RELEVANCE_PROMPT
@@ -50,13 +47,10 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         }
 
     try:
-
-        base_llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
-        structured_llm = base_llm.with_structured_output(JobRelevance)
+        # Get model using configuration (defaults to "default" model if configured)
+        # You can override by setting model_id to a specific configured model
+        base_model = get_model(model_id="default", temperature=0)
+        structured_model = base_model.with_structured_output(JobRelevance)
 
         messages = CHECK_JOB_RELEVANCE_PROMPT.invoke(
             {
@@ -67,7 +61,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
             }
         )
 
-        result: JobRelevance = structured_llm.invoke(messages)
+        result: JobRelevance = structured_model.invoke(messages)
 
         relevance_status = "RELEVANT" if result.is_relevant else "IRRELEVANT"
         print(f"  Job (ID: {job_id}): {relevance_status}")
