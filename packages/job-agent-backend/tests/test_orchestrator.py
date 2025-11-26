@@ -222,15 +222,13 @@ class TestJobAgentOrchestrator:
     def test_scrape_jobs(self, orchestrator, mock_scrapper_manager):
         """Test scrape_jobs calls scrapper manager correctly."""
         orchestrator.scrapper_manager = mock_scrapper_manager
-        
-        # Mock streaming to return a list of lists (batches)
-        mock_scrapper_manager.scrape_jobs_streaming.return_value = iter([
-            [{"title": "Python Developer"}]
-        ])
 
-        result = orchestrator.scrape_jobs(
-            min_salary=5000, employment_location="remote", timeout=30
+        # Mock streaming to return a list of lists (batches)
+        mock_scrapper_manager.scrape_jobs_streaming.return_value = iter(
+            [[{"title": "Python Developer"}]]
         )
+
+        result = orchestrator.scrape_jobs(min_salary=5000, employment_location="remote", timeout=30)
 
         mock_scrapper_manager.scrape_jobs_streaming.assert_called_once_with(
             min_salary=5000,
@@ -245,7 +243,7 @@ class TestJobAgentOrchestrator:
         """Test scrape_jobs with posted_after date."""
         orchestrator.scrapper_manager = mock_scrapper_manager
         posted_after = datetime(2024, 1, 1, tzinfo=UTC)
-        
+
         mock_scrapper_manager.scrape_jobs_streaming.return_value = iter([])
 
         orchestrator.scrape_jobs(min_salary=4000, posted_after=posted_after)
@@ -336,7 +334,7 @@ class TestJobAgentOrchestrator:
             "is_relevant": True,
             "status": "completed",
         }
-        
+
         # Mock streaming to return one batch with one valid job
         valid_job = {
             "job_id": 1,

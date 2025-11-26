@@ -1,5 +1,6 @@
 """Utility class for the workflows system."""
 
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -8,6 +9,64 @@ from pypdf import PdfReader
 
 class CVLoader:
     """Utility class for loading CV content from various sources."""
+
+    @staticmethod
+    def _clean_pdf_text(text: str) -> str:
+        """
+        Clean up text extracted from PDF to fix formatting issues.
+
+        Args:
+            text: Raw text extracted from PDF
+
+        Returns:
+            Cleaned text with proper spacing and line breaks
+        """
+        # First, split into lines and remove whitespace-only lines
+        lines = [line.strip() for line in text.split("\n")]
+        lines = [line for line in lines if line]  # Remove empty lines
+
+        if not lines:
+            return ""
+
+        # Join all non-empty lines into paragraphs
+        # A new paragraph starts when a line ends with sentence-ending punctuation
+        # followed by a line that starts with uppercase or special markers
+        paragraphs = []
+        current_paragraph = []
+
+        for i, line in enumerate(lines):
+            current_paragraph.append(line)
+
+            # Check if this line ends a paragraph
+            ends_sentence = line[-1] in ".!?"
+            next_is_new_section = False
+
+            if i + 1 < len(lines):
+                next_line = lines[i + 1]
+                # New paragraph if next line starts with uppercase or common section markers
+                next_is_new_section = next_line[0].isupper() and (
+                    ends_sentence
+                    or next_line.endswith(":")
+                    or next_line.isupper()  # All caps (like headers)
+                    or len(next_line.split()) <= 3
+                )  # Short line (likely a header)
+
+            if ends_sentence and (next_is_new_section or i == len(lines) - 1):
+                # End current paragraph
+                paragraphs.append(" ".join(current_paragraph))
+                current_paragraph = []
+
+        # Add any remaining content as final paragraph
+        if current_paragraph:
+            paragraphs.append(" ".join(current_paragraph))
+
+        # Join paragraphs with double newlines
+        result = "\n\n".join(paragraphs)
+
+        # Clean up extra spaces
+        result = re.sub(r" +", " ", result)
+
+        return result.strip()
 
     def load_from_text(self, cv_path: str) -> Optional[str]:
         """
@@ -71,7 +130,8 @@ class CVLoader:
                 if text:
                     text_parts.append(text)
 
-            cv_content = "\n\n".join(text_parts)
+            raw_content = "\n\n".join(text_parts)
+            cv_content = self._clean_pdf_text(raw_content)
             print(
                 f"✓ Loaded CV from {target_path} ({len(reader.pages)} pages, {len(cv_content)} characters)"
             )

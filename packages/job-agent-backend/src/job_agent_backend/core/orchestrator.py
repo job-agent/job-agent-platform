@@ -235,9 +235,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             timeout=timeout,
         ):
             total_jobs += len(batch_jobs)
-            self.logger(
-                f"Scraped batch: {len(batch_jobs)} jobs (total: {total_jobs})"
-            )
+            self.logger(f"Scraped batch: {len(batch_jobs)} jobs (total: {total_jobs})")
             yield batch_jobs, total_jobs
 
         self.logger(f"Completed scraping: {total_jobs} total jobs")

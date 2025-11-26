@@ -5,6 +5,7 @@ Each handler is in its own module for better organization.
 """
 
 from .cancel.handler import cancel_handler
+from .cv.handler import cv_handler
 from .help.handler import help_handler
 from .search.handler import search_jobs_handler
 from .start.handler import start_handler
@@ -13,6 +14,7 @@ from .upload_cv.handler import upload_cv_handler
 
 __all__ = [
     "cancel_handler",
+    "cv_handler",
     "help_handler",
     "search_jobs_handler",
     "start_handler",

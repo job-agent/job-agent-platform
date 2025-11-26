@@ -30,6 +30,7 @@ from .providers import (
     BaseModelProvider,
     OpenAIProvider,
     TransformersProvider,
+    OllamaProvider,
 )
 
 __all__ = [
@@ -44,4 +45,5 @@ __all__ = [
     "BaseModelProvider",
     "OpenAIProvider",
     "TransformersProvider",
+    "OllamaProvider",
 ]

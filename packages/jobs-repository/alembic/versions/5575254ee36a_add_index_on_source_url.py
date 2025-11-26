@@ -5,13 +5,14 @@ Revises: a361684797bf
 Create Date: 2025-11-11 15:55:30.213977
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
-revision: str = '5575254ee36a'
-down_revision: Union[str, None] = 'a361684797bf'
+revision: str = "5575254ee36a"
+down_revision: Union[str, None] = "a361684797bf"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

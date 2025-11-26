@@ -14,7 +14,7 @@ class OpenAIProvider(BaseModelProvider):
         model_name: str = "gpt-4o-mini",
         temperature: float = 0.0,
         api_key: Optional[str] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """Initialize OpenAI provider.
 
@@ -39,13 +39,9 @@ class OpenAIProvider(BaseModelProvider):
             from langchain_openai import ChatOpenAI
         except ImportError:
             raise ImportError(
-                "langchain-openai not installed. "
-                "Install it with: pip install langchain-openai"
+                "langchain-openai not installed. " "Install it with: pip install langchain-openai"
             )
 
         return ChatOpenAI(
-            model=self.model_name,
-            temperature=self.temperature,
-            api_key=self.api_key,
-            **self.kwargs
+            model=self.model_name, temperature=self.temperature, api_key=self.api_key, **self.kwargs
         )

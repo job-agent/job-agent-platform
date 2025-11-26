@@ -91,7 +91,9 @@ class ScrapperProducer:
         if filter_payload:
             request["filters"] = filter_payload
 
-        self.logger.info(f"Sending scrape request with correlation_id={self.correlation_id} filters={filter_payload}")
+        self.logger.info(
+            f"Sending scrape request with correlation_id={self.correlation_id} filters={filter_payload}"
+        )
 
         channel.basic_publish(
             exchange="",
@@ -171,5 +173,3 @@ class ScrapperProducer:
                 self.logger.info(
                     f"Received batch response with {jobs_count} jobs for correlation_id={self.correlation_id}"
                 )
-
-

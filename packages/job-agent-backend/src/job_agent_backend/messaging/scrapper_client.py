@@ -52,8 +52,7 @@ class ScrapperClient:
         try:
             job_repository = self.job_repository_factory()
             existing_urls = job_repository.get_existing_urls_by_source(
-                self.source,
-                days=self.url_lookback_days
+                self.source, days=self.url_lookback_days
             )
             self.logger.info(
                 f"Found {len(existing_urls)} existing URLs for source '{self.source}' "

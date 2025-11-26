@@ -48,6 +48,7 @@ class ModelConfig:
         temperature: Generation temperature (0.0 = deterministic, for chat models)
         kwargs: Additional provider-specific parameters
     """
+
     model_id: str
     provider: str
     model_name: str
@@ -84,7 +85,7 @@ class ModelRegistry:
         for key in os.environ:
             if key.startswith(prefix):
                 # Extract model_id from key (e.g., MODEL_default_PROVIDER -> default)
-                parts = key[len(prefix):].split("_")
+                parts = key[len(prefix) :].split("_")
                 if len(parts) >= 2:
                     # Join all parts except the last one to handle model_ids with underscores
                     # e.g., MODEL_skill_extraction_PROVIDER -> skill_extraction
@@ -119,7 +120,7 @@ class ModelRegistry:
         kwargs = {}
         for key, value in os.environ.items():
             if key.startswith(prefix):
-                param = key[len(prefix):]
+                param = key[len(prefix) :]
                 if param not in ("PROVIDER", "MODEL_NAME", "TEMPERATURE"):
                     # Convert to lowercase for kwargs
                     kwargs[param.lower()] = value
@@ -129,7 +130,7 @@ class ModelRegistry:
             provider=provider.lower(),
             model_name=model_name,
             temperature=temperature,
-            kwargs=kwargs
+            kwargs=kwargs,
         )
 
         self.register(config)
@@ -167,11 +168,7 @@ _registry = ModelRegistry()
 
 
 def register_model(
-    model_id: str,
-    provider: str,
-    model_name: str,
-    temperature: float = 0.0,
-    **kwargs: Any
+    model_id: str, provider: str, model_name: str, temperature: float = 0.0, **kwargs: Any
 ):
     """Register a new model configuration programmatically.
 
@@ -195,7 +192,7 @@ def register_model(
         provider=provider.lower(),
         model_name=model_name,
         temperature=temperature,
-        kwargs=kwargs
+        kwargs=kwargs,
     )
     _registry.register(config)
 

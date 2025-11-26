@@ -27,7 +27,8 @@ class TransformersProvider(BaseModelProvider):
         device: Optional[str] = None,
         model_kwargs: Optional[dict] = None,
         pipeline_kwargs: Optional[dict] = None,
-        **kwargs: Any
+        task: str = "text-generation",
+        **kwargs: Any,
     ):
         """Initialize Transformers provider.
 
@@ -37,30 +38,50 @@ class TransformersProvider(BaseModelProvider):
             device: Device to run on ('cuda', 'cpu', or None for auto)
             model_kwargs: Additional arguments for model loading
             pipeline_kwargs: Additional arguments for pipeline creation
+            task: Task type ('text-generation', 'token-classification')
             **kwargs: Additional HuggingFacePipeline parameters
         """
         super().__init__(model_name, temperature, **kwargs)
         self.device = device or os.getenv("TRANSFORMERS_DEVICE", "auto")
         self.model_kwargs = model_kwargs or {}
         self.pipeline_kwargs = pipeline_kwargs or {}
+        self.task = task
 
     def get_model(self) -> Any:
-        """Get HuggingFace pipeline chat model instance."""
+        """Get HuggingFace pipeline model instance."""
         try:
             from langchain_huggingface import HuggingFacePipeline
-            from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+            from transformers import (
+                AutoTokenizer,
+                AutoModelForCausalLM,
+                AutoModelForTokenClassification,
+                pipeline,
+            )
         except ImportError:
             raise ImportError(
                 "transformers and langchain-huggingface not installed. "
                 "Install them with: pip install transformers langchain-huggingface"
             )
 
-        # Load tokenizer and model
+        # Load tokenizer
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+        if self.task == "token-classification":
+            # Load model for token classification
+            model = AutoModelForTokenClassification.from_pretrained(
+                self.model_name, device_map=self.device, **self.model_kwargs
+            )
+
+            # Create token classification pipeline
+            # Note: For token classification, we return the raw pipeline
+            # as LangChain's HuggingFacePipeline is designed for text generation
+            return pipeline(
+                "token-classification", model=model, tokenizer=tokenizer, **self.pipeline_kwargs
+            )
+
+        # Default: text-generation
         model = AutoModelForCausalLM.from_pretrained(
-            self.model_name,
-            device_map=self.device,
-            **self.model_kwargs
+            self.model_name, device_map=self.device, **self.model_kwargs
         )
 
         # Create text generation pipeline
@@ -69,11 +90,8 @@ class TransformersProvider(BaseModelProvider):
             model=model,
             tokenizer=tokenizer,
             temperature=self.temperature,
-            **self.pipeline_kwargs
+            **self.pipeline_kwargs,
         )
 
         # Wrap in LangChain HuggingFacePipeline
-        return HuggingFacePipeline(
-            pipeline=pipe,
-            **self.kwargs
-        )
+        return HuggingFacePipeline(pipeline=pipe, **self.kwargs)

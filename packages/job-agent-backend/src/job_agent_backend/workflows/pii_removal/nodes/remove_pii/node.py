@@ -1,73 +1,70 @@
 """Remove PII node implementation."""
 
 from typing import Dict, Any
-from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+from job_agent_backend.model_providers import get_model
 
 from ...state import PIIRemovalState
+from .prompts import REMOVE_PII_PROMPT
 
 
-# Global variables to cache the model and pipeline
 _pii_model = None
-_pii_tokenizer = None
-_pii_pipeline = None
 
 
-def get_pii_pipeline():
+def get_pii_model():
     """
-    Get or initialize the PII removal pipeline.
+    Get or initialize the PII removal model.
 
     Uses lazy loading to initialize the model only when needed and cache it
     for subsequent uses.
+
+    Raises:
+        Exception: If the model cannot be loaded
     """
-    global _pii_model, _pii_tokenizer, _pii_pipeline
+    global _pii_model
 
-    if _pii_pipeline is None:
-        print("  Loading ai4privacy PII anonymization model (first time only)...")
-        model_name = "ai4privacy/llama-ai4privacy-english-anonymiser-openpii"
+    if _pii_model is None:
+        print("  Loading PII anonymization model...")
+        print("  Using phi3:mini via Ollama...")
+        try:
+            _pii_model = get_model(provider="ollama", model_name="phi3:mini")
+            print("  Model loaded successfully!")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load PII anonymization model (phi3:mini): {e}") from e
 
-        _pii_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        _pii_model = AutoModelForTokenClassification.from_pretrained(model_name)
-        _pii_pipeline = pipeline(
-            "token-classification",
-            model=_pii_model,
-            tokenizer=_pii_tokenizer,
-            aggregation_strategy="simple"
-        )
-        print("  Model loaded successfully!")
-
-    return _pii_pipeline
+    return _pii_model
 
 
 def anonymize_text(text: str) -> str:
     """
-    Anonymize PII in the given text using the ai4privacy model.
+    Anonymize PII in the given text using phi3:mini.
 
     Args:
         text: Text containing potential PII
 
     Returns:
-        Anonymized text with PII entities replaced by placeholders
+        Anonymized text with PII removed
+
+    Raises:
+        RuntimeError: If anonymization fails or returns invalid content
     """
-    pii_pipeline = get_pii_pipeline()
+    model = get_pii_model()
 
-    # Process the text with the pipeline
-    results = pii_pipeline(text)
+    messages = REMOVE_PII_PROMPT.format_messages(cv_content=text)
 
-    # Sort results by start position in reverse order to avoid offset issues
-    results = sorted(results, key=lambda x: x['start'], reverse=True)
+    try:
+        response = model.invoke(messages)
+    except Exception as e:
+        raise RuntimeError(f"Failed to invoke PII anonymization model: {e}") from e
 
-    # Replace PII entities with placeholders
-    anonymized_text = text
-    for entity in results:
-        start = entity['start']
-        end = entity['end']
-        entity_type = entity['entity_group']
+    if hasattr(response, "content"):
+        anonymized_text = response.content
+    else:
+        anonymized_text = str(response)
 
-        # Create a placeholder based on entity type
-        placeholder = f"[{entity_type.upper()}]"
+    anonymized_text = anonymized_text.strip()
 
-        # Replace the entity with the placeholder
-        anonymized_text = anonymized_text[:start] + placeholder + anonymized_text[end:]
+    if not anonymized_text:
+        raise RuntimeError("PII anonymization returned empty content")
 
     return anonymized_text
 
@@ -76,16 +73,18 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
     """
     Anonymize PII from CV content.
 
-    This node uses the ai4privacy/llama-ai4privacy-english-anonymiser-openpii model
-    to detect and replace personally identifiable information with placeholders.
+    This node uses phi3:mini to detect and remove personally identifiable
+    information while preserving professional content.
     This ensures privacy and prevents sensitive data exposure in logs or API calls.
 
     Args:
         state: Current agent state containing cv_context
 
     Returns:
-        State update containing the anonymized cv_context when anonymization succeeds,
-        or an empty dict when no changes are applied
+        State update containing the anonymized cv_context
+
+    Raises:
+        Exception: If the model cannot be loaded or anonymization fails
     """
     cv_context = state.get("cv_context", "")
 
@@ -97,30 +96,18 @@ def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
     print("=" * 60 + "\n")
 
     if not cv_context:
-        print("  No CV context available, skipping PII anonymization")
-        print("=" * 60 + "\n")
-        return {}
+        raise ValueError("No CV context available for PII anonymization")
 
-    try:
-        # Anonymize the CV content
-        anonymized_content = anonymize_text(cv_context)
+    # Anonymize the CV content - let exceptions propagate
+    anonymized_content = anonymize_text(cv_context)
 
-        print(f"  Original CV length: {len(cv_context)} characters")
-        print(f"  Anonymized CV length: {len(anonymized_content)} characters\n")
+    print(f"  Original CV length: {len(cv_context)} characters")
+    print(f"  Anonymized CV length: {len(anonymized_content)} characters\n")
 
-        print("=" * 60)
-        print(f"Finished anonymizing PII for job ID {job_id}")
-        print("=" * 60 + "\n")
+    print("=" * 60)
+    print(f"Finished anonymizing PII for job ID {job_id}")
+    print("=" * 60 + "\n")
 
-        return {
-            "cv_context": anonymized_content,
-        }
-
-    except Exception as e:
-        print(f"  Error anonymizing PII - {e}")
-        print("  Continuing with original CV content\n")
-        print("=" * 60)
-        print(f"Failed to anonymize PII for job ID {job_id}")
-        print("=" * 60 + "\n")
-
-        return {}
+    return {
+        "cv_context": anonymized_content,
+    }

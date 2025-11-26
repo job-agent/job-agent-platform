@@ -141,9 +141,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             total_filtered += len(filtered_batch)
 
             if not filtered_batch:
-                await update.message.reply_text(
-                    f"⏭️  No jobs passed filters, continuing..."
-                )
+                await update.message.reply_text("⏭️  No jobs passed filters, continuing...")
                 continue
 
             await update.message.reply_text(
@@ -166,9 +164,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     relevant_count += 1
 
             if batch_relevant:
-                await update.message.reply_text(
-                    f"✨ Found {len(batch_relevant)} relevant job(s)!"
-                )
+                await update.message.reply_text(f"✨ Found {len(batch_relevant)} relevant job(s)!")
 
                 for result in batch_relevant:
                     sent_job_count += 1

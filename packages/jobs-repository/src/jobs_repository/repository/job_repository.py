@@ -285,10 +285,7 @@ class JobRepository(IJobRepository):
             List of URLs for jobs from the specified source
         """
         with self._session_scope(commit=False) as session:
-            stmt = select(Job.source_url).where(
-                Job.source == source,
-                Job.source_url.isnot(None)
-            )
+            stmt = select(Job.source_url).where(Job.source == source, Job.source_url.isnot(None))
 
             # Apply time-window filter if specified
             if days is not None:

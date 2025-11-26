@@ -2,8 +2,8 @@
 
 from typing import Any, Optional
 
-from .config import get_model_config, ModelConfig
-from .providers import OpenAIProvider, TransformersProvider
+from .config import get_model_config
+from .providers import OpenAIProvider, TransformersProvider, OllamaProvider
 
 
 def get_model(
@@ -11,7 +11,7 @@ def get_model(
     provider: Optional[str] = None,
     model_name: Optional[str] = None,
     temperature: Optional[float] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Any:
     """Get an AI model instance based on configuration.
 
@@ -67,14 +67,14 @@ def get_model(
 
     # If no config and no provider/model_name, error
     if not config and not (provider and model_name):
-        raise ValueError(
-            "Either 'model_id' or both 'provider' and 'model_name' must be provided"
-        )
+        raise ValueError("Either 'model_id' or both 'provider' and 'model_name' must be provided")
 
     # Determine final parameters (command-line args override config)
     final_provider = provider or (config.provider if config else None)
     final_model_name = model_name or (config.model_name if config else None)
-    final_temperature = temperature if temperature is not None else (config.temperature if config else 0.0)
+    final_temperature = (
+        temperature if temperature is not None else (config.temperature if config else 0.0)
+    )
 
     # Merge kwargs from config and function call
     final_kwargs = {}
@@ -86,6 +86,7 @@ def get_model(
     provider_map = {
         "openai": OpenAIProvider,
         "transformers": TransformersProvider,
+        "ollama": OllamaProvider,
     }
 
     provider_class = provider_map.get(final_provider.lower())
@@ -97,9 +98,7 @@ def get_model(
 
     # Instantiate provider and get model
     provider_instance = provider_class(
-        model_name=final_model_name,
-        temperature=final_temperature,
-        **final_kwargs
+        model_name=final_model_name, temperature=final_temperature, **final_kwargs
     )
 
     return provider_instance.get_model()

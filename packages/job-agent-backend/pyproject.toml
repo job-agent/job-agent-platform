@@ -12,6 +12,7 @@ dependencies = [
     "langgraph>=1.0.2",
     "langchain>=1.0.3",
     "langchain-openai>=1.0.1",
+    "langchain-ollama>=0.2.0",
     "langchain-huggingface>=0.1.0",
     "langsmith>=0.4.39",
     "pydantic>=2.0.0",

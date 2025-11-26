@@ -17,6 +17,7 @@ from telegram_bot.handlers import (
     status_handler,
     cancel_handler,
     upload_cv_handler,
+    cv_handler,
 )
 from telegram_bot.di import build_dependencies
 
@@ -48,6 +49,7 @@ class JobAgentBot:
         self.application.add_handler(CommandHandler("search", search_jobs_handler))
         self.application.add_handler(CommandHandler("status", status_handler))
         self.application.add_handler(CommandHandler("cancel", cancel_handler))
+        self.application.add_handler(CommandHandler("cv", cv_handler))
 
         self.application.add_handler(MessageHandler(filters.Document.PDF, upload_cv_handler))
 
@@ -61,6 +63,7 @@ class JobAgentBot:
                 ("search", "Search for jobs (e.g., /search min_salary=5000)"),
                 ("status", "Check current search status"),
                 ("cancel", "Cancel current job search"),
+                ("cv", "View your current CV content"),
             ]
         )
 

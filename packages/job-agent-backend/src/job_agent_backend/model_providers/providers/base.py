@@ -1,7 +1,7 @@
 """Base provider interface for AI model implementations."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 
 class BaseModelProvider(ABC):
@@ -13,12 +13,7 @@ class BaseModelProvider(ABC):
     This supports various model types: chat models, embeddings, classifiers, etc.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        temperature: float = 0.0,
-        **kwargs: Any
-    ):
+    def __init__(self, model_name: str, temperature: float = 0.0, **kwargs: Any):
         """Initialize the provider.
 
         Args:
