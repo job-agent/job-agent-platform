@@ -6,8 +6,10 @@ from typing import Optional
 
 from pypdf import PdfReader
 
+from .interfaces import ICVLoader
 
-class CVLoader:
+
+class CVLoader(ICVLoader):
     """Utility class for loading CV content from various sources."""
 
     @staticmethod

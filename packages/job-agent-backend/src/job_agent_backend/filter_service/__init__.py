@@ -6,6 +6,7 @@ before passing them to the workflows system.
 
 from .filter import FilterService
 from .filter_config import FilterConfig
+from .interfaces import IFilterService
 
-__all__ = ["FilterService", "FilterConfig"]
+__all__ = ["FilterService", "FilterConfig", "IFilterService"]
 __version__ = "0.1.0"

@@ -164,6 +164,7 @@ class TestJobRepository:
 
         job_dict_2 = sample_job_dict.copy()
         job_dict_2["job_id"] = 99999
+        job_dict_2["url"] = "https://example.com/jobs/99999"
         job2 = repository.create(job_dict_2)
         company_id_2 = job2.company_id
 
@@ -180,6 +181,7 @@ class TestJobRepository:
 
         job_dict_2 = sample_job_dict.copy()
         job_dict_2["job_id"] = 99998
+        job_dict_2["url"] = "https://example.com/jobs/99998"
         job2 = repository.create(job_dict_2)
         location_id_2 = job2.location_id
 
@@ -196,6 +198,7 @@ class TestJobRepository:
 
         job_dict_2 = sample_job_dict.copy()
         job_dict_2["job_id"] = 99997
+        job_dict_2["url"] = "https://example.com/jobs/99997"
         job2 = repository.create(job_dict_2)
         category_id_2 = job2.category_id
 
@@ -212,6 +215,7 @@ class TestJobRepository:
 
         job_dict_2 = sample_job_dict.copy()
         job_dict_2["job_id"] = 99996
+        job_dict_2["url"] = "https://example.com/jobs/99996"
         job2 = repository.create(job_dict_2)
         industry_id_2 = job2.industry_id
 
@@ -580,4 +584,4 @@ class TestJobRepository:
             repository.create(sample_job_dict)
 
         assert exc_info.value.external_id == "12345"
-        assert exc_info.value.source is not None
+        assert exc_info.value.source == "unknown"

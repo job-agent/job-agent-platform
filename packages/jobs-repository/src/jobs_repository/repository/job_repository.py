@@ -214,7 +214,7 @@ class JobRepository(IJobRepository):
                 if existing_job:
                     raise JobAlreadyExistsError(
                         external_id=mapped_data["external_id"],
-                        source=mapped_data.get("source", "unknown"),
+                        source=mapped_data.get("source") or "unknown",
                     )
 
                 job = Job(**mapped_data)

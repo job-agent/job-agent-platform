@@ -1,4 +1,4 @@
-"""RabbitMQ-based scrapper client implementing ScrapperManagerProtocol."""
+"""RabbitMQ-based scrapper client implementing IScrapperClient."""
 
 import logging
 from datetime import datetime
@@ -7,13 +7,14 @@ from typing import Callable, Iterator, Optional
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import IJobRepository
 
-from job_agent_backend.messaging.producer import ScrapperProducer
+from .interfaces import IScrapperClient
+from .producer import ScrapperProducer
 
 
-class ScrapperClient:
+class ScrapperClient(IScrapperClient):
     """RabbitMQ-based client for scrapping jobs.
 
-    Implements the same interface as ScrapperManager but uses RabbitMQ
+    Implements IScrapperClient interface using RabbitMQ
     message broker for communication with scrapper-service.
     """
 

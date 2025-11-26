@@ -29,24 +29,24 @@ def job_repository_factory_with_session(db_session):
     return factory
 
 
-def create_mock_chat_openai(result_obj):
-    """Helper to create a mock ChatOpenAI with structured output."""
-    mock_llm = MagicMock()
+def create_mock_model(result_obj):
+    """Helper to create a mock model with structured output."""
+    mock_model = MagicMock()
     mock_structured = MagicMock()
     mock_structured.invoke.return_value = result_obj
-    mock_llm.with_structured_output.return_value = mock_structured
-    return mock_llm
+    mock_model.with_structured_output.return_value = mock_structured
+    return mock_model
 
 
 class TestJobProcessingWorkflow:
     """Test suite for job processing workflow."""
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
     )
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
     )
     def test_relevant_job_extracts_skills(
         self,
@@ -61,15 +61,15 @@ class TestJobProcessingWorkflow:
 
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python", "Django", "PostgreSQL"]
-        mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = ["Docker", "Kubernetes"]
-        mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
 
         result = run_job_processing(
             sample_job_dict,
@@ -82,7 +82,7 @@ class TestJobProcessingWorkflow:
         assert "extracted_nice_to_have_skills" in result
         assert result["status"] == "completed"
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     def test_irrelevant_job_skips_skill_extraction(
         self,
         mock_relevance_chat,
@@ -94,7 +94,7 @@ class TestJobProcessingWorkflow:
 
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = False
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         result = run_job_processing(
             sample_irrelevant_job_dict,
@@ -134,7 +134,7 @@ class TestJobProcessingWorkflow:
                 job_repository_factory=job_repository_factory_stub,
             )
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     def test_workflow_without_database_session_completes(
         self,
         mock_relevance_chat,
@@ -144,7 +144,7 @@ class TestJobProcessingWorkflow:
         """Test that workflow completes without database session."""
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = False
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         factory = MagicMock()
         factory.return_value = MagicMock()
@@ -159,12 +159,12 @@ class TestJobProcessingWorkflow:
         assert result["is_relevant"] is False
         factory.assert_not_called()
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
     )
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
     )
     def test_workflow_state_includes_job_data(
         self,
@@ -179,15 +179,15 @@ class TestJobProcessingWorkflow:
 
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
 
         result = run_job_processing(
             sample_job_dict,
@@ -198,12 +198,12 @@ class TestJobProcessingWorkflow:
         assert result["job"] == sample_job_dict
         assert result["cv_context"] == sample_cv_content
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
     )
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
     )
     def test_workflow_with_empty_skills_extracts(
         self,
@@ -218,15 +218,15 @@ class TestJobProcessingWorkflow:
 
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = []
-        mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
 
         result = run_job_processing(
             sample_job_dict,
@@ -239,12 +239,12 @@ class TestJobProcessingWorkflow:
         assert result["extracted_nice_to_have_skills"] == []
         assert result["status"] == "completed"
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
     )
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
     )
     def test_workflow_cv_context_passed_to_all_nodes(
         self,
@@ -258,15 +258,15 @@ class TestJobProcessingWorkflow:
         """Test that CV context is passed to all workflow nodes."""
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
 
         result = run_job_processing(
             sample_job_dict,
@@ -276,12 +276,12 @@ class TestJobProcessingWorkflow:
 
         assert result["cv_context"] == sample_cv_content
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
     )
     @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.ChatOpenAI"
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
     )
     def test_workflow_handles_job_without_salary(
         self,
@@ -307,15 +307,15 @@ class TestJobProcessingWorkflow:
 
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_chat_openai(mock_must_result)
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_chat_openai(mock_nice_result)
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
 
         result = run_job_processing(
             job_without_salary,
@@ -326,7 +326,7 @@ class TestJobProcessingWorkflow:
         assert result["status"] == "completed"
         assert result["is_relevant"] is True
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.ChatOpenAI")
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     def test_workflow_returns_final_state_structure(
         self,
         mock_relevance_chat,
@@ -337,7 +337,7 @@ class TestJobProcessingWorkflow:
         """Test that workflow returns expected state structure."""
         mock_relevance_result = MagicMock()
         mock_relevance_result.is_relevant = False
-        mock_relevance_chat.return_value = create_mock_chat_openai(mock_relevance_result)
+        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
 
         result = run_job_processing(
             sample_job_dict,

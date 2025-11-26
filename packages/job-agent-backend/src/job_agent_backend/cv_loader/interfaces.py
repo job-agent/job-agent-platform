@@ -1,4 +1,4 @@
-"""CV loader contract definitions."""
+"""CV loader interface definitions."""
 
 from abc import ABC, abstractmethod
 from typing import Optional

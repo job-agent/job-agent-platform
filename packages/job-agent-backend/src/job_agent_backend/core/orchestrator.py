@@ -6,7 +6,7 @@ It can be used by any interface (CLI, Telegram, Web, etc.).
 
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Protocol, Sequence, cast
+from typing import Callable, Iterator, Optional, Sequence, cast
 
 from cvs_repository import CVRepository
 from job_scrapper_contracts import JobDict
@@ -17,22 +17,14 @@ from job_agent_platform_contracts import (
     JobProcessingResult,
     PipelineSummary,
 )
-from job_agent_backend.contracts import ICVLoader, IFilterService
+from job_agent_backend.cv_loader import ICVLoader
+from job_agent_backend.filter_service import IFilterService
+from job_agent_backend.messaging import IScrapperClient
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
 from job_agent_backend.workflows.job_processing.state import AgentState
 
 
 CVRepositoryFactory = Callable[[str | Path], ICVRepository]
-
-
-class ScrapperManagerProtocol(Protocol):
-    def scrape_jobs_streaming(
-        self,
-        min_salary: Optional[int],
-        employment_location: Optional[str],
-        posted_after: Optional[datetime],
-        timeout: int,
-    ) -> Iterator[list[JobDict]]: ...
 
 
 class JobAgentOrchestrator(IJobAgentOrchestrator):
@@ -47,7 +39,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         cv_repository_class: CVRepositoryFactory,
         cv_loader: ICVLoader,
         job_repository_factory: Callable[[], IJobRepository],
-        scrapper_manager: ScrapperManagerProtocol,
+        scrapper_manager: IScrapperClient,
         filter_service: IFilterService,
         database_initializer: Callable[[], None],
         logger: Optional[Callable[[str], None]] = None,
@@ -75,7 +67,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         if job_repository_factory is None:
             raise ValueError("job_repository_factory must be provided")
         self.job_repository_factory: Callable[[], IJobRepository] = job_repository_factory
-        self.scrapper_manager: ScrapperManagerProtocol = scrapper_manager
+        self.scrapper_manager: IScrapperClient = scrapper_manager
         self.filter_service: IFilterService = filter_service
         self.database_initializer: Callable[[], None] = database_initializer
 

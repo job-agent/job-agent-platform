@@ -7,10 +7,10 @@ scrapper service before they are passed to the workflows system.
 from typing import Callable, List, Optional
 
 from job_scrapper_contracts import JobDict
-from job_agent_backend.contracts.filter_service import IFilterService
 from job_agent_platform_contracts import IJobRepository
 
 from .filter_config import FilterConfig
+from .interfaces import IFilterService
 
 
 class FilterService(IFilterService):

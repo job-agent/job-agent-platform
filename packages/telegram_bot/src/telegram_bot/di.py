@@ -25,7 +25,7 @@ def _create_cv_repository(user_id: int) -> ICVRepository:
     """Create a CV repository for a specific user."""
     orchestrator = container.orchestrator()
     cv_path = orchestrator.get_cv_path(user_id)
-    cv_repository_class = container.cv_repository_class()
+    cv_repository_class = container.cv_repository()
     return cv_repository_class(cv_path)
 
 

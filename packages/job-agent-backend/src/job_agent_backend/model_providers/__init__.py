@@ -25,7 +25,8 @@ from .config import (
     get_model_config,
     list_available_models,
 )
-from .factory import get_model
+from .factory import get_model, ModelFactory
+from .interfaces import IModelFactory
 from .providers import (
     BaseModelProvider,
     OpenAIProvider,
@@ -36,6 +37,9 @@ from .providers import (
 __all__ = [
     # Factory function (main entry point)
     "get_model",
+    # Factory class and interface for DI
+    "ModelFactory",
+    "IModelFactory",
     # Configuration
     "ModelConfig",
     "register_model",

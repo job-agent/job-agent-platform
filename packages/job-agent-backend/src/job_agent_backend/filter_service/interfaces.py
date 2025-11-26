@@ -1,4 +1,4 @@
-"""Filter service contract definitions."""
+"""Filter service interface definitions."""
 
 from abc import ABC, abstractmethod
 from typing import List, Mapping, Optional, Any
