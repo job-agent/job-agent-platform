@@ -72,7 +72,7 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         # It allows for some semantic overlap without requiring exact matches
         THRESHOLD = 0.4
 
-        is_relevant = similarity >= THRESHOLD
+        is_relevant = bool(similarity >= THRESHOLD)
         relevance_status = "RELEVANT" if is_relevant else "IRRELEVANT"
 
         print(f"  Job (ID: {job_id}): {relevance_status} (Similarity: {similarity:.4f})")
