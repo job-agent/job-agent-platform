@@ -9,4 +9,6 @@ MODEL_PROVIDER_MAP = {
     "gpt-4o-mini": "openai",
     # Ollama models
     "phi3:mini": "ollama",
+    # Transformers models
+    "sentence-transformers/distiluse-base-multilingual-cased-v2": "transformers",
 }

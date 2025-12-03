@@ -2,8 +2,6 @@
 
 from .....model_providers import get_model
 from ...state import AgentState
-from .schemas import JobRelevance
-from .prompts import CHECK_JOB_RELEVANCE_PROMPT
 
 
 def check_job_relevance_node(state: AgentState) -> AgentState:
@@ -47,26 +45,37 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         }
 
     try:
-        # Get model using configuration (defaults to "default" model if configured)
-        # You can override by setting model_id to a specific configured model
-        base_model = get_model(model_id="default", temperature=0)
-        structured_model = base_model.with_structured_output(JobRelevance)
-
-        messages = CHECK_JOB_RELEVANCE_PROMPT.invoke(
-            {
-                "cv_content": cv_context,
-                "job_title": job_title,
-                "job_company": job_company,
-                "job_description": job_description,
-            }
+        # Get embedding model
+        model = get_model(
+            model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
+            task="embedding",
         )
 
-        result: JobRelevance = structured_model.invoke(messages)
+        # Prepare texts for embedding
+        # We combine title and description for the job representation
+        job_text = f"{job_title}\n\n{job_description}"
 
-        relevance_status = "RELEVANT" if result.is_relevant else "IRRELEVANT"
-        print(f"  Job (ID: {job_id}): {relevance_status}")
+        # Embed both texts
+        cv_embedding = model.embed_query(cv_context)
+        job_embedding = model.embed_query(job_text)
 
-        is_relevant = result.is_relevant
+        # Calculate cosine similarity
+        import numpy as np
+
+        def cosine_similarity(a, b):
+            return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+        similarity = cosine_similarity(cv_embedding, job_embedding)
+
+        # Threshold for relevance
+        # 0.4 is a reasonable starting point for multilingual-cased-v2
+        # It allows for some semantic overlap without requiring exact matches
+        THRESHOLD = 0.4
+
+        is_relevant = similarity >= THRESHOLD
+        relevance_status = "RELEVANT" if is_relevant else "IRRELEVANT"
+
+        print(f"  Job (ID: {job_id}): {relevance_status} (Similarity: {similarity:.4f})")
 
     except Exception as e:
         print(f"  Job (ID: {job_id}): Error checking relevance - {e}")

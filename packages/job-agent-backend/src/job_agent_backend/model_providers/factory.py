@@ -107,11 +107,9 @@ class ModelFactory(IModelFactory):
                     f"Available models: {list(get_model_config.__globals__['_registry'].list_models().keys())}"
                 )
 
-        # If no config and no provider/model_name, error
-        if not config and not (provider and model_name):
-            raise ValueError(
-                "Either 'model_id' or both 'provider' and 'model_name' must be provided"
-            )
+        # If no config and no model_name, error (provider is optional if model_name is known)
+        if not config and not model_name:
+            raise ValueError("Either 'model_id' or 'model_name' must be provided")
 
         # Determine final parameters (command-line args override config)
         final_model_name = model_name or (config.model_name if config else None)

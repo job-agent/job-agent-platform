@@ -50,7 +50,7 @@ class TransformersProvider(BaseModelProvider):
     def get_model(self) -> Any:
         """Get HuggingFace pipeline model instance."""
         try:
-            from langchain_huggingface import HuggingFacePipeline
+            from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings
             from transformers import (
                 AutoTokenizer,
                 AutoModelForCausalLM,
@@ -61,6 +61,14 @@ class TransformersProvider(BaseModelProvider):
             raise ImportError(
                 "transformers and langchain-huggingface not installed. "
                 "Install them with: pip install transformers langchain-huggingface"
+            )
+
+        if self.task == "embedding":
+            return HuggingFaceEmbeddings(
+                model_name=self.model_name,
+                model_kwargs=self.model_kwargs,
+                encode_kwargs=self.pipeline_kwargs,
+                **self.kwargs,
             )
 
         # Load tokenizer
