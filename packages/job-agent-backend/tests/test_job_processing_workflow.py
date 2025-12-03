@@ -38,6 +38,37 @@ def create_mock_model(result_obj):
     return mock_model
 
 
+def create_mock_embedding_model(similarity_score=0.8):
+    """
+    Helper to create a mock embedding model.
+
+    Args:
+        similarity_score: The desired cosine similarity between CV and job embeddings.
+                         Values >= 0.4 result in relevant jobs, < 0.4 in irrelevant jobs.
+
+    Returns:
+        Mock embedding model with embed_query method that returns valid embeddings.
+    """
+    import numpy as np
+
+    mock_model = MagicMock()
+
+    # Create two embeddings that will produce the desired similarity score
+    # Using simple vectors for predictable cosine similarity
+    cv_embedding = np.array([1.0, 0.0, 0.0])
+    job_embedding = np.array([similarity_score, np.sqrt(1 - similarity_score**2), 0.0])
+
+    # Normalize to unit vectors for consistent cosine similarity
+    cv_embedding = cv_embedding / np.linalg.norm(cv_embedding)
+    job_embedding = job_embedding / np.linalg.norm(job_embedding)
+
+    # Set up the mock to return these embeddings
+    # First call returns CV embedding, second call returns job embedding
+    mock_model.embed_query.side_effect = [cv_embedding.tolist(), job_embedding.tolist()]
+
+    return mock_model
+
+
 class TestJobProcessingWorkflow:
     """Test suite for job processing workflow."""
 
@@ -59,9 +90,8 @@ class TestJobProcessingWorkflow:
     ):
         """Test that relevant job goes through complete skill extraction."""
 
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python", "Django", "PostgreSQL"]
@@ -92,9 +122,8 @@ class TestJobProcessingWorkflow:
     ):
         """Test that irrelevant job skips skill extraction."""
 
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = False
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
 
         result = run_job_processing(
             sample_irrelevant_job_dict,
@@ -142,9 +171,8 @@ class TestJobProcessingWorkflow:
         sample_cv_content,
     ):
         """Test that workflow completes without database session."""
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = False
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
 
         factory = MagicMock()
         factory.return_value = MagicMock()
@@ -177,9 +205,8 @@ class TestJobProcessingWorkflow:
     ):
         """Test that final state includes original job data."""
 
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
@@ -216,9 +243,8 @@ class TestJobProcessingWorkflow:
     ):
         """Test workflow handles empty skills extraction gracefully."""
 
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = []
@@ -256,9 +282,8 @@ class TestJobProcessingWorkflow:
         job_repository_factory_stub,
     ):
         """Test that CV context is passed to all workflow nodes."""
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
@@ -305,9 +330,8 @@ class TestJobProcessingWorkflow:
             "location": {"region": "Remote", "is_remote": True},
         }
 
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = True
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
@@ -335,9 +359,8 @@ class TestJobProcessingWorkflow:
         job_repository_factory_stub,
     ):
         """Test that workflow returns expected state structure."""
-        mock_relevance_result = MagicMock()
-        mock_relevance_result.is_relevant = False
-        mock_relevance_chat.return_value = create_mock_model(mock_relevance_result)
+        # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
 
         result = run_job_processing(
             sample_job_dict,
