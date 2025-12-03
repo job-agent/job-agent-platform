@@ -34,13 +34,13 @@ echo "=================================="
 echo "Reinstalling all local packages..."
 echo "=================================="
 
-# Reinstall all packages in editable mode
+# Reinstall all packages in editable mode with dev dependencies
 for package in "${PACKAGES[@]}"; do
     package_path="$PACKAGES_DIR/$package"
     if [ -d "$package_path" ]; then
         echo ""
         echo "Installing: $package"
-        pip install -e "$package_path"
+        pip install -e "$package_path[dev]"
     else
         echo "  Warning: Package directory not found: $package_path"
     fi
