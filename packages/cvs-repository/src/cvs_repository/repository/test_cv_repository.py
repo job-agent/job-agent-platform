@@ -157,7 +157,7 @@ class TestFind:
 
     def test_find_with_special_characters(self, repository, cv_file_path):
         """Find CV with special characters and formatting."""
-        cv_data = "Name: O'Brien\nEmail: user@example.com\nSalary: $100,000\nNotes: \"Excellent\" (top 10%)"
+        cv_data = 'Name: O\'Brien\nEmail: user@example.com\nSalary: $100,000\nNotes: "Excellent" (top 10%)'
         cv_file_path.write_text(cv_data, encoding="utf-8")
 
         result = repository.find()
@@ -179,15 +179,12 @@ class TestUpdate:
         assert result == updated_data
         assert cv_file_path.read_text(encoding="utf-8") == updated_data
 
-    def test_update_creates_file_if_not_exists(self, repository, cv_file_path):
-        """Update creates file if it doesn't exist."""
+    def test_update_raises_error_if_file_not_exists(self, repository, cv_file_path):
+        """Update raises FileNotFoundError if file doesn't exist."""
         cv_data = "New CV via Update"
 
-        result = repository.update(cv_data)
-
-        assert result == cv_data
-        assert cv_file_path.exists()
-        assert cv_file_path.read_text(encoding="utf-8") == cv_data
+        with pytest.raises(FileNotFoundError, match="Cannot update CV: file does not exist"):
+            repository.update(cv_data)
 
     def test_update_with_empty_content(self, repository, cv_file_path):
         """Update CV with empty content."""

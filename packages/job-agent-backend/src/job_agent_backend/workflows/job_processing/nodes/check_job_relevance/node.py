@@ -34,7 +34,6 @@ def check_job_relevance_node(state: AgentState) -> AgentState:
         }
 
     job_title = job.get("title", "Unknown")
-    job_company = job.get("company", "Unknown")
     job_description = job.get("description", "")
 
     if not job_description:
