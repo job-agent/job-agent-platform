@@ -1,6 +1,5 @@
-"""SQLAlchemy declarative base."""
+"""SQLAlchemy declarative base reference."""
 
-from sqlalchemy.orm import declarative_base
+from jobs_repository.models.base import Base
 
-
-Base = declarative_base()
+__all__ = ["Base"]

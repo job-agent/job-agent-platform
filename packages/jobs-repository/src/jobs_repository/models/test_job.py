@@ -1,198 +1,9 @@
-"""Tests for database models."""
+"""Tests for Job model."""
 
-from datetime import datetime, UTC
+from datetime import datetime
 
-import pytest
-
-from jobs_repository.models import Job, Company, Location, Category, Industry
-
-
-class TestCompanyModel:
-    """Test suite for Company model."""
-
-    def test_repr(self, db_session):
-        """Test Company __repr__ method."""
-        company = Company(name="Test Corp")
-        db_session.add(company)
-        db_session.commit()
-        db_session.refresh(company)
-
-        repr_str = repr(company)
-
-        assert "Company" in repr_str
-        assert "Test Corp" in repr_str
-        assert str(company.id) in repr_str
-
-    def test_repr_without_id(self):
-        """Test Company __repr__ before persistence."""
-        company = Company(name="Test Corp")
-
-        repr_str = repr(company)
-
-        assert "Company" in repr_str
-        assert "Test Corp" in repr_str
-
-    def test_name_field(self, db_session):
-        """Test Company name field."""
-        company = Company(name="Example Company")
-        db_session.add(company)
-        db_session.commit()
-
-        assert company.name == "Example Company"
-
-    def test_website_field(self, db_session):
-        """Test Company website field."""
-        company = Company(name="Example Company", website="https://example.com")
-        db_session.add(company)
-        db_session.commit()
-
-        assert company.website == "https://example.com"
-
-    def test_website_optional(self, db_session):
-        """Test that Company website is optional."""
-        company = Company(name="Example Company")
-        db_session.add(company)
-        db_session.commit()
-
-        assert company.website is None
-
-    def test_jobs_relationship(self, db_session, sample_company):
-        """Test Company jobs relationship."""
-        job = Job(title="Test Job", company_id=sample_company.id)
-        db_session.add(job)
-        db_session.commit()
-
-        assert len(sample_company.jobs) == 1
-        assert sample_company.jobs[0].title == "Test Job"
-
-
-class TestLocationModel:
-    """Test suite for Location model."""
-
-    def test_repr(self, db_session):
-        """Test Location __repr__ method."""
-        location = Location(region="San Francisco, CA")
-        db_session.add(location)
-        db_session.commit()
-        db_session.refresh(location)
-
-        repr_str = repr(location)
-
-        assert "Location" in repr_str
-        assert "San Francisco, CA" in repr_str
-        assert str(location.id) in repr_str
-
-    def test_repr_without_id(self):
-        """Test Location __repr__ before persistence."""
-        location = Location(region="New York, NY")
-
-        repr_str = repr(location)
-
-        assert "Location" in repr_str
-        assert "New York, NY" in repr_str
-
-    def test_region_field(self, db_session):
-        """Test Location region field."""
-        location = Location(region="Seattle, WA")
-        db_session.add(location)
-        db_session.commit()
-
-        assert location.region == "Seattle, WA"
-
-    def test_jobs_relationship(self, db_session, sample_location):
-        """Test Location jobs relationship."""
-        job = Job(title="Test Job", location_id=sample_location.id)
-        db_session.add(job)
-        db_session.commit()
-
-        assert len(sample_location.jobs) == 1
-        assert sample_location.jobs[0].title == "Test Job"
-
-
-class TestCategoryModel:
-    """Test suite for Category model."""
-
-    def test_repr(self, db_session):
-        """Test Category __repr__ method."""
-        category = Category(name="Engineering")
-        db_session.add(category)
-        db_session.commit()
-        db_session.refresh(category)
-
-        repr_str = repr(category)
-
-        assert "Category" in repr_str
-        assert "Engineering" in repr_str
-        assert str(category.id) in repr_str
-
-    def test_repr_without_id(self):
-        """Test Category __repr__ before persistence."""
-        category = Category(name="Design")
-
-        repr_str = repr(category)
-
-        assert "Category" in repr_str
-        assert "Design" in repr_str
-
-    def test_name_field(self, db_session):
-        """Test Category name field."""
-        category = Category(name="Data Science")
-        db_session.add(category)
-        db_session.commit()
-
-        assert category.name == "Data Science"
-
-    def test_jobs_relationship(self, db_session, sample_category):
-        """Test Category jobs relationship."""
-        job = Job(title="Test Job", category_id=sample_category.id)
-        db_session.add(job)
-        db_session.commit()
-
-        assert len(sample_category.jobs) == 1
-        assert sample_category.jobs[0].title == "Test Job"
-
-
-class TestIndustryModel:
-    """Test suite for Industry model."""
-
-    def test_repr(self, db_session):
-        """Test Industry __repr__ method."""
-        industry = Industry(name="Technology")
-        db_session.add(industry)
-        db_session.commit()
-        db_session.refresh(industry)
-
-        repr_str = repr(industry)
-
-        assert "Industry" in repr_str
-        assert "Technology" in repr_str
-        assert str(industry.id) in repr_str
-
-    def test_repr_without_id(self):
-        """Test Industry __repr__ before persistence."""
-        industry = Industry(name="Finance")
-
-        repr_str = repr(industry)
-
-        assert "Industry" in repr_str
-        assert "Finance" in repr_str
-
-    def test_name_field(self, db_session):
-        """Test Industry name field."""
-        industry = Industry(name="Healthcare")
-        db_session.add(industry)
-        db_session.commit()
-
-        assert industry.name == "Healthcare"
-
-    def test_jobs_relationship(self, db_session, sample_industry):
-        """Test Industry jobs relationship."""
-        job = Job(title="Test Job", industry_id=sample_industry.id)
-        db_session.add(job)
-        db_session.commit()
-
-        assert len(sample_industry.jobs) == 1
-        assert sample_industry.jobs[0].title == "Test Job"
+from jobs_repository.models import Job
+from jobs_repository.mapper import JobMapper
 
 
 class TestJobModel:
@@ -227,7 +38,8 @@ class TestJobModel:
 
     def test_to_dict_with_all_relationships(self, sample_job):
         """Test Job to_dict with all relationships populated."""
-        job_dict = sample_job.to_dict()
+        mapper = JobMapper()
+        job_dict = mapper.map_from_model(sample_job)
 
         assert job_dict["id"] == sample_job.id
         assert job_dict["title"] == "Software Engineer"
@@ -259,7 +71,8 @@ class TestJobModel:
         db_session.commit()
         db_session.refresh(job)
 
-        job_dict = job.to_dict()
+        mapper = JobMapper()
+        job_dict = mapper.map_from_model(job)
 
         assert job_dict["id"] == job.id
         assert job_dict["title"] == "Standalone Job"
@@ -279,7 +92,8 @@ class TestJobModel:
         db_session.commit()
         db_session.refresh(job)
 
-        job_dict = job.to_dict()
+        mapper = JobMapper()
+        job_dict = mapper.map_from_model(job)
 
         assert job_dict["company_id"] == sample_company.id
         assert job_dict["company_name"] == sample_company.name
@@ -288,7 +102,8 @@ class TestJobModel:
 
     def test_to_dict_datetime_serialization(self, sample_job):
         """Test that datetime fields are serialized to ISO format."""
-        job_dict = sample_job.to_dict()
+        mapper = JobMapper()
+        job_dict = mapper.map_from_model(sample_job)
 
         assert isinstance(job_dict["posted_at"], str)
         assert isinstance(job_dict["expires_at"], str)
@@ -304,7 +119,8 @@ class TestJobModel:
         db_session.commit()
         db_session.refresh(job)
 
-        job_dict = job.to_dict()
+        mapper = JobMapper()
+        job_dict = mapper.map_from_model(job)
 
         assert job_dict["posted_at"] is None
         assert job_dict["expires_at"] is None
@@ -313,7 +129,8 @@ class TestJobModel:
 
     def test_to_dict_includes_all_fields(self, sample_job):
         """Test that to_dict includes all expected fields."""
-        job_dict = sample_job.to_dict()
+        mapper = JobMapper()
+        job_dict = mapper.map_from_model(sample_job)
 
         expected_fields = [
             "id",

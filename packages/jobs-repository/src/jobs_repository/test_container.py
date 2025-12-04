@@ -2,7 +2,6 @@
 
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 from jobs_repository.container import JobsRepositoryContainer, container, get_job_repository
 from jobs_repository.repository.job_repository import JobRepository

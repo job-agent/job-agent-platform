@@ -14,9 +14,9 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, or_
 
 from job_agent_platform_contracts import IJobRepository
-from jobs_repository.models import Job, Company, Location, Category, Industry
-from jobs_repository.mapper import JobMapper
+from jobs_repository.models import Job, Company
 from jobs_repository.database.session import get_session_factory
+from jobs_repository.interfaces import IReferenceDataService, IJobMapper
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
@@ -35,6 +35,8 @@ class JobRepository(IJobRepository):
 
     def __init__(
         self,
+        reference_data_service: IReferenceDataService,
+        mapper: IJobMapper,
         session: Optional[Session] = None,
         session_factory: Optional[Callable[[], Session]] = None,
     ):
@@ -42,13 +44,16 @@ class JobRepository(IJobRepository):
         Initialize the repository with a managed or external session.
 
         Args:
+            reference_data_service: Service for managing reference data entities
+            mapper: Service for mapping between Job model and contract data
             session: Existing SQLAlchemy session to reuse
             session_factory: Callable returning SQLAlchemy session instances
         """
         if session is not None and session_factory is not None:
             raise ValueError("Provide either session or session_factory, not both")
 
-        self.mapper = JobMapper()
+        self.mapper = mapper
+        self._reference_data_service = reference_data_service
 
         if session is not None:
             self._session_factory: Callable[[], Session] = lambda: session
@@ -77,54 +82,6 @@ class JobRepository(IJobRepository):
         finally:
             if close_session:
                 session.close()
-
-    def _get_or_create_company(self, session: Session, name: str) -> Company:
-        stmt = select(Company).where(Company.name == name)
-        company = session.scalar(stmt)
-
-        if company:
-            return company
-
-        company = Company(name=name)
-        session.add(company)
-        session.flush()
-        return company
-
-    def _get_or_create_location(self, session: Session, region: str) -> Location:
-        stmt = select(Location).where(Location.region == region)
-        location = session.scalar(stmt)
-
-        if location:
-            return location
-
-        location = Location(region=region)
-        session.add(location)
-        session.flush()
-        return location
-
-    def _get_or_create_category(self, session: Session, name: str) -> Category:
-        stmt = select(Category).where(Category.name == name)
-        category = session.scalar(stmt)
-
-        if category:
-            return category
-
-        category = Category(name=name)
-        session.add(category)
-        session.flush()
-        return category
-
-    def _get_or_create_industry(self, session: Session, name: str) -> Industry:
-        stmt = select(Industry).where(Industry.name == name)
-        industry = session.scalar(stmt)
-
-        if industry:
-            return industry
-
-        industry = Industry(name=name)
-        session.add(industry)
-        session.flush()
-        return industry
 
     def _load_relationships(self, job: Job) -> None:
         if job.company_rel:
@@ -187,19 +144,27 @@ class JobRepository(IJobRepository):
                 mapped_data = self.mapper.map_to_model(job_data)
 
                 if company_name := mapped_data.pop("company_name", None):
-                    company = self._get_or_create_company(session, company_name)
+                    company = self._reference_data_service.get_or_create_company(
+                        session, company_name
+                    )
                     mapped_data["company_id"] = company.id
 
                 if location_region := mapped_data.pop("location_region", None):
-                    location = self._get_or_create_location(session, location_region)
+                    location = self._reference_data_service.get_or_create_location(
+                        session, location_region
+                    )
                     mapped_data["location_id"] = location.id
 
                 if category_name := mapped_data.pop("category_name", None):
-                    category = self._get_or_create_category(session, category_name)
+                    category = self._reference_data_service.get_or_create_category(
+                        session, category_name
+                    )
                     mapped_data["category_id"] = category.id
 
                 if industry_name := mapped_data.pop("industry_name", None):
-                    industry = self._get_or_create_industry(session, industry_name)
+                    industry = self._reference_data_service.get_or_create_industry(
+                        session, industry_name
+                    )
                     mapped_data["industry_id"] = industry.id
 
                 existing_job = self._get_job_by_external_id(

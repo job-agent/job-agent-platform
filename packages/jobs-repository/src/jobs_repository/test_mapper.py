@@ -1,6 +1,6 @@
 """Tests for JobMapper class."""
 
-from datetime import datetime, UTC
+from datetime import datetime
 
 import pytest
 

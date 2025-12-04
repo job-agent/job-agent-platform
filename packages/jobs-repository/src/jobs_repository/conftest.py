@@ -10,6 +10,8 @@ from sqlalchemy.types import TypeDecorator, String
 
 from jobs_repository.database.base import Base
 from jobs_repository.models import Job, Company, Location, Category, Industry
+from jobs_repository.services import ReferenceDataService
+from jobs_repository.mapper import JobMapper
 
 
 class JSONArray(TypeDecorator):
@@ -63,6 +65,18 @@ def db_session(in_memory_engine) -> Generator[Session, None, None]:
     finally:
         session.rollback()
         session.close()
+
+
+@pytest.fixture
+def reference_data_service() -> ReferenceDataService:
+    """Create a ReferenceDataService instance for testing."""
+    return ReferenceDataService()
+
+
+@pytest.fixture
+def job_mapper() -> JobMapper:
+    """Create a JobMapper instance for testing."""
+    return JobMapper()
 
 
 @pytest.fixture

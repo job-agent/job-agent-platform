@@ -118,7 +118,7 @@ class TestGetDbSession:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             session_gen = get_db_session()
-            session = next(session_gen)
+            _ = next(session_gen)
 
             try:
                 next(session_gen)
@@ -134,7 +134,7 @@ class TestGetDbSession:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             session_gen = get_db_session()
-            session = next(session_gen)
+            _ = next(session_gen)
 
             with pytest.raises(TransactionError):
                 session_gen.throw(SQLAlchemyError("Test error"))
@@ -199,7 +199,7 @@ class TestTransaction:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
-            with transaction() as session:
+            with transaction() as _:
                 pass
 
             mock_session.commit.assert_called_once()
@@ -210,7 +210,7 @@ class TestTransaction:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
-            with transaction() as session:
+            with transaction() as _:
                 pass
 
             mock_session.close.assert_called_once()
@@ -222,7 +222,7 @@ class TestTransaction:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             with pytest.raises(TransactionError):
-                with transaction() as session:
+                with transaction() as _:
                     raise Exception("Test error")
 
             mock_session.rollback.assert_called_once()
@@ -235,7 +235,7 @@ class TestTransaction:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             with pytest.raises(TransactionError) as exc_info:
-                with transaction() as session:
+                with transaction() as _:
                     raise ValueError("Test error")
 
             assert "Transaction failed" in str(exc_info.value)
@@ -247,7 +247,7 @@ class TestTransaction:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             try:
-                with transaction() as session:
+                with transaction() as _:
                     raise Exception("Test error")
             except TransactionError:
                 pass
@@ -261,7 +261,7 @@ class TestTransaction:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             try:
-                with transaction() as session:
+                with transaction() as _:
                     raise Exception("Force rollback")
             except TransactionError:
                 pass
@@ -276,7 +276,7 @@ class TestTransaction:
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
             with pytest.raises(TransactionError):
-                with transaction() as session:
+                with transaction() as _:
                     raise SQLAlchemyError("Database error")
 
             mock_session.rollback.assert_called_once()

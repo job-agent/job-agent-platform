@@ -3,7 +3,7 @@
 from unittest.mock import patch, MagicMock
 
 import pytest
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine
 
 from jobs_repository.database.connection import get_engine, reset_engine
 from jobs_repository.database.config import DatabaseConfig
@@ -26,9 +26,7 @@ class TestGetEngine:
         with patch("jobs_repository.database.connection.create_engine") as mock_create:
             mock_engine = MagicMock(spec=Engine)
             mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
@@ -42,9 +40,7 @@ class TestGetEngine:
         with patch("jobs_repository.database.connection.create_engine") as mock_create:
             mock_engine = MagicMock(spec=Engine)
             mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
@@ -60,9 +56,7 @@ class TestGetEngine:
             with patch("jobs_repository.database.connection.get_database_config") as mock_config:
                 mock_engine = MagicMock(spec=Engine)
                 mock_connection = MagicMock()
-                mock_engine.connect.return_value.__enter__ = MagicMock(
-                    return_value=mock_connection
-                )
+                mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
                 mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
                 mock_create.return_value = mock_engine
 
@@ -85,9 +79,7 @@ class TestGetEngine:
             with patch("jobs_repository.database.connection.get_database_config") as mock_config:
                 mock_engine = MagicMock(spec=Engine)
                 mock_connection = MagicMock()
-                mock_engine.connect.return_value.__enter__ = MagicMock(
-                    return_value=mock_connection
-                )
+                mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
                 mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
                 mock_create.return_value = mock_engine
 
@@ -114,9 +106,7 @@ class TestGetEngine:
         with patch("jobs_repository.database.connection.create_engine") as mock_create:
             mock_engine = MagicMock(spec=Engine)
             mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
@@ -140,9 +130,7 @@ class TestGetEngine:
             mock_engine = MagicMock(spec=Engine)
             mock_connection = MagicMock()
             mock_connection.execute.side_effect = Exception("Verification failed")
-            mock_engine.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
@@ -160,9 +148,7 @@ class TestResetEngine:
         with patch("jobs_repository.database.connection.create_engine") as mock_create:
             mock_engine = MagicMock(spec=Engine)
             mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
@@ -176,15 +162,13 @@ class TestResetEngine:
         with patch("jobs_repository.database.connection.create_engine") as mock_create:
             mock_engine = MagicMock(spec=Engine)
             mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
             get_engine()
             reset_engine()
-            engine = get_engine()
+            get_engine()
 
             assert mock_create.call_count == 2
 
@@ -199,13 +183,9 @@ class TestResetEngine:
             mock_engine2 = MagicMock(spec=Engine)
             mock_connection = MagicMock()
 
-            mock_engine1.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine1.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine1.connect.return_value.__exit__ = MagicMock(return_value=False)
-            mock_engine2.connect.return_value.__enter__ = MagicMock(
-                return_value=mock_connection
-            )
+            mock_engine2.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
             mock_engine2.connect.return_value.__exit__ = MagicMock(return_value=False)
 
             mock_create.side_effect = [mock_engine1, mock_engine2]

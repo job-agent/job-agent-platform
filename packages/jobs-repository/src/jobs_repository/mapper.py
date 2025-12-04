@@ -1,26 +1,32 @@
 """Mapper service for transforming JobDict contract data to Job model format."""
 
-from typing import Dict, Any
+from typing import TYPE_CHECKING
 from dateutil import parser as date_parser
 
 from job_scrapper_contracts import JobDict
+from jobs_repository.interfaces import IJobMapper
+from jobs_repository.types import JobModelDict, JobSerializedDict
+
+if TYPE_CHECKING:
+    from jobs_repository.models import Job
 
 
-class JobMapper:
+class JobMapper(IJobMapper):
     """
-    Service for mapping JobDict contract data to Job model fields.
+    Service for bidirectional mapping between Job model and contract data.
 
     This mapper handles:
     - Field name transformations (job_id -> external_id, url -> source_url, etc.)
     - Nested object extraction (company, location, etc.)
     - Data type conversions (ISO datetime strings -> datetime objects)
-    - Flattening nested structures (salary dict -> separate fields)
+    - Flattening/expanding nested structures (salary dict -> separate fields)
+    - Serialization from Job model to dictionary representation
 
     Note: This mapper only transforms data structure. It does NOT create any
     database entities. Entity creation is handled by the repository.
     """
 
-    def map_to_model(self, job_data: JobDict | Dict[str, Any]) -> Dict[str, Any]:
+    def map_to_model(self, job_data: JobDict) -> JobModelDict:
         """
         Transform JobDict contract data to Job model field dictionary.
 
@@ -28,9 +34,9 @@ class JobMapper:
             job_data: Job data in JobDict format from job-agent-platform-contracts
 
         Returns:
-            Dictionary with fields mapped to Job model format
+            Type-safe dictionary with fields mapped to Job model format
         """
-        mapped_data: Dict[str, Any] = {}
+        mapped_data: JobModelDict = {}
 
         self._map_simple_fields(job_data, mapped_data)
 
@@ -44,9 +50,7 @@ class JobMapper:
 
         return mapped_data
 
-    def _map_simple_fields(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
+    def _map_simple_fields(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Map simple scalar fields from JobDict to Job model."""
         mapped_data["title"] = job_data.get("title")
         mapped_data["description"] = job_data.get("description")
@@ -61,47 +65,78 @@ class JobMapper:
         if nice_to_have_skills := job_data.get("nice_to_have_skills"):
             mapped_data["nice_to_have_skills"] = nice_to_have_skills
 
-    def _map_company(self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]) -> None:
+    def _map_company(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract company name from nested object."""
         if company_data := job_data.get("company"):
             mapped_data["company_name"] = company_data["name"]
 
-    def _map_location(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
+    def _map_location(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract location from nested object."""
         if location_data := job_data.get("location"):
             if region := location_data.get("region"):
                 mapped_data["location_region"] = region
             mapped_data["is_remote"] = location_data.get("is_remote", False)
 
-    def _map_category(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
+    def _map_category(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract category name."""
         if category_name := job_data.get("category"):
             mapped_data["category_name"] = category_name
 
-    def _map_industry(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
+    def _map_industry(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract industry name."""
         if industry_name := job_data.get("industry"):
             mapped_data["industry_name"] = industry_name
 
-    def _map_salary(self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]) -> None:
+    def _map_salary(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Flatten salary nested object into separate fields."""
         if salary_data := job_data.get("salary"):
             mapped_data["salary_currency"] = salary_data.get("currency", "USD")
             mapped_data["salary_min"] = salary_data.get("min_value")
             mapped_data["salary_max"] = salary_data.get("max_value")
 
-    def _map_datetime_fields(
-        self, job_data: JobDict | Dict[str, Any], mapped_data: Dict[str, Any]
-    ) -> None:
+    def _map_datetime_fields(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Convert ISO datetime strings to datetime objects."""
         if date_posted := job_data.get("date_posted"):
             mapped_data["posted_at"] = date_parser.isoparse(date_posted)
 
         if valid_through := job_data.get("valid_through"):
             mapped_data["expires_at"] = date_parser.isoparse(valid_through)
+
+    def map_from_model(self, job: "Job") -> JobSerializedDict:
+        """
+        Transform Job model to dictionary representation.
+
+        Args:
+            job: Job model instance
+
+        Returns:
+            Type-safe dictionary with all job fields serialized
+        """
+        return {
+            "id": job.id,
+            "title": job.title,
+            "company_id": job.company_id,
+            "company_name": job.company_rel.name if job.company_rel else None,
+            "location_id": job.location_id,
+            "location_region": job.location_rel.region if job.location_rel else None,
+            "category_id": job.category_id,
+            "category_name": job.category_rel.name if job.category_rel else None,
+            "industry_id": job.industry_id,
+            "industry_name": job.industry_rel.name if job.industry_rel else None,
+            "description": job.description,
+            "must_have_skills": job.must_have_skills,
+            "nice_to_have_skills": job.nice_to_have_skills,
+            "job_type": job.job_type,
+            "experience_months": job.experience_months,
+            "salary_min": job.salary_min,
+            "salary_max": job.salary_max,
+            "salary_currency": job.salary_currency,
+            "external_id": job.external_id,
+            "source": job.source,
+            "source_url": job.source_url,
+            "is_remote": job.is_remote,
+            "posted_at": job.posted_at.isoformat() if job.posted_at else None,
+            "expires_at": job.expires_at.isoformat() if job.expires_at else None,
+            "created_at": job.created_at.isoformat() if job.created_at else None,
+            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+        }

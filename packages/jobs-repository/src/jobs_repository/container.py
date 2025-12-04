@@ -5,6 +5,8 @@ from job_agent_platform_contracts import IJobRepository
 
 from jobs_repository.database import get_session_factory
 from jobs_repository.repository.job_repository import JobRepository
+from jobs_repository.services import ReferenceDataService
+from jobs_repository.mapper import JobMapper
 
 
 class JobsRepositoryContainer(containers.DeclarativeContainer):
@@ -14,8 +16,14 @@ class JobsRepositoryContainer(containers.DeclarativeContainer):
 
     session_factory = providers.Singleton(get_session_factory)
 
+    reference_data_service = providers.Singleton(ReferenceDataService)
+
+    job_mapper = providers.Singleton(JobMapper)
+
     job_repository = providers.Factory(
         JobRepository,
+        reference_data_service=reference_data_service,
+        mapper=job_mapper,
         session_factory=session_factory,
     )
 
