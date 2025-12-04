@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from jobs_repository.models import Job
-from jobs_repository.mapper import JobMapper
 
 
 class TestJobModelConstraints:
