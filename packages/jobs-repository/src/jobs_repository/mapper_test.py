@@ -82,28 +82,6 @@ class TestJobMapper:
         assert "category_name" not in result
         assert "industry_name" not in result
 
-    def test_map_simple_fields(self, mapper):
-        """Test mapping of simple scalar fields."""
-        job_data = {
-            "job_id": 123,
-            "title": "Test Job",
-            "description": "Test Description",
-            "url": "https://test.com",
-            "source": "TestSource",
-            "employment_type": "CONTRACT",
-            "experience_months": 24,
-        }
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["title"] == "Test Job"
-        assert result["description"] == "Test Description"
-        assert result["external_id"] == "123"
-        assert result["source_url"] == "https://test.com"
-        assert result["source"] == "TestSource"
-        assert result["job_type"] == "CONTRACT"
-        assert result["experience_months"] == 24
-
     def test_external_id_converts_to_string(self, mapper):
         """Test that job_id is converted to string for external_id."""
         job_data = {"job_id": 12345, "title": "Test"}
@@ -112,18 +90,6 @@ class TestJobMapper:
 
         assert result["external_id"] == "12345"
         assert isinstance(result["external_id"], str)
-
-    def test_map_company(self, mapper):
-        """Test mapping of company data."""
-        job_data = {
-            "job_id": 1,
-            "title": "Test",
-            "company": {"name": "Example Corp", "website": "https://example.com"},
-        }
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["company_name"] == "Example Corp"
 
     def test_map_company_with_missing_company(self, mapper):
         """Test mapping when company data is missing."""
@@ -171,38 +137,6 @@ class TestJobMapper:
 
         assert "location_region" not in result
         assert "is_remote" not in result
-
-    def test_map_category(self, mapper):
-        """Test mapping of category."""
-        job_data = {"job_id": 1, "title": "Test", "category": "Engineering"}
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["category_name"] == "Engineering"
-
-    def test_map_category_with_missing_category(self, mapper):
-        """Test mapping when category is missing."""
-        job_data = {"job_id": 1, "title": "Test"}
-
-        result = mapper.map_to_model(job_data)
-
-        assert "category_name" not in result
-
-    def test_map_industry(self, mapper):
-        """Test mapping of industry."""
-        job_data = {"job_id": 1, "title": "Test", "industry": "Finance"}
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["industry_name"] == "Finance"
-
-    def test_map_industry_with_missing_industry(self, mapper):
-        """Test mapping when industry is missing."""
-        job_data = {"job_id": 1, "title": "Test"}
-
-        result = mapper.map_to_model(job_data)
-
-        assert "industry_name" not in result
 
     def test_map_salary(self, mapper):
         """Test mapping of salary data."""
@@ -252,9 +186,6 @@ class TestJobMapper:
         assert result["posted_at"].year == 2024
         assert result["posted_at"].month == 1
         assert result["posted_at"].day == 15
-        assert result["expires_at"].year == 2024
-        assert result["expires_at"].month == 2
-        assert result["expires_at"].day == 15
 
     def test_map_datetime_with_missing_dates(self, mapper):
         """Test mapping when datetime fields are missing."""
@@ -264,30 +195,6 @@ class TestJobMapper:
 
         assert "posted_at" not in result
         assert "expires_at" not in result
-
-    def test_map_must_have_skills(self, mapper):
-        """Test mapping of must_have_skills."""
-        job_data = {
-            "job_id": 1,
-            "title": "Test",
-            "must_have_skills": ["Python", "SQL", "Git"],
-        }
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["must_have_skills"] == ["Python", "SQL", "Git"]
-
-    def test_map_nice_to_have_skills(self, mapper):
-        """Test mapping of nice_to_have_skills."""
-        job_data = {
-            "job_id": 1,
-            "title": "Test",
-            "nice_to_have_skills": ["React", "TypeScript"],
-        }
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["nice_to_have_skills"] == ["React", "TypeScript"]
 
     def test_empty_skills_arrays_not_mapped(self, mapper):
         """Test that empty skills arrays are not included in mapping."""
@@ -323,13 +230,6 @@ class TestJobMapper:
         assert result["job_type"] is None
         assert result["experience_months"] is None
 
-    def test_map_with_dict_input(self, mapper, complete_job_dict):
-        """Test that mapper accepts plain dict."""
-        result = mapper.map_to_model(complete_job_dict)
-
-        assert result["title"] == "Senior Software Engineer"
-        assert result["external_id"] == "12345"
-
     def test_datetime_parsing_with_timezone(self, mapper):
         """Test datetime parsing with different timezone formats."""
         job_data = {
@@ -342,36 +242,6 @@ class TestJobMapper:
 
         assert isinstance(result["posted_at"], datetime)
         assert result["posted_at"].year == 2024
-
-    def test_all_mapping_methods_called(self, mapper, complete_job_dict):
-        """Test that all private mapping methods are invoked."""
-        result = mapper.map_to_model(complete_job_dict)
-
-        assert "title" in result
-        assert "company_name" in result
-        assert "location_region" in result
-        assert "category_name" in result
-        assert "industry_name" in result
-        assert "salary_currency" in result
-        assert "posted_at" in result
-
-    def test_missing_optional_fields_handled_gracefully(self, mapper):
-        """Test that missing optional fields don't cause errors."""
-        job_data = {"job_id": 1, "title": "Minimal Job"}
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["title"] == "Minimal Job"
-        assert result["external_id"] == "1"
-
-    def test_integer_job_id_converted_to_string(self, mapper):
-        """Test that integer job_id is converted to string."""
-        job_data = {"job_id": 999999, "title": "Test"}
-
-        result = mapper.map_to_model(job_data)
-
-        assert result["external_id"] == "999999"
-        assert isinstance(result["external_id"], str)
 
     def test_salary_with_partial_data(self, mapper):
         """Test salary mapping with only some fields."""

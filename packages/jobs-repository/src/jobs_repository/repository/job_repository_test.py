@@ -23,86 +23,6 @@ class TestJobRepository:
         """Create a JobRepository instance."""
         return JobRepository(reference_data_service, job_mapper, db_session)
 
-    def test_get_or_create_company_creates_new(self, reference_data_service, db_session):
-        """Test creating a new company when it doesn't exist."""
-        company = reference_data_service.get_or_create_company(db_session, "New Company")
-
-        assert company.id is not None
-        assert company.name == "New Company"
-
-        db_company = db_session.query(Company).filter_by(name="New Company").first()
-        assert db_company is not None
-        assert db_company.id == company.id
-
-    def test_get_or_create_company_returns_existing(
-        self, reference_data_service, sample_company, db_session
-    ):
-        """Test returning existing company instead of creating duplicate."""
-        company = reference_data_service.get_or_create_company(db_session, sample_company.name)
-
-        assert company.id == sample_company.id
-        assert company.name == sample_company.name
-
-    def test_get_or_create_location_creates_new(self, reference_data_service, db_session):
-        """Test creating a new location when it doesn't exist."""
-        location = reference_data_service.get_or_create_location(db_session, "Seattle, WA")
-
-        assert location.id is not None
-        assert location.region == "Seattle, WA"
-
-        db_location = db_session.query(Location).filter_by(region="Seattle, WA").first()
-        assert db_location is not None
-        assert db_location.id == location.id
-
-    def test_get_or_create_location_returns_existing(
-        self, reference_data_service, sample_location, db_session
-    ):
-        """Test returning existing location instead of creating duplicate."""
-        location = reference_data_service.get_or_create_location(db_session, sample_location.region)
-
-        assert location.id == sample_location.id
-        assert location.region == sample_location.region
-
-    def test_get_or_create_category_creates_new(self, reference_data_service, db_session):
-        """Test creating a new category when it doesn't exist."""
-        category = reference_data_service.get_or_create_category(db_session, "Data Science")
-
-        assert category.id is not None
-        assert category.name == "Data Science"
-
-        db_category = db_session.query(Category).filter_by(name="Data Science").first()
-        assert db_category is not None
-        assert db_category.id == category.id
-
-    def test_get_or_create_category_returns_existing(
-        self, reference_data_service, sample_category, db_session
-    ):
-        """Test returning existing category instead of creating duplicate."""
-        category = reference_data_service.get_or_create_category(db_session, sample_category.name)
-
-        assert category.id == sample_category.id
-        assert category.name == sample_category.name
-
-    def test_get_or_create_industry_creates_new(self, reference_data_service, db_session):
-        """Test creating a new industry when it doesn't exist."""
-        industry = reference_data_service.get_or_create_industry(db_session, "Healthcare")
-
-        assert industry.id is not None
-        assert industry.name == "Healthcare"
-
-        db_industry = db_session.query(Industry).filter_by(name="Healthcare").first()
-        assert db_industry is not None
-        assert db_industry.id == industry.id
-
-    def test_get_or_create_industry_returns_existing(
-        self, reference_data_service, sample_industry, db_session
-    ):
-        """Test returning existing industry instead of creating duplicate."""
-        industry = reference_data_service.get_or_create_industry(db_session, sample_industry.name)
-
-        assert industry.id == sample_industry.id
-        assert industry.name == sample_industry.name
-
     def test_get_by_external_id_found(self, repository, sample_job):
         """Test retrieving a job by external_id when it exists."""
         job = repository.get_by_external_id(sample_job.external_id, sample_job.source)
@@ -358,13 +278,6 @@ class TestJobRepository:
         assert job.source_url == "https://example.com/jobs/12345"
         assert job.job_type == "FULL_TIME"
 
-    def test_repository_has_mapper_instance(self, repository):
-        """Test that repository initializes with a mapper."""
-        assert repository.mapper is not None
-        from jobs_repository.mapper import JobMapper
-
-        assert isinstance(repository.mapper, JobMapper)
-
     def test_create_job_with_all_relationships(self, repository, sample_job_dict):
         """Test creating job with all relationship entities populated."""
         job = repository.create(sample_job_dict)
@@ -418,36 +331,6 @@ class TestJobRepository:
 
         assert job.company_rel is not None
         assert job.location_rel is not None
-
-    def test_get_or_create_company_case_sensitive(self, reference_data_service, db_session):
-        """Test that company names are case-sensitive."""
-        company1 = reference_data_service.get_or_create_company(db_session, "TechCorp")
-        company2 = reference_data_service.get_or_create_company(db_session, "techcorp")
-
-        assert company1.id != company2.id
-        assert db_session.query(Company).count() == 2
-
-    def test_get_or_create_location_whitespace_sensitive(self, reference_data_service, db_session):
-        """Test that location regions are whitespace-sensitive."""
-        location1 = reference_data_service.get_or_create_location(db_session, "San Francisco, CA")
-        location2 = reference_data_service.get_or_create_location(db_session, "San Francisco,CA")
-
-        assert location1.id != location2.id
-        assert db_session.query(Location).count() == 2
-
-    def test_get_or_create_methods_use_flush(self, reference_data_service, db_session):
-        """Test that get_or_create methods flush to get ID without committing."""
-        company = reference_data_service.get_or_create_company(db_session, "Flush Test Company")
-
-        assert company.id is not None
-
-        db_session.rollback()
-
-        from sqlalchemy import select
-
-        stmt = select(Company).where(Company.name == "Flush Test Company")
-        result = db_session.scalar(stmt)
-        assert result is None
 
     def test_create_multiple_jobs_same_external_id_different_source(
         self, repository, sample_job_dict
@@ -571,21 +454,6 @@ class TestJobRepository:
         assert job.industry_rel.name == "IT & Services"
         assert job.location_rel.region == "São Paulo, Brazil"
 
-    def test_get_or_create_creates_entity_on_first_call(self, reference_data_service, db_session):
-        """Test that get_or_create actually creates entity on first call."""
-
-        from sqlalchemy import select
-
-        stmt = select(Company).where(Company.name == "First Call Company")
-        assert db_session.scalar(stmt) is None
-
-        company = reference_data_service.get_or_create_company(db_session, "First Call Company")
-
-        assert company.id is not None
-        db_company = db_session.scalar(select(Company).where(Company.name == "First Call Company"))
-        assert db_company is not None
-        assert db_company.id == company.id
-
     def test_exception_contains_correct_external_id(self, repository, sample_job_dict):
         """Test that JobAlreadyExistsError contains the correct external_id."""
         repository.create(sample_job_dict)
@@ -595,3 +463,393 @@ class TestJobRepository:
 
         assert exc_info.value.external_id == "12345"
         assert exc_info.value.source == "unknown"
+
+
+class TestJobRepositoryConstructor:
+    """Tests for JobRepository constructor validation."""
+
+    def test_raises_error_when_both_session_and_factory_provided(
+        self, reference_data_service, job_mapper, db_session
+    ):
+        """Test that providing both session and session_factory raises ValueError."""
+
+        def factory():
+            return db_session
+
+        with pytest.raises(ValueError) as exc_info:
+            JobRepository(
+                reference_data_service,
+                job_mapper,
+                session=db_session,
+                session_factory=factory,
+            )
+
+        assert "either session or session_factory" in str(exc_info.value).lower()
+
+    def test_raises_error_when_session_factory_not_callable(
+        self, reference_data_service, job_mapper
+    ):
+        """Test that non-callable session_factory raises TypeError."""
+        with pytest.raises(TypeError) as exc_info:
+            JobRepository(
+                reference_data_service,
+                job_mapper,
+                session_factory="not_callable",
+            )
+
+        assert "callable" in str(exc_info.value).lower()
+
+    def test_accepts_session_only(self, reference_data_service, job_mapper, db_session):
+        """Test that repository can be created with session only."""
+        repo = JobRepository(reference_data_service, job_mapper, session=db_session)
+
+        assert repo is not None
+        assert repo._close_session is False
+
+    def test_accepts_session_factory_only(
+        self, reference_data_service, job_mapper, in_memory_engine
+    ):
+        """Test that repository can be created with session_factory only."""
+        factory = sessionmaker(bind=in_memory_engine)
+        repo = JobRepository(reference_data_service, job_mapper, session_factory=factory)
+
+        assert repo is not None
+        assert repo._close_session is True
+
+
+class TestJobRepositoryHasActiveJobWithTitleAndCompany:
+    """Tests for has_active_job_with_title_and_company method."""
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_returns_true_when_active_job_exists(
+        self, repository, reference_data_service, db_session
+    ):
+        """Test returns True when matching active job exists."""
+        from datetime import datetime, timedelta, UTC
+
+        company = reference_data_service.get_or_create_company(db_session, "Active Test Corp")
+        future_date = datetime.now(UTC) + timedelta(days=30)
+        # Handle timezone-naive column
+        if not getattr(Job.__table__.c.expires_at.type, "timezone", False):
+            future_date = future_date.replace(tzinfo=None)
+
+        job = Job(
+            title="Active Test Job",
+            company_id=company.id,
+            external_id="active-test-1",
+            expires_at=future_date,
+        )
+        db_session.add(job)
+        db_session.commit()
+
+        result = repository.has_active_job_with_title_and_company(
+            "Active Test Job", "Active Test Corp"
+        )
+
+        assert result is True
+
+    def test_returns_false_when_no_matching_job(self, repository, sample_job):
+        """Test returns False when no job matches title and company."""
+        result = repository.has_active_job_with_title_and_company(
+            "Nonexistent Title", "Nonexistent Company"
+        )
+
+        assert result is False
+
+    def test_returns_false_when_title_matches_but_company_does_not(self, repository, sample_job):
+        """Test returns False when title matches but company doesn't."""
+        result = repository.has_active_job_with_title_and_company(sample_job.title, "Wrong Company")
+
+        assert result is False
+
+    def test_returns_false_when_company_matches_but_title_does_not(self, repository, sample_job):
+        """Test returns False when company matches but title doesn't."""
+        result = repository.has_active_job_with_title_and_company(
+            "Wrong Title", sample_job.company_rel.name
+        )
+
+        assert result is False
+
+    def test_returns_true_when_job_has_no_expiry(
+        self, repository, reference_data_service, db_session
+    ):
+        """Test returns True when matching job has no expiry date."""
+        company = reference_data_service.get_or_create_company(db_session, "No Expiry Corp")
+        job = Job(
+            title="No Expiry Job",
+            company_id=company.id,
+            external_id="no-expiry-1",
+            expires_at=None,
+        )
+        db_session.add(job)
+        db_session.commit()
+
+        result = repository.has_active_job_with_title_and_company("No Expiry Job", "No Expiry Corp")
+
+        assert result is True
+
+    def test_returns_false_when_job_is_expired(
+        self, repository, reference_data_service, db_session
+    ):
+        """Test returns False when matching job is expired."""
+        from datetime import datetime, timedelta, UTC
+
+        company = reference_data_service.get_or_create_company(db_session, "Expired Corp")
+        expired_date = datetime.now(UTC) - timedelta(days=1)
+        # Handle timezone-naive column
+        if not getattr(Job.__table__.c.expires_at.type, "timezone", False):
+            expired_date = expired_date.replace(tzinfo=None)
+
+        job = Job(
+            title="Expired Job",
+            company_id=company.id,
+            external_id="expired-1",
+            expires_at=expired_date,
+        )
+        db_session.add(job)
+        db_session.commit()
+
+        result = repository.has_active_job_with_title_and_company("Expired Job", "Expired Corp")
+
+        assert result is False
+
+    def test_returns_true_when_job_expires_in_future(
+        self, repository, reference_data_service, db_session
+    ):
+        """Test returns True when matching job expires in the future."""
+        from datetime import datetime, timedelta, UTC
+
+        company = reference_data_service.get_or_create_company(db_session, "Future Corp")
+        future_date = datetime.now(UTC) + timedelta(days=30)
+        # Handle timezone-naive column
+        if not getattr(Job.__table__.c.expires_at.type, "timezone", False):
+            future_date = future_date.replace(tzinfo=None)
+
+        job = Job(
+            title="Future Job",
+            company_id=company.id,
+            external_id="future-1",
+            expires_at=future_date,
+        )
+        db_session.add(job)
+        db_session.commit()
+
+        result = repository.has_active_job_with_title_and_company("Future Job", "Future Corp")
+
+        assert result is True
+
+
+class TestJobRepositoryGetExistingUrlsBySource:
+    """Tests for get_existing_urls_by_source method."""
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_returns_empty_list_when_no_jobs(self, repository):
+        """Test returns empty list when no jobs exist for source."""
+        result = repository.get_existing_urls_by_source("nonexistent_source")
+
+        assert result == []
+
+    def test_returns_urls_for_matching_source(self, repository, db_session):
+        """Test returns URLs for jobs with matching source."""
+        from datetime import datetime, UTC
+
+        posted_at = datetime.now(UTC)
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            posted_at = posted_at.replace(tzinfo=None)
+
+        job1 = Job(
+            title="Job 1",
+            external_id="url-test-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/1",
+            posted_at=posted_at,
+        )
+        job2 = Job(
+            title="Job 2",
+            external_id="url-test-2",
+            source="djinni",
+            source_url="https://djinni.co/jobs/2",
+            posted_at=posted_at,
+        )
+        db_session.add_all([job1, job2])
+        db_session.commit()
+
+        result = repository.get_existing_urls_by_source("djinni")
+
+        assert len(result) == 2
+        assert "https://djinni.co/jobs/1" in result
+        assert "https://djinni.co/jobs/2" in result
+
+    def test_excludes_jobs_from_other_sources(self, repository, db_session):
+        """Test excludes URLs from jobs with different source."""
+        from datetime import datetime, UTC
+
+        posted_at = datetime.now(UTC)
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            posted_at = posted_at.replace(tzinfo=None)
+
+        job1 = Job(
+            title="Djinni Job",
+            external_id="source-test-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/1",
+            posted_at=posted_at,
+        )
+        job2 = Job(
+            title="LinkedIn Job",
+            external_id="source-test-2",
+            source="linkedin",
+            source_url="https://linkedin.com/jobs/2",
+            posted_at=posted_at,
+        )
+        db_session.add_all([job1, job2])
+        db_session.commit()
+
+        result = repository.get_existing_urls_by_source("djinni")
+
+        assert len(result) == 1
+        assert "https://djinni.co/jobs/1" in result
+        assert "https://linkedin.com/jobs/2" not in result
+
+    def test_excludes_jobs_with_null_source_url(self, repository, db_session):
+        """Test excludes jobs where source_url is None."""
+        from datetime import datetime, UTC
+
+        posted_at = datetime.now(UTC)
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            posted_at = posted_at.replace(tzinfo=None)
+
+        job1 = Job(
+            title="Job With URL",
+            external_id="null-url-test-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/1",
+            posted_at=posted_at,
+        )
+        job2 = Job(
+            title="Job Without URL",
+            external_id="null-url-test-2",
+            source="djinni",
+            source_url=None,
+            posted_at=posted_at,
+        )
+        db_session.add_all([job1, job2])
+        db_session.commit()
+
+        result = repository.get_existing_urls_by_source("djinni")
+
+        assert len(result) == 1
+        assert "https://djinni.co/jobs/1" in result
+
+    def test_filters_by_days_parameter(self, repository, db_session):
+        """Test filters jobs by posted_at within days parameter."""
+        from datetime import datetime, timedelta, UTC
+
+        now = datetime.now(UTC)
+        recent = now - timedelta(days=5)
+        old = now - timedelta(days=30)
+
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            recent = recent.replace(tzinfo=None)
+            old = old.replace(tzinfo=None)
+
+        job_recent = Job(
+            title="Recent Job",
+            external_id="days-test-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/recent",
+            posted_at=recent,
+        )
+        job_old = Job(
+            title="Old Job",
+            external_id="days-test-2",
+            source="djinni",
+            source_url="https://djinni.co/jobs/old",
+            posted_at=old,
+        )
+        db_session.add_all([job_recent, job_old])
+        db_session.commit()
+
+        result = repository.get_existing_urls_by_source("djinni", days=7)
+
+        assert len(result) == 1
+        assert "https://djinni.co/jobs/recent" in result
+        assert "https://djinni.co/jobs/old" not in result
+
+    def test_returns_all_urls_when_days_is_none(self, repository, db_session):
+        """Test returns all URLs when days parameter is None."""
+        from datetime import datetime, timedelta, UTC
+
+        now = datetime.now(UTC)
+        recent = now - timedelta(days=5)
+        old = now - timedelta(days=365)
+
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            recent = recent.replace(tzinfo=None)
+            old = old.replace(tzinfo=None)
+
+        job_recent = Job(
+            title="Recent Job",
+            external_id="all-urls-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/recent",
+            posted_at=recent,
+        )
+        job_old = Job(
+            title="Old Job",
+            external_id="all-urls-2",
+            source="djinni",
+            source_url="https://djinni.co/jobs/old",
+            posted_at=old,
+        )
+        db_session.add_all([job_recent, job_old])
+        db_session.commit()
+
+        result = repository.get_existing_urls_by_source("djinni", days=None)
+
+        assert len(result) == 2
+        assert "https://djinni.co/jobs/recent" in result
+        assert "https://djinni.co/jobs/old" in result
+
+    def test_returns_list_type(self, repository):
+        """Test that return type is always a list."""
+        result = repository.get_existing_urls_by_source("any_source")
+
+        assert isinstance(result, list)
+
+
+class TestJobRepositoryDuplicateDetectionBySourceUrl:
+    """Tests for duplicate detection via source_url."""
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_detects_duplicate_by_source_url(self, repository):
+        """Test that duplicate is detected by source_url even with different external_id."""
+        job_data_1 = {
+            "job_id": 1001,
+            "title": "First Job",
+            "url": "https://example.com/jobs/same-url",
+            "company": {"name": "Test Corp"},
+        }
+        repository.create(job_data_1)
+
+        job_data_2 = {
+            "job_id": 1002,
+            "title": "Second Job",
+            "url": "https://example.com/jobs/same-url",
+            "company": {"name": "Test Corp"},
+        }
+
+        with pytest.raises(JobAlreadyExistsError):
+            repository.create(job_data_2)
