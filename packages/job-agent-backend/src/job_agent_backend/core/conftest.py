@@ -1,6 +1,5 @@
-"""Shared test fixtures for job-agent-backend integration tests."""
+"""Test fixtures for core module tests."""
 
-import os
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -22,21 +21,6 @@ def sample_cv_content():
     - Languages: Python, JavaScript, SQL
     - Frameworks: Django, React
     - Tools: Git, Docker, Jenkins
-    """
-
-
-@pytest.fixture
-def sample_cv_with_pii():
-    """Sample CV with PII for testing PII removal."""
-    return """
-    John Doe
-    Email: john.doe@example.com
-    Phone: +1-555-123-4567
-    Address: 123 Main St, San Francisco, CA 94105
-
-    Professional Experience:
-    - 5+ years of Python development at TechCorp
-    - Led team of 10 engineers
     """
 
 
@@ -69,34 +53,6 @@ def sample_job_dict():
         "experience_months": 36.0,
         "location": {"region": "New York, NY", "is_remote": True, "can_apply": True},
         "industry": "Information Technology",
-    }
-
-
-@pytest.fixture
-def sample_irrelevant_job_dict():
-    """Sample irrelevant JobDict for testing."""
-    return {
-        "job_id": 67890,
-        "title": "Senior Java Architect",
-        "url": "https://example.com/jobs/67890",
-        "description": """
-        We are looking for a Senior Java Architect with:
-        - 10+ years of Java/J2EE experience (required)
-        - Spring Boot, Hibernate
-        - Microservices architecture
-        - AWS or Azure cloud experience
-
-        No Python experience needed.
-        """,
-        "company": {"name": "Java Corp", "website": "https://javacorp.com"},
-        "category": "Software Architecture",
-        "date_posted": "2024-01-16T10:00:00Z",
-        "valid_through": "2024-02-16T10:00:00Z",
-        "employment_type": "FULL_TIME",
-        "salary": {"currency": "USD", "min_value": 150000.0, "max_value": 200000.0},
-        "experience_months": 120.0,
-        "location": {"region": "Seattle, WA", "is_remote": False, "can_apply": True},
-        "industry": "Enterprise Software",
     }
 
 
@@ -155,23 +111,11 @@ def mock_scrapper_manager():
 
 
 @pytest.fixture
-def mock_openai_responses():
-    """Mock OpenAI API responses for workflow testing."""
-
-    def create_mock_response(content: str):
-        """Create a mock OpenAI response."""
-        mock_response = MagicMock()
-        mock_response.content = content
-        return mock_response
-
-    return {
-        "relevance_check": create_mock_response('{"is_relevant": true, "reasoning": "Good match"}'),
-        "must_have_skills": create_mock_response('{"skills": ["Python", "Django", "PostgreSQL"]}'),
-        "nice_to_have_skills": create_mock_response('{"skills": ["Docker", "Kubernetes"]}'),
-        "pii_removal": create_mock_response(
-            "Professional Experience:\n- 5+ years of Python development at [COMPANY]\n- Led team of engineers"
-        ),
-    }
+def temp_cv_dir(tmp_path):
+    """Create a temporary directory for CV files."""
+    cv_dir = tmp_path / "cv_files"
+    cv_dir.mkdir()
+    return Path(cv_dir)
 
 
 @pytest.fixture
@@ -180,28 +124,3 @@ def sample_temp_cv_file(temp_cv_dir, sample_cv_content):
     cv_file = temp_cv_dir / "test_cv.txt"
     cv_file.write_text(sample_cv_content)
     return cv_file
-
-
-@pytest.fixture
-def sample_pdf_cv_path(temp_cv_dir):
-    """Create a temporary PDF file path for testing (without actual PDF content)."""
-    pdf_file = temp_cv_dir / "test_cv.pdf"
-    return pdf_file
-
-
-@pytest.fixture
-def temp_cv_dir(tmp_path):
-    """Create a temporary directory for CV files."""
-    cv_dir = tmp_path / "cv_files"
-    cv_dir.mkdir()
-    return Path(cv_dir)
-
-
-@pytest.fixture(autouse=True)
-def setup_test_env(monkeypatch):
-    """Set up test environment variables."""
-
-    monkeypatch.setenv("LANGSMITH_TRACING_V2", "false")
-
-    if not os.getenv("OPENAI_API_KEY"):
-        monkeypatch.setenv("OPENAI_API_KEY", "test-api-key")

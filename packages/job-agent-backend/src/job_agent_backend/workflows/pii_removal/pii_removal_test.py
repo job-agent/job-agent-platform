@@ -1,4 +1,4 @@
-"""Integration tests for PII removal workflow."""
+"""Tests for PII removal workflow."""
 
 from unittest.mock import patch, MagicMock
 import pytest

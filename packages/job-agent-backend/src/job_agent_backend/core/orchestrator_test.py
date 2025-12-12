@@ -1,4 +1,4 @@
-"""Integration tests for JobAgentOrchestrator."""
+"""Tests for JobAgentOrchestrator."""
 
 from unittest.mock import patch, MagicMock
 from datetime import datetime, UTC

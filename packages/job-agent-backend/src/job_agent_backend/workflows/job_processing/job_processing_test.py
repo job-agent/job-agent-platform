@@ -1,32 +1,9 @@
-"""Integration tests for job processing workflow."""
+"""Tests for job processing workflow."""
 
 from unittest.mock import patch, MagicMock
 import pytest
 
 from job_agent_backend.workflows import run_job_processing
-from jobs_repository.repository.job_repository import JobRepository
-
-
-@pytest.fixture
-def job_repository_factory_stub():
-    """Provide a stub job repository factory."""
-
-    def factory():
-        repository = MagicMock()
-        repository.create.return_value = MagicMock(id=1)
-        return repository
-
-    return factory
-
-
-@pytest.fixture
-def job_repository_factory_with_session(db_session):
-    """Provide a job repository factory that reuses the test session."""
-
-    def factory():
-        return JobRepository(session=db_session)
-
-    return factory
 
 
 def create_mock_model(result_obj):

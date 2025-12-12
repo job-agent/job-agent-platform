@@ -1,7 +1,7 @@
-"""Integration tests for job filter service."""
+"""Tests for job filter service."""
 
-from job_agent_backend.filter_service.filter import FilterService
-from job_agent_backend.filter_service.filter_config import FilterConfig
+from .filter import FilterService
+from .filter_config import FilterConfig
 
 
 class TestFilterService:
