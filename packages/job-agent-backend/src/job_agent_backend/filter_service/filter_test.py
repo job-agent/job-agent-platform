@@ -1,5 +1,7 @@
 """Tests for job filter service."""
 
+import pytest
+
 from .filter import FilterService
 from .filter_config import FilterConfig
 
@@ -204,3 +206,77 @@ class TestFilterService:
 
         assert len(result) == 1
         assert result[0]["job_id"] == 50
+
+    def test_constructor_applies_default_config(self):
+        """Test that constructor sets default filter configuration."""
+        service = FilterService()
+
+        assert service.config["max_months_of_experience"] == 60
+        assert service.config["location_allows_to_apply"] is True
+
+    def test_filter_raises_when_repository_factory_throws(self):
+        """Test that exception from repository factory propagates."""
+
+        def failing_factory():
+            raise RuntimeError("Factory failure")
+
+        service = FilterService(job_repository_factory=failing_factory)
+        jobs = [{"job_id": 1, "experience_months": 12, "location": {"can_apply": True}}]
+
+        with pytest.raises(RuntimeError, match="Factory failure"):
+            service.filter(jobs)
+
+    def test_filter_raises_when_get_by_external_id_throws(self):
+        """Test that exception from repository.get_by_external_id propagates."""
+
+        class FailingRepository:
+            def get_by_external_id(self, external_id, source=None):
+                raise RuntimeError("get_by_external_id failure")
+
+        service = FilterService(job_repository_factory=lambda: FailingRepository())
+        jobs = [{"job_id": 1, "experience_months": 12, "location": {"can_apply": True}}]
+
+        with pytest.raises(RuntimeError, match="get_by_external_id failure"):
+            service.filter(jobs)
+
+    def test_filter_raises_when_has_active_job_throws(self):
+        """Test that exception from repository.has_active_job_with_title_and_company propagates."""
+
+        class FailingRepository:
+            def get_by_external_id(self, external_id, source=None):
+                return None
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                raise RuntimeError("has_active_job failure")
+
+        service = FilterService(job_repository_factory=lambda: FailingRepository())
+        jobs = [
+            {
+                "job_id": 1,
+                "title": "Test Job",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Test Company"},
+            }
+        ]
+
+        with pytest.raises(RuntimeError, match="has_active_job failure"):
+            service.filter(jobs)
+
+    def test_filter_raises_when_experience_months_is_none(self):
+        """Test that explicit None for experience_months raises TypeError."""
+        service = FilterService()
+        service.configure({"max_months_of_experience": 60})
+        jobs = [{"job_id": 1, "experience_months": None, "location": {"can_apply": True}}]
+
+        with pytest.raises(TypeError):
+            service.filter(jobs)
+
+    def test_filter_raises_when_location_is_none(self):
+        """Test that explicit None for location raises AttributeError."""
+        service = FilterService()
+        service.configure({"location_allows_to_apply": True})
+        jobs = [{"job_id": 1, "experience_months": 12, "location": None}]
+
+        with pytest.raises(AttributeError):
+            service.filter(jobs)
