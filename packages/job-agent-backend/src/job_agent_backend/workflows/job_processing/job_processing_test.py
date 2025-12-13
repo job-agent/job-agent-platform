@@ -350,3 +350,100 @@ class TestJobProcessingWorkflow:
         assert "cv_context" in result
         assert "is_relevant" in result
         assert isinstance(result, dict)
+
+    def test_non_callable_repository_factory_raises_error(
+        self,
+        sample_job_dict,
+        sample_cv_content,
+    ):
+        """Test that non-callable job_repository_factory raises ValueError."""
+        with pytest.raises(ValueError, match="job_repository_factory must be callable"):
+            run_job_processing(
+                sample_job_dict,
+                sample_cv_content,
+                job_repository_factory="not_callable",
+            )
+
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
+    @patch(
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
+    )
+    @patch(
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
+    )
+    def test_relevant_job_stores_to_repository(
+        self,
+        mock_nice_chat,
+        mock_must_chat,
+        mock_relevance_chat,
+        sample_job_dict,
+        sample_cv_content,
+    ):
+        """Test that relevant jobs are stored to the repository with extracted skills."""
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+
+        mock_must_result = MagicMock()
+        mock_must_result.skills = ["Python", "Django"]
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
+
+        mock_nice_result = MagicMock()
+        mock_nice_result.skills = ["Docker"]
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+
+        mock_repository = MagicMock()
+        mock_repository.create.return_value = MagicMock(id=42)
+        job_repository_factory = MagicMock(return_value=mock_repository)
+
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory,
+        )
+
+        job_repository_factory.assert_called_once()
+        mock_repository.create.assert_called_once()
+        created_job = mock_repository.create.call_args[0][0]
+        assert created_job["must_have_skills"] == ["Python", "Django"]
+        assert created_job["nice_to_have_skills"] == ["Docker"]
+        assert result["status"] == "completed"
+
+    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
+    @patch(
+        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
+    )
+    @patch(
+        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
+    )
+    def test_workflow_continues_after_store_job_error(
+        self,
+        mock_nice_chat,
+        mock_must_chat,
+        mock_relevance_chat,
+        sample_job_dict,
+        sample_cv_content,
+    ):
+        """Test that workflow completes even when repository raises exception."""
+        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+
+        mock_must_result = MagicMock()
+        mock_must_result.skills = ["Python"]
+        mock_must_chat.return_value = create_mock_model(mock_must_result)
+
+        mock_nice_result = MagicMock()
+        mock_nice_result.skills = []
+        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+
+        mock_repository = MagicMock()
+        mock_repository.create.side_effect = Exception("Database error")
+        job_repository_factory = MagicMock(return_value=mock_repository)
+
+        result = run_job_processing(
+            sample_job_dict,
+            sample_cv_content,
+            job_repository_factory=job_repository_factory,
+        )
+
+        # Workflow continues to completion despite store error
+        mock_repository.create.assert_called_once()
+        assert result["status"] == "completed"
+        assert result["is_relevant"] is True
