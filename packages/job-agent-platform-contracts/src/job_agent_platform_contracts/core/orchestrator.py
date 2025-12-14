@@ -5,8 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from sqlalchemy.orm import Session
-
 from job_scrapper_contracts import JobDict
 
 from job_agent_platform_contracts.core.job_processing_result import JobProcessingResult
@@ -51,7 +49,6 @@ class IJobAgentOrchestrator(ABC):
         self,
         job: JobDict,
         cv_content: str,
-        db_session: Optional[Session] = None,
     ) -> JobProcessingResult:
         """Execute processing workflows for a single job and return the results."""
 
