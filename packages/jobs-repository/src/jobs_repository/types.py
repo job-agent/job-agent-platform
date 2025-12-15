@@ -39,6 +39,8 @@ class JobModelDict(TypedDict, total=False):
     source_url: Optional[str]
 
     is_remote: bool
+    is_relevant: bool
+    is_filtered: bool
     posted_at: Optional[datetime]
     expires_at: Optional[datetime]
 
@@ -79,6 +81,8 @@ class JobSerializedDict(TypedDict, total=False):
     source_url: Optional[str]
 
     is_remote: bool
+    is_relevant: bool
+    is_filtered: bool
     posted_at: Optional[str]
     expires_at: Optional[str]
     created_at: Optional[str]

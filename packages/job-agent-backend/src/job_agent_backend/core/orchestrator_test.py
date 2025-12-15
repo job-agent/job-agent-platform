@@ -30,6 +30,9 @@ class TestJobAgentOrchestrator:
             def has_active_job_with_title_and_company(self, title, company_name):
                 return False
 
+            def save_filtered_jobs(self, jobs):
+                return len(jobs)
+
         container.job_repository_factory.override(providers.Object(lambda: StubRepository()))
 
         container.filter_service.override(
@@ -460,3 +463,252 @@ class TestJobAgentOrchestrator:
             orchestrator.run_complete_pipeline(user_id=1)
         except Exception as e:
             assert "Database connection failed" not in str(e)
+
+
+class TestOrchestratorFilterJobsListWithRejected:
+    """Tests for filter_jobs_list integration with filtered jobs storage.
+
+    These tests verify the NEW behavior where filter_jobs_list:
+    1. Uses filter_with_rejected to get both passed and rejected jobs
+    2. Calls save_filtered_jobs on the repository with rejected jobs
+    3. Returns only the passed jobs for workflow processing
+    """
+
+    @pytest.fixture
+    def app_container(self):
+        """Provide a fresh dependency container per test."""
+        container = ApplicationContainer()
+
+        class StubRepository:
+            def __init__(self):
+                self.saved_filtered_jobs = []
+
+            def get_by_external_id(self, external_id, source=None):
+                return None
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                return False
+
+            def save_filtered_jobs(self, jobs):
+                self.saved_filtered_jobs.extend(jobs)
+                return len(jobs)
+
+        self.stub_repository = StubRepository()
+        container.job_repository_factory.override(providers.Object(lambda: self.stub_repository))
+
+        container.filter_service.override(
+            providers.Singleton(
+                FilterService,
+                job_repository_factory=container.job_repository_factory,
+            )
+        )
+
+        return container
+
+    @pytest.fixture
+    def stub_repository(self, app_container):
+        """Access the stub repository for verification."""
+        return self.stub_repository
+
+    def test_filter_jobs_list_calls_save_filtered_jobs_with_rejected(
+        self, app_container, stub_repository, sample_jobs_list
+    ):
+        """Test that filter_jobs_list calls save_filtered_jobs with rejected jobs.
+
+        When jobs are filtered out by the pre-LLM filter, they should be
+        saved to the repository with is_filtered=True, is_relevant=False.
+        """
+        orchestrator = app_container.orchestrator(database_initializer=lambda: None)
+        orchestrator.filter_service.configure({"max_months_of_experience": 36})
+
+        orchestrator.filter_jobs_list(sample_jobs_list)
+
+        # Verify save_filtered_jobs was called with rejected jobs
+        assert len(stub_repository.saved_filtered_jobs) == 2
+
+        # Verify the rejected jobs are the ones with high experience
+        saved_ids = [job["job_id"] for job in stub_repository.saved_filtered_jobs]
+        assert 3 in saved_ids  # 60 months experience
+        assert 4 in saved_ids  # 96 months experience
+
+    def test_filter_jobs_list_returns_only_passed_jobs(self, app_container, sample_jobs_list):
+        """Test that filter_jobs_list returns only passed jobs for processing.
+
+        Rejected jobs should be stored but not returned for workflow processing.
+        """
+        orchestrator = app_container.orchestrator(database_initializer=lambda: None)
+        orchestrator.filter_service.configure({"max_months_of_experience": 36})
+
+        result = orchestrator.filter_jobs_list(sample_jobs_list)
+
+        # Only jobs with experience <= 36 should be returned
+        result_ids = [job["job_id"] for job in result]
+        assert 1 in result_ids  # 12 months
+        assert 2 in result_ids  # 36 months
+        assert 3 not in result_ids  # 60 months - filtered
+        assert 4 not in result_ids  # 96 months - filtered
+
+    def test_filter_jobs_list_does_not_save_when_no_rejections(
+        self, app_container, stub_repository
+    ):
+        """Test that save_filtered_jobs is not called when all jobs pass."""
+        jobs = [
+            {
+                "job_id": 1,
+                "title": "Junior Dev",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+            },
+        ]
+        orchestrator = app_container.orchestrator(database_initializer=lambda: None)
+        orchestrator.filter_service.configure({"max_months_of_experience": 60})
+
+        result = orchestrator.filter_jobs_list(jobs)
+
+        # No jobs should be saved as filtered
+        assert len(stub_repository.saved_filtered_jobs) == 0
+        assert len(result) == 1
+
+    def test_filter_jobs_list_saves_all_rejected_when_all_fail(
+        self, app_container, stub_repository
+    ):
+        """Test that all jobs are saved as filtered when all are rejected."""
+        jobs = [
+            {
+                "job_id": 1,
+                "title": "Senior Dev",
+                "experience_months": 120,
+                "location": {"can_apply": True},
+            },
+            {
+                "job_id": 2,
+                "title": "Staff Eng",
+                "experience_months": 96,
+                "location": {"can_apply": True},
+            },
+        ]
+        orchestrator = app_container.orchestrator(database_initializer=lambda: None)
+        orchestrator.filter_service.configure({"max_months_of_experience": 24})
+
+        result = orchestrator.filter_jobs_list(jobs)
+
+        # All jobs should be saved as filtered
+        assert len(stub_repository.saved_filtered_jobs) == 2
+        # No jobs should be returned for processing
+        assert len(result) == 0
+
+    def test_filter_jobs_list_logs_filtered_count(self, app_container, sample_jobs_list):
+        """Test that filter_jobs_list logs both passed and filtered counts."""
+        mock_logger = MagicMock()
+        orchestrator = app_container.orchestrator(
+            logger=mock_logger,
+            database_initializer=lambda: None,
+        )
+        orchestrator.filter_service.configure({"max_months_of_experience": 36})
+
+        orchestrator.filter_jobs_list(sample_jobs_list)
+
+        # Verify logging was called
+        mock_logger.assert_called()
+        # Check that the log message contains filter counts
+        log_calls = [str(call) for call in mock_logger.call_args_list]
+        assert any("2/4" in call or "2" in call for call in log_calls)
+
+
+class TestOrchestratorPipelineWithFilteredJobsStorage:
+    """Integration tests for the complete pipeline with filtered jobs storage.
+
+    These tests verify that the run_complete_pipeline method properly stores
+    filtered jobs during the filtering phase.
+    """
+
+    @pytest.fixture
+    def app_container(self):
+        """Provide a fresh dependency container per test."""
+        container = ApplicationContainer()
+
+        class StubRepository:
+            def __init__(self):
+                self.saved_filtered_jobs = []
+
+            def get_by_external_id(self, external_id, source=None):
+                return None
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                return False
+
+            def save_filtered_jobs(self, jobs):
+                self.saved_filtered_jobs.extend(jobs)
+                return len(jobs)
+
+        self.stub_repository = StubRepository()
+        container.job_repository_factory.override(providers.Object(lambda: self.stub_repository))
+
+        container.filter_service.override(
+            providers.Singleton(
+                FilterService,
+                job_repository_factory=container.job_repository_factory,
+            )
+        )
+
+        return container
+
+    @patch("job_agent_backend.core.orchestrator.run_job_processing")
+    def test_pipeline_stores_filtered_jobs_before_processing(
+        self, mock_run_job_processing, app_container, sample_cv_content
+    ):
+        """Test that filtered jobs are stored before workflow processing begins."""
+        user_id = 5000
+
+        mock_repo_instance = MagicMock()
+        mock_repo_instance.find.return_value = sample_cv_content
+        mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
+
+        mock_scrapper = MagicMock()
+        jobs_data = [
+            {
+                "job_id": 1,
+                "title": "Junior Developer",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Company A"},
+                "url": "https://example.com/1",
+                "date_posted": "2024-01-15T10:00:00Z",
+                "employment_type": "FULL_TIME",
+            },
+            {
+                "job_id": 2,
+                "title": "Senior Developer",
+                "experience_months": 120,  # High experience - will be filtered
+                "location": {"can_apply": True},
+                "company": {"name": "Company B"},
+                "url": "https://example.com/2",
+                "date_posted": "2024-01-15T10:00:00Z",
+                "employment_type": "FULL_TIME",
+            },
+        ]
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([jobs_data])
+
+        orchestrator = app_container.orchestrator(
+            cv_repository_class=mock_cv_repo_class,
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+        orchestrator.filter_service.configure({"max_months_of_experience": 60})
+
+        mock_run_job_processing.return_value = {"status": "completed"}
+
+        result = orchestrator.run_complete_pipeline(user_id=user_id)
+
+        # The filtered job should have been stored
+        stub_repo = self.stub_repository
+        assert len(stub_repo.saved_filtered_jobs) == 1
+        assert stub_repo.saved_filtered_jobs[0]["job_id"] == 2
+
+        # Only the passing job should have been processed
+        assert mock_run_job_processing.call_count == 1
+
+        # Pipeline summary should reflect correct counts
+        assert result["total_scraped"] == 2
+        assert result["total_filtered"] == 1  # Only 1 passed the filter
+        assert result["total_processed"] == 1

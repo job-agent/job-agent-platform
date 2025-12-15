@@ -7,13 +7,14 @@ jobs and looking them up by external identifier.
 
 from contextlib import contextmanager
 from datetime import datetime, timedelta, UTC
-from typing import Callable, Generator, Optional
+from typing import Callable, Generator, List, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, or_
 
 from job_agent_platform_contracts import IJobRepository
+from job_scrapper_contracts import JobDict
 from jobs_repository.models import Job, Company
 from jobs_repository.database.session import get_session_factory
 from jobs_repository.interfaces import IReferenceDataService, IJobMapper
@@ -119,6 +120,53 @@ class JobRepository(IJobRepository):
             stmt = stmt.where(Job.source == source)
         return session.scalar(stmt)
 
+    def _find_existing_job(
+        self, session: Session, external_id: str, source: Optional[str], source_url: Optional[str]
+    ) -> Optional[Job]:
+        """Check for existing job by external_id or source_url.
+
+        Args:
+            session: SQLAlchemy session
+            external_id: External job identifier
+            source: Optional job source (e.g., 'djinni', 'linkedin')
+            source_url: Optional URL where the job was scraped from
+
+        Returns:
+            Job instance if found by either external_id or source_url, None otherwise
+        """
+        existing_job = self._get_job_by_external_id(session, external_id, source)
+
+        if not existing_job and source_url:
+            existing_job = self._get_job_by_source_url(session, source_url, source)
+
+        return existing_job
+
+    def _resolve_reference_data(self, session: Session, mapped_data: dict) -> None:
+        """Resolve reference data entities and update mapped_data with foreign keys.
+
+        Pops company_name, location_region, category_name, and industry_name from
+        mapped_data and replaces them with their corresponding *_id fields.
+
+        Args:
+            session: SQLAlchemy session
+            mapped_data: Mutable dictionary that will be modified in place
+        """
+        if company_name := mapped_data.pop("company_name", None):
+            company = self._reference_data_service.get_or_create_company(session, company_name)
+            mapped_data["company_id"] = company.id
+
+        if location_region := mapped_data.pop("location_region", None):
+            location = self._reference_data_service.get_or_create_location(session, location_region)
+            mapped_data["location_id"] = location.id
+
+        if category_name := mapped_data.pop("category_name", None):
+            category = self._reference_data_service.get_or_create_category(session, category_name)
+            mapped_data["category_id"] = category.id
+
+        if industry_name := mapped_data.pop("industry_name", None):
+            industry = self._reference_data_service.get_or_create_industry(session, industry_name)
+            mapped_data["industry_id"] = industry.id
+
     def create(self, job_data: JobCreate) -> Job:
         """
         Create a new job from JobDict or JobCreate contract data.
@@ -143,38 +191,14 @@ class JobRepository(IJobRepository):
             with self._session_scope(commit=True) as session:
                 mapped_data = self.mapper.map_to_model(job_data)
 
-                if company_name := mapped_data.pop("company_name", None):
-                    company = self._reference_data_service.get_or_create_company(
-                        session, company_name
-                    )
-                    mapped_data["company_id"] = company.id
+                self._resolve_reference_data(session, mapped_data)
 
-                if location_region := mapped_data.pop("location_region", None):
-                    location = self._reference_data_service.get_or_create_location(
-                        session, location_region
-                    )
-                    mapped_data["location_id"] = location.id
-
-                if category_name := mapped_data.pop("category_name", None):
-                    category = self._reference_data_service.get_or_create_category(
-                        session, category_name
-                    )
-                    mapped_data["category_id"] = category.id
-
-                if industry_name := mapped_data.pop("industry_name", None):
-                    industry = self._reference_data_service.get_or_create_industry(
-                        session, industry_name
-                    )
-                    mapped_data["industry_id"] = industry.id
-
-                existing_job = self._get_job_by_external_id(
-                    session, mapped_data["external_id"], mapped_data.get("source")
+                existing_job = self._find_existing_job(
+                    session,
+                    mapped_data["external_id"],
+                    mapped_data.get("source"),
+                    mapped_data.get("source_url"),
                 )
-
-                if not existing_job and mapped_data.get("source_url"):
-                    existing_job = self._get_job_by_source_url(
-                        session, mapped_data["source_url"], mapped_data.get("source")
-                    )
 
                 if existing_job:
                     raise JobAlreadyExistsError(
@@ -265,3 +289,47 @@ class JobRepository(IJobRepository):
 
             results = session.execute(stmt).scalars().all()
             return list(results)
+
+    def save_filtered_jobs(self, jobs: List[JobDict]) -> int:
+        """
+        Save multiple filtered jobs in a batch operation.
+
+        Filtered jobs are stored with is_filtered=True and is_relevant=False
+        so they can be included in existing_urls for future scrapes.
+
+        Args:
+            jobs: List of job dictionaries that were rejected by pre-LLM filtering
+
+        Returns:
+            Count of jobs that were successfully saved (excluding duplicates)
+        """
+        if not jobs:
+            return 0
+
+        saved_count = 0
+        with self._session_scope(commit=True) as session:
+            for job_data in jobs:
+                # Map job data to model format
+                mapped_data = self.mapper.map_to_model(job_data)
+
+                # Force filtered job flags
+                mapped_data["is_filtered"] = True
+                mapped_data["is_relevant"] = False
+
+                existing_job = self._find_existing_job(
+                    session,
+                    mapped_data["external_id"],
+                    mapped_data.get("source"),
+                    mapped_data.get("source_url"),
+                )
+
+                if existing_job:
+                    continue  # Skip duplicates
+
+                self._resolve_reference_data(session, mapped_data)
+
+                job = Job(**mapped_data)
+                session.add(job)
+                saved_count += 1
+
+        return saved_count

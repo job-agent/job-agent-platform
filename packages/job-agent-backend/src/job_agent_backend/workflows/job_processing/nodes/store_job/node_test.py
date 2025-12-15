@@ -164,3 +164,91 @@ class TestStoreJobNode:
         result = store_job_node(state)
 
         assert result["status"] == "in_progress"
+
+
+class TestStoreJobNodeIsRelevant:
+    """Tests for is_relevant handling in store_job_node."""
+
+    def test_stores_job_with_is_relevant_true_when_relevant(self):
+        """Node passes is_relevant=True to repository for relevant jobs."""
+        mock_repository = MagicMock()
+        mock_repository.create.return_value = MagicMock(id=42)
+        job_repository_factory = MagicMock(return_value=mock_repository)
+
+        store_job_node = create_store_job_node(job_repository_factory)
+
+        state = {
+            "job": {"job_id": 1, "title": "Python Developer"},
+            "status": "in_progress",
+            "cv_context": "Python developer",
+            "is_relevant": True,
+            "extracted_must_have_skills": ["Python"],
+        }
+
+        store_job_node(state)
+
+        created_job = mock_repository.create.call_args[0][0]
+        assert created_job["is_relevant"] is True
+
+    def test_stores_job_with_is_relevant_false_when_irrelevant(self):
+        """Node passes is_relevant=False to repository for irrelevant jobs."""
+        mock_repository = MagicMock()
+        mock_repository.create.return_value = MagicMock(id=42)
+        job_repository_factory = MagicMock(return_value=mock_repository)
+
+        store_job_node = create_store_job_node(job_repository_factory)
+
+        state = {
+            "job": {"job_id": 1, "title": "Python Developer"},
+            "status": "in_progress",
+            "cv_context": "Python developer",
+            "is_relevant": False,
+        }
+
+        store_job_node(state)
+
+        created_job = mock_repository.create.call_args[0][0]
+        assert created_job["is_relevant"] is False
+
+    def test_irrelevant_job_stored_without_skills(self):
+        """Irrelevant jobs are stored without extracted skills (they skip extraction)."""
+        mock_repository = MagicMock()
+        mock_repository.create.return_value = MagicMock(id=42)
+        job_repository_factory = MagicMock(return_value=mock_repository)
+
+        store_job_node = create_store_job_node(job_repository_factory)
+
+        state = {
+            "job": {"job_id": 1, "title": "Python Developer"},
+            "status": "in_progress",
+            "cv_context": "Python developer",
+            "is_relevant": False,
+            # No extracted_must_have_skills or extracted_nice_to_have_skills
+        }
+
+        store_job_node(state)
+
+        created_job = mock_repository.create.call_args[0][0]
+        assert created_job["is_relevant"] is False
+        assert "must_have_skills" not in created_job
+        assert "nice_to_have_skills" not in created_job
+
+    def test_defaults_is_relevant_to_true_when_missing(self):
+        """Node defaults is_relevant to True when not in state."""
+        mock_repository = MagicMock()
+        mock_repository.create.return_value = MagicMock(id=42)
+        job_repository_factory = MagicMock(return_value=mock_repository)
+
+        store_job_node = create_store_job_node(job_repository_factory)
+
+        state = {
+            "job": {"job_id": 1, "title": "Python Developer"},
+            "status": "in_progress",
+            "cv_context": "Python developer",
+            # No is_relevant in state
+        }
+
+        store_job_node(state)
+
+        created_job = mock_repository.create.call_args[0][0]
+        assert created_job["is_relevant"] is True

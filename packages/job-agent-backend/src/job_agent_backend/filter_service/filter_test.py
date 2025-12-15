@@ -280,3 +280,259 @@ class TestFilterService:
 
         with pytest.raises(AttributeError):
             service.filter(jobs)
+
+    def test_filter_excludes_previously_stored_irrelevant_jobs(self):
+        """Test that previously stored irrelevant jobs are filtered out.
+
+        When a job was previously processed and stored as irrelevant (is_relevant=False),
+        it should still be excluded from future searches to avoid re-processing.
+        """
+
+        class StubRepository:
+            def __init__(self):
+                # Simulates a job that was stored as irrelevant
+                self.stored_jobs = {
+                    "123": {"external_id": "123", "is_relevant": False},
+                }
+
+            def get_by_external_id(self, external_id, source=None):
+                # Returns the job regardless of is_relevant value
+                return self.stored_jobs.get(external_id)
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                return False
+
+        service = FilterService(job_repository_factory=lambda: StubRepository())
+
+        jobs = [
+            {
+                "job_id": 123,  # Same as stored irrelevant job
+                "title": "Previously Irrelevant Job",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Some Company"},
+            },
+            {
+                "job_id": 456,  # New job
+                "title": "New Job",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Another Company"},
+            },
+        ]
+
+        result = service.filter(jobs)
+
+        # Only the new job should pass through; the stored irrelevant job is excluded
+        assert len(result) == 1
+        assert result[0]["job_id"] == 456
+
+
+class TestFilterServiceWithRejected:
+    """Tests for filter_with_rejected method.
+
+    These tests verify the NEW behavior where the filter service returns
+    both passed and rejected (filtered) jobs, allowing the caller to
+    store rejected jobs for future exclusion.
+    """
+
+    def test_filter_with_rejected_returns_tuple_of_two_lists(self, sample_jobs_list):
+        """Test that filter_with_rejected returns a tuple of (passed, rejected) lists."""
+        service = FilterService()
+        service.configure({"max_months_of_experience": 36})
+
+        result = service.filter_with_rejected(sample_jobs_list)
+
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        passed, rejected = result
+        assert isinstance(passed, list)
+        assert isinstance(rejected, list)
+
+    def test_filter_with_rejected_passed_jobs_match_filter_output(self, sample_jobs_list):
+        """Test that passed jobs from filter_with_rejected match regular filter output."""
+        service = FilterService()
+        config = {"max_months_of_experience": 36}
+        service.configure(config)
+
+        passed, _ = service.filter_with_rejected(sample_jobs_list)
+        regular_filtered = service.filter(sample_jobs_list)
+
+        assert passed == regular_filtered
+
+    def test_filter_with_rejected_experience_check_populates_rejected(self, sample_jobs_list):
+        """Test that jobs failing experience check appear in rejected list."""
+        service = FilterService()
+        service.configure({"max_months_of_experience": 36})
+
+        passed, rejected = service.filter_with_rejected(sample_jobs_list)
+
+        # Jobs with experience > 36 should be in rejected
+        rejected_ids = [job["job_id"] for job in rejected]
+        assert 3 in rejected_ids  # 60 months
+        assert 4 in rejected_ids  # 96 months
+
+        # Jobs with experience <= 36 should NOT be in rejected
+        assert 1 not in rejected_ids  # 12 months
+        assert 2 not in rejected_ids  # 36 months
+
+    def test_filter_with_rejected_location_check_populates_rejected(self, sample_jobs_list):
+        """Test that jobs failing location check appear in rejected list."""
+        service = FilterService()
+        service.configure({"location_allows_to_apply": True})
+
+        passed, rejected = service.filter_with_rejected(sample_jobs_list)
+
+        # Job with can_apply=False should be in rejected
+        rejected_ids = [job["job_id"] for job in rejected]
+        assert 3 in rejected_ids  # can_apply=False
+
+        # Jobs with can_apply=True should NOT be in rejected for location
+        # (though they might be rejected for other reasons)
+        passed_ids = [job["job_id"] for job in passed]
+        assert 1 in passed_ids
+        assert 2 in passed_ids
+        assert 4 in passed_ids
+
+    def test_filter_with_rejected_both_criteria_populates_rejected(self, sample_jobs_list):
+        """Test that jobs failing multiple criteria appear in rejected list."""
+        service = FilterService()
+        service.configure(
+            {
+                "max_months_of_experience": 36,
+                "location_allows_to_apply": True,
+            }
+        )
+
+        passed, rejected = service.filter_with_rejected(sample_jobs_list)
+
+        # Passed: jobs 1 and 2 (experience <= 36 AND can_apply=True)
+        passed_ids = [job["job_id"] for job in passed]
+        assert 1 in passed_ids
+        assert 2 in passed_ids
+        assert len(passed) == 2
+
+        # Rejected: jobs 3 and 4
+        rejected_ids = [job["job_id"] for job in rejected]
+        assert 3 in rejected_ids  # can_apply=False (and experience=60)
+        assert 4 in rejected_ids  # experience=96
+
+    def test_filter_with_rejected_preserves_job_data_structure(self, sample_jobs_list):
+        """Test that rejected jobs preserve complete job data structure."""
+        service = FilterService()
+        service.configure({"max_months_of_experience": 24})
+
+        _, rejected = service.filter_with_rejected(sample_jobs_list)
+
+        for job in rejected:
+            assert "job_id" in job
+            assert "title" in job
+            assert "experience_months" in job
+            assert "location" in job
+
+    def test_filter_with_rejected_sum_equals_input(self, sample_jobs_list):
+        """Test that passed + rejected equals original input count."""
+        service = FilterService()
+        service.configure({"max_months_of_experience": 36})
+
+        passed, rejected = service.filter_with_rejected(sample_jobs_list)
+
+        assert len(passed) + len(rejected) == len(sample_jobs_list)
+
+    def test_filter_with_rejected_empty_input_returns_empty_lists(self):
+        """Test that empty input returns two empty lists."""
+        service = FilterService()
+        service.configure({"max_months_of_experience": 36})
+
+        passed, rejected = service.filter_with_rejected([])
+
+        assert passed == []
+        assert rejected == []
+
+    def test_filter_with_rejected_no_rejections(self):
+        """Test filter_with_rejected when all jobs pass."""
+        jobs = [
+            {"job_id": 1, "experience_months": 12, "location": {"can_apply": True}},
+            {"job_id": 2, "experience_months": 24, "location": {"can_apply": True}},
+        ]
+        service = FilterService()
+        service.configure({"max_months_of_experience": 36})
+
+        passed, rejected = service.filter_with_rejected(jobs)
+
+        assert len(passed) == 2
+        assert len(rejected) == 0
+
+    def test_filter_with_rejected_all_rejected(self):
+        """Test filter_with_rejected when all jobs are rejected."""
+        jobs = [
+            {"job_id": 1, "experience_months": 120, "location": {"can_apply": True}},
+            {"job_id": 2, "experience_months": 96, "location": {"can_apply": True}},
+        ]
+        service = FilterService()
+        service.configure({"max_months_of_experience": 36})
+
+        passed, rejected = service.filter_with_rejected(jobs)
+
+        assert len(passed) == 0
+        assert len(rejected) == 2
+
+    def test_filter_with_rejected_excludes_existing_jobs_into_neither_list(self):
+        """Test that existing repository jobs are excluded from BOTH lists.
+
+        Jobs that already exist in the repository should not appear in either
+        passed or rejected lists - they're simply skipped.
+        """
+
+        class StubRepository:
+            def __init__(self):
+                self.external_ids = {"100"}
+
+            def get_by_external_id(self, external_id, source=None):
+                if external_id in self.external_ids:
+                    return {"external_id": external_id}
+                return None
+
+            def has_active_job_with_title_and_company(self, title, company_name):
+                return False
+
+        service = FilterService(job_repository_factory=lambda: StubRepository())
+        service.configure({"max_months_of_experience": 60})
+
+        jobs = [
+            {
+                "job_id": 100,  # Exists in repository
+                "title": "Existing Job",
+                "experience_months": 12,
+                "location": {"can_apply": True},
+                "company": {"name": "Company X"},
+            },
+            {
+                "job_id": 200,  # New job, passes filter
+                "title": "New Passing Job",
+                "experience_months": 24,
+                "location": {"can_apply": True},
+                "company": {"name": "Company Y"},
+            },
+            {
+                "job_id": 300,  # New job, fails filter
+                "title": "New Failing Job",
+                "experience_months": 120,
+                "location": {"can_apply": True},
+                "company": {"name": "Company Z"},
+            },
+        ]
+
+        passed, rejected = service.filter_with_rejected(jobs)
+
+        # Existing job (100) should be in neither list
+        all_ids = [job["job_id"] for job in passed + rejected]
+        assert 100 not in all_ids
+
+        # New passing job should be in passed
+        passed_ids = [job["job_id"] for job in passed]
+        assert 200 in passed_ids
+
+        # New failing job should be in rejected
+        rejected_ids = [job["job_id"] for job in rejected]
+        assert 300 in rejected_ids

@@ -141,18 +141,19 @@ class TestJobProcessingWorkflow:
             )
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    def test_workflow_without_database_session_completes(
+    def test_irrelevant_job_is_stored_with_is_relevant_false(
         self,
         mock_relevance_chat,
         sample_irrelevant_job_dict,
         sample_cv_content,
     ):
-        """Test that workflow completes without database session."""
+        """Test that irrelevant jobs are stored with is_relevant=False."""
         # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
         mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
 
-        factory = MagicMock()
-        factory.return_value = MagicMock()
+        mock_repository = MagicMock()
+        mock_repository.create.return_value = MagicMock(id=42)
+        factory = MagicMock(return_value=mock_repository)
 
         result = run_job_processing(
             sample_irrelevant_job_dict,
@@ -162,7 +163,14 @@ class TestJobProcessingWorkflow:
 
         assert result["status"] in ["started", "completed"]
         assert result["is_relevant"] is False
-        factory.assert_not_called()
+        # Irrelevant jobs are now stored (with is_relevant=False)
+        factory.assert_called_once()
+        mock_repository.create.assert_called_once()
+        created_job = mock_repository.create.call_args[0][0]
+        assert created_job["is_relevant"] is False
+        # Irrelevant jobs skip skill extraction
+        assert "must_have_skills" not in created_job
+        assert "nice_to_have_skills" not in created_job
 
     @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     @patch(

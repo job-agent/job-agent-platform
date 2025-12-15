@@ -21,7 +21,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     Examples:
         /search
-        /search min_salary=5000
+        /search min_salary=4000
         /search min_salary=6000 employment_location=remote
         /search min_salary=5000 days=7  # Get jobs from last 7 days
     """

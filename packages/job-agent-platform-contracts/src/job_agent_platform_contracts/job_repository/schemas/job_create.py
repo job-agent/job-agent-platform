@@ -32,3 +32,6 @@ class JobCreate(TypedDict, total=False):
 
     must_have_skills: List[str]
     nice_to_have_skills: List[str]
+
+    is_relevant: bool
+    is_filtered: bool

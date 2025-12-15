@@ -31,11 +31,14 @@ def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
 
     The workflow processes a single job at a time and consists of:
     1. check_job_relevance - Checks if the job is relevant to the candidate's CV
-       - If irrelevant: workflow ends immediately
-       - If relevant: continues to next steps
+       - If relevant: continues to skill extraction
+       - If irrelevant: skips to store_job (stored with is_relevant=False)
     2. extract_must_have_skills & extract_nice_to_have_skills - Run in parallel
        to extract both types of skills from job description using OpenAI
-    3. store_job - Stores relevant jobs to the database (waits for both extraction nodes)
+       (only for relevant jobs)
+    3. store_job - Stores all jobs to the database with is_relevant flag
+       - Relevant jobs: stored with extracted skills and is_relevant=True
+       - Irrelevant jobs: stored without skills and is_relevant=False
     4. process_jobs - Receives and prints the single job with extracted skills
     5. END - Terminates the workflow
 
@@ -73,7 +76,7 @@ def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
         {
             JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS: JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS,
             JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS: JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
-            "end": END,
+            JobProcessingNode.STORE_JOB: JobProcessingNode.STORE_JOB,
         },
     )
 

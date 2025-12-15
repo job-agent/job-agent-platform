@@ -252,3 +252,176 @@ class TestJobMapper:
         assert result["salary_currency"] == "USD"
         assert result["salary_min"] == 50000.0
         assert result["salary_max"] is None
+
+
+class TestJobMapperIsRelevant:
+    """Tests for JobMapper is_relevant field handling."""
+
+    @pytest.fixture
+    def mapper(self):
+        """Create a JobMapper instance."""
+        return JobMapper()
+
+    def test_map_to_model_includes_is_relevant_true(self, mapper):
+        """Test that is_relevant=True is included in mapped data."""
+        job_data = {"job_id": 1, "title": "Test", "is_relevant": True}
+
+        result = mapper.map_to_model(job_data)
+
+        assert "is_relevant" in result
+        assert result["is_relevant"] is True
+
+    def test_map_to_model_includes_is_relevant_false(self, mapper):
+        """Test that is_relevant=False is included in mapped data."""
+        job_data = {"job_id": 1, "title": "Test", "is_relevant": False}
+
+        result = mapper.map_to_model(job_data)
+
+        assert "is_relevant" in result
+        assert result["is_relevant"] is False
+
+    def test_map_to_model_defaults_is_relevant_to_true(self, mapper):
+        """Test that is_relevant defaults to True when not in input."""
+        job_data = {"job_id": 1, "title": "Test"}
+
+        result = mapper.map_to_model(job_data)
+
+        assert "is_relevant" in result
+        assert result["is_relevant"] is True
+
+    def test_map_to_model_with_complete_data_includes_is_relevant(self, mapper):
+        """Test that complete job data includes is_relevant field."""
+        job_data = {
+            "job_id": 12345,
+            "title": "Senior Software Engineer",
+            "description": "We are looking for an experienced engineer.",
+            "company": {"name": "Tech Corp"},
+            "is_relevant": False,
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["is_relevant"] is False
+
+
+class TestJobMapperFromModelIsRelevant:
+    """Tests for JobMapper.map_from_model is_relevant field handling."""
+
+    @pytest.fixture
+    def mapper(self):
+        """Create a JobMapper instance."""
+        return JobMapper()
+
+    def test_map_from_model_includes_is_relevant_true(self, mapper, sample_job):
+        """Test that is_relevant=True is included when serializing from model."""
+        sample_job.is_relevant = True
+
+        result = mapper.map_from_model(sample_job)
+
+        assert "is_relevant" in result
+        assert result["is_relevant"] is True
+
+    def test_map_from_model_includes_is_relevant_false(self, mapper, sample_job):
+        """Test that is_relevant=False is included when serializing from model."""
+        sample_job.is_relevant = False
+
+        result = mapper.map_from_model(sample_job)
+
+        assert "is_relevant" in result
+        assert result["is_relevant"] is False
+
+
+class TestJobMapperIsFiltered:
+    """Tests for JobMapper is_filtered field handling.
+
+    These tests verify the NEW behavior where is_filtered field is mapped
+    correctly between JobDict contract data and Job model format.
+    """
+
+    @pytest.fixture
+    def mapper(self):
+        """Create a JobMapper instance."""
+        return JobMapper()
+
+    def test_map_to_model_includes_is_filtered_true(self, mapper):
+        """Test that is_filtered=True is included in mapped data."""
+        job_data = {"job_id": 1, "title": "Test", "is_filtered": True}
+
+        result = mapper.map_to_model(job_data)
+
+        assert "is_filtered" in result
+        assert result["is_filtered"] is True
+
+    def test_map_to_model_includes_is_filtered_false(self, mapper):
+        """Test that is_filtered=False is included in mapped data."""
+        job_data = {"job_id": 1, "title": "Test", "is_filtered": False}
+
+        result = mapper.map_to_model(job_data)
+
+        assert "is_filtered" in result
+        assert result["is_filtered"] is False
+
+    def test_map_to_model_defaults_is_filtered_to_false(self, mapper):
+        """Test that is_filtered defaults to False when not in input.
+
+        Jobs should default to not being filtered.
+        """
+        job_data = {"job_id": 1, "title": "Test"}
+
+        result = mapper.map_to_model(job_data)
+
+        assert "is_filtered" in result
+        assert result["is_filtered"] is False
+
+    def test_map_to_model_with_complete_data_includes_is_filtered(self, mapper):
+        """Test that complete job data includes is_filtered field."""
+        job_data = {
+            "job_id": 12345,
+            "title": "Senior Software Engineer",
+            "description": "We are looking for an experienced engineer.",
+            "company": {"name": "Tech Corp"},
+            "is_filtered": True,
+            "is_relevant": False,
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["is_filtered"] is True
+        assert result["is_relevant"] is False
+
+
+class TestJobMapperFromModelIsFiltered:
+    """Tests for JobMapper.map_from_model is_filtered field handling."""
+
+    @pytest.fixture
+    def mapper(self):
+        """Create a JobMapper instance."""
+        return JobMapper()
+
+    def test_map_from_model_includes_is_filtered_true(self, mapper, sample_job):
+        """Test that is_filtered=True is included when serializing from model."""
+        sample_job.is_filtered = True
+
+        result = mapper.map_from_model(sample_job)
+
+        assert "is_filtered" in result
+        assert result["is_filtered"] is True
+
+    def test_map_from_model_includes_is_filtered_false(self, mapper, sample_job):
+        """Test that is_filtered=False is included when serializing from model."""
+        sample_job.is_filtered = False
+
+        result = mapper.map_from_model(sample_job)
+
+        assert "is_filtered" in result
+        assert result["is_filtered"] is False
+
+    def test_map_from_model_filtered_job_has_correct_flags(self, mapper, sample_job):
+        """Test that a filtered job is serialized with correct flags."""
+        sample_job.is_filtered = True
+        sample_job.is_relevant = False
+
+        result = mapper.map_from_model(sample_job)
+
+        assert result["is_filtered"] is True
+        assert result["is_relevant"] is False

@@ -38,6 +38,8 @@ class Job(Base):
     source_url = Column(Text, nullable=True)
 
     is_remote = Column(Boolean, default=False, index=True)
+    is_relevant = Column(Boolean, default=True, nullable=False, index=True)
+    is_filtered = Column(Boolean, default=False, nullable=False, index=True)
     posted_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=True)
 

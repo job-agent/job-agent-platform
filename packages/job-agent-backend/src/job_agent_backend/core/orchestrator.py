@@ -233,18 +233,29 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger(f"Completed scraping: {total_jobs} total jobs")
 
     def filter_jobs_list(self, jobs: Sequence[JobDict]) -> list[JobDict]:
-        """Filter jobs based on configuration.
+        """Filter jobs based on configuration and save rejected jobs.
+
+        Uses filter_with_rejected to get both passed and rejected jobs.
+        Rejected jobs are stored with is_filtered=True, is_relevant=False
+        so they can be included in existing_urls for future scrapes.
 
         Args:
             jobs: List of job dictionaries
 
         Returns:
-            Filtered list of jobs
+            Filtered list of jobs that passed all criteria
         """
         self.logger("Filtering jobs...")
-        filtered_jobs = self.filter_service.filter(list(jobs))
-        self.logger(f"Filtered jobs: {len(filtered_jobs)}/{len(jobs)} jobs passed")
-        return filtered_jobs
+        passed_jobs, rejected_jobs = self.filter_service.filter_with_rejected(list(jobs))
+        self.logger(f"Filtered jobs: {len(passed_jobs)}/{len(jobs)} jobs passed")
+
+        # Save rejected jobs to repository with is_filtered=True
+        if rejected_jobs:
+            repository = self.job_repository_factory()
+            saved_count = repository.save_filtered_jobs(rejected_jobs)
+            self.logger(f"Saved {saved_count} filtered jobs to repository")
+
+        return passed_jobs
 
     def process_job(
         self,

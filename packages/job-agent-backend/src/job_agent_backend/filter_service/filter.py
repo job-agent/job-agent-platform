@@ -4,7 +4,7 @@ This module provides filtering capabilities for job posts coming from the
 scrapper service before they are passed to the workflows system.
 """
 
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import IJobRepository
@@ -63,6 +63,37 @@ class FilterService(IFilterService):
             filtered_jobs.append(job)
 
         return filtered_jobs
+
+    def filter_with_rejected(self, jobs: List[JobDict]) -> Tuple[List[JobDict], List[JobDict]]:
+        """
+        Filter jobs and return both passed and rejected lists.
+
+        Args:
+            jobs: List of job dictionaries to filter
+
+        Returns:
+            Tuple of (passed_jobs, rejected_jobs) where:
+            - passed_jobs: Jobs that passed all filter criteria
+            - rejected_jobs: Jobs that failed at least one filter criterion
+              (excluding jobs that already exist in the repository)
+        """
+        passed_jobs: List[JobDict] = []
+        rejected_jobs: List[JobDict] = []
+        repository = self._resolve_repository()
+
+        for job in jobs:
+            # Skip jobs that already exist in the repository
+            if repository and self._is_existing_job(repository, job):
+                continue
+
+            # Check filter criteria
+            if not self._passes_experience(job) or not self._passes_location(job):
+                rejected_jobs.append(job)
+                continue
+
+            passed_jobs.append(job)
+
+        return passed_jobs, rejected_jobs
 
     def _resolve_repository(self) -> Optional[IJobRepository]:
         if self._job_repository_factory is None:

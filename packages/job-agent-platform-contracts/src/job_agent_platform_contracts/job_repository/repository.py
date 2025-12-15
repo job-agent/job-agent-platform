@@ -1,9 +1,9 @@
 """Repository interface for job operations."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List, Optional
 
-from job_scrapper_contracts import Job
+from job_scrapper_contracts import Job, JobDict
 
 from job_agent_platform_contracts.job_repository.schemas.job_create import JobCreate
 
@@ -74,5 +74,21 @@ class IJobRepository(ABC):
 
         Returns:
             List of URLs for jobs from the specified source
+        """
+        pass
+
+    @abstractmethod
+    def save_filtered_jobs(self, jobs: List[JobDict]) -> int:
+        """
+        Save multiple filtered jobs in a batch operation.
+
+        Filtered jobs are stored with is_filtered=True and is_relevant=False
+        so they can be included in existing_urls for future scrapes.
+
+        Args:
+            jobs: List of job dictionaries that were rejected by pre-LLM filtering
+
+        Returns:
+            Count of jobs that were successfully saved (excluding duplicates)
         """
         pass

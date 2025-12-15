@@ -23,7 +23,7 @@ Your CV will be stored securely and used to match you with relevant job opportun
 /search
   → Search with default parameters (min_salary=4000, remote)
 
-/search min_salary=5000
+/search min_salary=4000
   → Search for jobs with minimum salary of 5000
 
 /search min_salary=6000 employment_location=remote days=7

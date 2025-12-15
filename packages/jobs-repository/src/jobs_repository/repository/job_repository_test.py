@@ -853,3 +853,424 @@ class TestJobRepositoryDuplicateDetectionBySourceUrl:
 
         with pytest.raises(JobAlreadyExistsError):
             repository.create(job_data_2)
+
+
+class TestJobRepositoryIsRelevant:
+    """Tests for JobRepository is_relevant field handling."""
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_create_job_with_is_relevant_true(self, repository):
+        """Test creating a job with is_relevant=True."""
+        job_data = {
+            "job_id": 2001,
+            "title": "Relevant Job",
+            "company": {"name": "Relevant Corp"},
+            "is_relevant": True,
+        }
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.is_relevant is True
+
+    def test_create_job_with_is_relevant_false(self, repository):
+        """Test creating a job with is_relevant=False."""
+        job_data = {
+            "job_id": 2002,
+            "title": "Irrelevant Job",
+            "company": {"name": "Irrelevant Corp"},
+            "is_relevant": False,
+        }
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.is_relevant is False
+
+    def test_create_job_defaults_is_relevant_to_true(self, repository):
+        """Test that is_relevant defaults to True when not specified in JobCreate."""
+        job_data = {
+            "job_id": 2003,
+            "title": "Default Relevance Job",
+            "company": {"name": "Default Corp"},
+        }
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.is_relevant is True
+
+    def test_create_job_is_relevant_persists_correctly(self, repository, db_session):
+        """Test that is_relevant value is correctly persisted to database."""
+        job_data = {
+            "job_id": 2004,
+            "title": "Persisted Irrelevant Job",
+            "company": {"name": "Persist Corp"},
+            "is_relevant": False,
+        }
+
+        created_job = repository.create(job_data)
+
+        # Force reload from database
+        db_session.expire_all()
+
+        retrieved_job = repository.get_by_external_id("2004")
+        assert retrieved_job is not None
+        assert retrieved_job.is_relevant is False
+        assert retrieved_job.id == created_job.id
+
+    def test_create_job_with_full_data_and_is_relevant_false(self, repository, sample_job_dict):
+        """Test creating a job with full data and is_relevant=False."""
+        job_data = sample_job_dict.copy()
+        job_data["job_id"] = 2005
+        job_data["url"] = "https://example.com/jobs/2005"
+        job_data["is_relevant"] = False
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.title == "Senior Python Developer"
+        assert job.is_relevant is False
+        assert job.company_rel is not None
+
+    def test_create_job_with_full_data_and_is_relevant_true(self, repository, sample_job_dict):
+        """Test creating a job with full data and is_relevant=True."""
+        job_data = sample_job_dict.copy()
+        job_data["job_id"] = 2006
+        job_data["url"] = "https://example.com/jobs/2006"
+        job_data["is_relevant"] = True
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.title == "Senior Python Developer"
+        assert job.is_relevant is True
+
+
+class TestJobRepositoryIsFiltered:
+    """Tests for JobRepository is_filtered field handling.
+
+    These tests verify the NEW behavior where jobs can be created with
+    is_filtered=True to indicate they were rejected by pre-LLM filtering.
+    """
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_create_job_with_is_filtered_true(self, repository):
+        """Test creating a job with is_filtered=True."""
+        job_data = {
+            "job_id": 3001,
+            "title": "Filtered Job",
+            "company": {"name": "Filtered Corp"},
+            "is_filtered": True,
+            "is_relevant": False,
+        }
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.is_filtered is True
+        assert job.is_relevant is False
+
+    def test_create_job_with_is_filtered_false(self, repository):
+        """Test creating a job with is_filtered=False (default behavior)."""
+        job_data = {
+            "job_id": 3002,
+            "title": "Non-filtered Job",
+            "company": {"name": "Normal Corp"},
+            "is_filtered": False,
+        }
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.is_filtered is False
+
+    def test_create_job_defaults_is_filtered_to_false(self, repository):
+        """Test that is_filtered defaults to False when not specified."""
+        job_data = {
+            "job_id": 3003,
+            "title": "Default Filtered Job",
+            "company": {"name": "Default Corp"},
+        }
+
+        job = repository.create(job_data)
+
+        assert job.id is not None
+        assert job.is_filtered is False
+
+    def test_create_job_is_filtered_persists_correctly(self, repository, db_session):
+        """Test that is_filtered value is correctly persisted to database."""
+        job_data = {
+            "job_id": 3004,
+            "title": "Persisted Filtered Job",
+            "company": {"name": "Persist Corp"},
+            "is_filtered": True,
+            "is_relevant": False,
+        }
+
+        created_job = repository.create(job_data)
+
+        # Force reload from database
+        db_session.expire_all()
+
+        retrieved_job = repository.get_by_external_id("3004")
+        assert retrieved_job is not None
+        assert retrieved_job.is_filtered is True
+        assert retrieved_job.is_relevant is False
+        assert retrieved_job.id == created_job.id
+
+
+class TestJobRepositorySaveFilteredJobs:
+    """Tests for save_filtered_jobs method.
+
+    These tests verify the NEW method that saves multiple filtered jobs
+    in a single batch operation with correct flags (is_filtered=True, is_relevant=False).
+    """
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_save_filtered_jobs_persists_with_correct_flags(self, repository, db_session):
+        """Test that save_filtered_jobs stores jobs with is_filtered=True, is_relevant=False.
+
+        The primary purpose of this method is to store filtered jobs with the
+        correct flags so they are included in existing_urls for future scrapes.
+        """
+        filtered_jobs = [
+            {
+                "job_id": 4001,
+                "title": "Filtered Job 1",
+                "url": "https://example.com/jobs/4001",
+                "source": "djinni",
+                "company": {"name": "Company A"},
+                "experience_months": 120,
+                "location": {"can_apply": True},
+            },
+            {
+                "job_id": 4002,
+                "title": "Filtered Job 2",
+                "url": "https://example.com/jobs/4002",
+                "source": "djinni",
+                "company": {"name": "Company B"},
+                "experience_months": 80,
+                "location": {"can_apply": False},
+            },
+        ]
+
+        count = repository.save_filtered_jobs(filtered_jobs)
+
+        assert count == 2
+
+        job1 = repository.get_by_external_id("4001")
+        assert job1 is not None
+        assert job1.is_filtered is True
+        assert job1.is_relevant is False
+
+        job2 = repository.get_by_external_id("4002")
+        assert job2 is not None
+        assert job2.is_filtered is True
+        assert job2.is_relevant is False
+
+    def test_save_filtered_jobs_skips_duplicates_by_external_id(self, repository):
+        """Test that save_filtered_jobs skips jobs that already exist by external_id."""
+        # Create an existing job first
+        existing_job_data = {
+            "job_id": 4003,
+            "title": "Existing Job",
+            "url": "https://example.com/jobs/4003",
+            "source": "djinni",
+            "company": {"name": "Existing Corp"},
+        }
+        repository.create(existing_job_data)
+
+        # Try to save filtered jobs including the duplicate
+        filtered_jobs = [
+            {
+                "job_id": 4003,  # Duplicate!
+                "title": "Duplicate Job",
+                "url": "https://example.com/jobs/4003-duplicate",
+                "source": "djinni",
+                "company": {"name": "Company A"},
+            },
+            {
+                "job_id": 4004,
+                "title": "New Filtered Job",
+                "url": "https://example.com/jobs/4004",
+                "source": "djinni",
+                "company": {"name": "Company B"},
+            },
+        ]
+
+        count = repository.save_filtered_jobs(filtered_jobs)
+
+        # Only the new job should be saved
+        assert count == 1
+
+        # Verify the new job was saved
+        new_job = repository.get_by_external_id("4004")
+        assert new_job is not None
+        assert new_job.is_filtered is True
+
+    def test_save_filtered_jobs_skips_duplicates_by_source_url(self, repository):
+        """Test that save_filtered_jobs skips jobs that already exist by source_url."""
+        # Create an existing job first
+        existing_job_data = {
+            "job_id": 4005,
+            "title": "Existing Job",
+            "url": "https://example.com/jobs/same-url",
+            "source": "djinni",
+            "company": {"name": "Existing Corp"},
+        }
+        repository.create(existing_job_data)
+
+        # Try to save filtered jobs with same URL but different external_id
+        filtered_jobs = [
+            {
+                "job_id": 4006,  # Different external_id
+                "title": "Duplicate URL Job",
+                "url": "https://example.com/jobs/same-url",  # Same URL!
+                "source": "djinni",
+                "company": {"name": "Company A"},
+            },
+            {
+                "job_id": 4007,
+                "title": "New Filtered Job",
+                "url": "https://example.com/jobs/4007",
+                "source": "djinni",
+                "company": {"name": "Company B"},
+            },
+        ]
+
+        count = repository.save_filtered_jobs(filtered_jobs)
+
+        # Only the new job should be saved
+        assert count == 1
+
+    def test_save_filtered_jobs_returns_count_of_saved_jobs(self, repository):
+        """Test that save_filtered_jobs returns the correct count of saved jobs."""
+        filtered_jobs = [
+            {"job_id": 4008, "title": "Job 1", "url": "https://example.com/1", "source": "djinni"},
+            {"job_id": 4009, "title": "Job 2", "url": "https://example.com/2", "source": "djinni"},
+            {"job_id": 4010, "title": "Job 3", "url": "https://example.com/3", "source": "djinni"},
+        ]
+
+        count = repository.save_filtered_jobs(filtered_jobs)
+
+        assert count == 3
+
+    def test_save_filtered_jobs_with_empty_list_returns_zero(self, repository):
+        """Test that save_filtered_jobs with empty list returns 0."""
+        count = repository.save_filtered_jobs([])
+
+        assert count == 0
+
+    def test_save_filtered_jobs_stores_source_url_for_existing_urls(self, repository, db_session):
+        """Test that saved filtered jobs have source_url set for get_existing_urls_by_source."""
+        filtered_jobs = [
+            {
+                "job_id": 4011,
+                "title": "Filtered Job",
+                "url": "https://djinni.co/jobs/4011",
+                "source": "djinni",
+            },
+        ]
+
+        repository.save_filtered_jobs(filtered_jobs)
+
+        # The URL should be retrievable via get_existing_urls_by_source
+        urls = repository.get_existing_urls_by_source("djinni")
+        assert "https://djinni.co/jobs/4011" in urls
+
+
+class TestJobRepositoryGetExistingUrlsIncludesFiltered:
+    """Tests for get_existing_urls_by_source including filtered jobs.
+
+    These tests verify that get_existing_urls_by_source returns URLs
+    for filtered jobs (is_filtered=True) to prevent re-fetching.
+    """
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_get_existing_urls_includes_filtered_jobs(self, repository, db_session):
+        """Test that get_existing_urls_by_source includes URLs of filtered jobs.
+
+        Filtered jobs should be included in existing_urls to prevent
+        the scrapper from re-fetching them.
+        """
+        from datetime import datetime, UTC
+
+        posted_at = datetime.now(UTC)
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            posted_at = posted_at.replace(tzinfo=None)
+
+        # Create a regular job
+        regular_job = Job(
+            title="Regular Job",
+            external_id="urls-filtered-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/regular",
+            is_filtered=False,
+            is_relevant=True,
+            posted_at=posted_at,
+        )
+        # Create a filtered job
+        filtered_job = Job(
+            title="Filtered Job",
+            external_id="urls-filtered-2",
+            source="djinni",
+            source_url="https://djinni.co/jobs/filtered",
+            is_filtered=True,
+            is_relevant=False,
+            posted_at=posted_at,
+        )
+        db_session.add_all([regular_job, filtered_job])
+        db_session.commit()
+
+        urls = repository.get_existing_urls_by_source("djinni")
+
+        # Both URLs should be included
+        assert len(urls) == 2
+        assert "https://djinni.co/jobs/regular" in urls
+        assert "https://djinni.co/jobs/filtered" in urls
+
+    def test_get_existing_urls_includes_irrelevant_jobs(self, repository, db_session):
+        """Test that get_existing_urls_by_source includes URLs of irrelevant jobs.
+
+        Jobs marked as is_relevant=False should still be included in
+        existing_urls since they were already processed.
+        """
+        from datetime import datetime, UTC
+
+        posted_at = datetime.now(UTC)
+        if not getattr(Job.__table__.c.posted_at.type, "timezone", False):
+            posted_at = posted_at.replace(tzinfo=None)
+
+        # Create an irrelevant (but not filtered) job
+        irrelevant_job = Job(
+            title="Irrelevant Job",
+            external_id="urls-irrelevant-1",
+            source="djinni",
+            source_url="https://djinni.co/jobs/irrelevant",
+            is_filtered=False,
+            is_relevant=False,
+            posted_at=posted_at,
+        )
+        db_session.add(irrelevant_job)
+        db_session.commit()
+
+        urls = repository.get_existing_urls_by_source("djinni")
+
+        assert "https://djinni.co/jobs/irrelevant" in urls

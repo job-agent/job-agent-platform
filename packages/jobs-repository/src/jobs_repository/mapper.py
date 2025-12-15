@@ -65,6 +65,9 @@ class JobMapper(IJobMapper):
         if nice_to_have_skills := job_data.get("nice_to_have_skills"):
             mapped_data["nice_to_have_skills"] = nice_to_have_skills
 
+        mapped_data["is_relevant"] = job_data.get("is_relevant", True)
+        mapped_data["is_filtered"] = job_data.get("is_filtered", False)
+
     def _map_company(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract company name from nested object."""
         if company_data := job_data.get("company"):
@@ -135,6 +138,8 @@ class JobMapper(IJobMapper):
             "source": job.source,
             "source_url": job.source_url,
             "is_remote": job.is_remote,
+            "is_relevant": job.is_relevant,
+            "is_filtered": job.is_filtered,
             "posted_at": job.posted_at.isoformat() if job.posted_at else None,
             "expires_at": job.expires_at.isoformat() if job.expires_at else None,
             "created_at": job.created_at.isoformat() if job.created_at else None,

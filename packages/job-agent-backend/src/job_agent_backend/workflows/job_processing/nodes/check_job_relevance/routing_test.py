@@ -7,8 +7,12 @@ from .routing import route_after_relevance_check
 class TestRouteAfterRelevanceCheck:
     """Tests for route_after_relevance_check function."""
 
-    def test_returns_end_when_job_irrelevant(self):
-        """Routing returns 'end' when is_relevant is False."""
+    def test_returns_store_job_when_job_irrelevant(self):
+        """Routing returns STORE_JOB when is_relevant is False.
+
+        Irrelevant jobs should still be stored (with is_relevant=False)
+        but skip skill extraction.
+        """
         state = {
             "job": {"job_id": 1},
             "status": "started",
@@ -18,7 +22,7 @@ class TestRouteAfterRelevanceCheck:
 
         result = route_after_relevance_check(state)
 
-        assert result == "end"
+        assert result == JobProcessingNode.STORE_JOB
 
     def test_returns_extract_nodes_when_job_relevant(self):
         """Routing returns both extract nodes when is_relevant is True."""
