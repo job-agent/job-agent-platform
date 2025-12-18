@@ -11,7 +11,7 @@ from typing import Callable, Generator, List, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 
 from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
@@ -333,3 +333,18 @@ class JobRepository(IJobRepository):
                 saved_count += 1
 
         return saved_count
+
+    def get_latest_updated_at(self) -> Optional[datetime]:
+        """
+        Get the most recent updated_at timestamp from all jobs.
+
+        This method is used to auto-calculate the search date range when
+        the days parameter is not explicitly provided.
+
+        Returns:
+            The latest updated_at datetime if jobs exist, None otherwise.
+        """
+        with self._session_scope(commit=False) as session:
+            stmt = select(func.max(Job.updated_at))
+            result = session.scalar(stmt)
+            return result

@@ -51,8 +51,24 @@ python -m telegram_bot.main
 After the bot starts:
 
 1. Send your CV as a PDF document to store a sanitized copy for later searches.
-2. Run `/search salary=5000 employment=remote days=7` (parameters are optional) to trigger the end-to-end pipeline.
+2. Run `/search` to trigger the end-to-end pipeline. All parameters are optional:
+   - `salary=5000` - Minimum salary filter (default: 4000)
+   - `employment=remote` - Employment type (default: remote)
+   - `days=7` - Search jobs from last N days
+   - `timeout=30` - Request timeout in seconds (default: 30)
 3. Use `/status` to check progress or `/cancel` to stop the current search.
+
+### Automatic Date Range Calculation
+
+When the `days` parameter is omitted, the bot automatically determines the search date range:
+
+- **If jobs exist in database**: Uses the `updated_at` timestamp of the most recent stored job as the cutoff date
+- **If no jobs exist**: Defaults to the last 5 days
+- **5-day cap**: If the last job is older than 5 days, the search is capped at 5 days to prevent excessive scraping after extended inactivity
+
+This "resume from last search" behavior ensures you pick up where you left off without fetching duplicate jobs.
+
+To override this behavior, explicitly provide the `days` parameter (e.g., `/search days=3`).
 
 ### Docker
 

@@ -35,4 +35,17 @@ job_repo = JobRepository(session)
 
 # Use repository methods
 jobs = job_repo.get_all()
+
+# Get the most recent job timestamp (for search date auto-calculation)
+latest_timestamp = job_repo.get_latest_updated_at()
 ```
+
+## Repository Methods
+
+| Method | Description |
+|--------|-------------|
+| `get_all()` | Retrieve all jobs from the database |
+| `get_by_id(id)` | Retrieve a job by its ID |
+| `save(job)` | Save a job to the database |
+| `delete(id)` | Delete a job by its ID |
+| `get_latest_updated_at()` | Get the most recent `updated_at` timestamp from all jobs, or `None` if no jobs exist |

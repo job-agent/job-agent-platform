@@ -110,14 +110,24 @@ def mock_orchestrator():
 
 
 @pytest.fixture
-def mock_dependencies(mock_orchestrator):
+def mock_job_repository():
+    """Create a mock job repository."""
+    repo = MagicMock()
+    repo.get_latest_updated_at.return_value = None
+    return repo
+
+
+@pytest.fixture
+def mock_dependencies(mock_orchestrator, mock_job_repository):
     """Create mock dependencies for upload tests."""
     orchestrator_factory = MagicMock(return_value=mock_orchestrator)
     cv_repository_factory = MagicMock()
+    job_repository_factory = MagicMock(return_value=mock_job_repository)
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        job_repository_factory=job_repository_factory,
     )
 
 

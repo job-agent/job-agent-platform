@@ -1,7 +1,9 @@
 """Search command handler for Telegram bot."""
 
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import Optional, Protocol
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -10,6 +12,97 @@ from telegram_bot.di import get_dependencies
 
 from . import formatter
 from ..state import active_searches
+
+# Maximum days for auto-calculated date range
+MAX_AUTO_DAYS = 5
+
+# Default search parameters
+DEFAULT_MIN_SALARY = 4000
+DEFAULT_EMPLOYMENT_LOCATION = "remote"
+DEFAULT_TIMEOUT = 30
+
+
+class JobRepositoryProtocol(Protocol):
+    """Protocol for job repository used in date calculation."""
+
+    def get_latest_updated_at(self) -> Optional[datetime]: ...
+
+
+@dataclass
+class DateCalculationResult:
+    """Result of date range calculation for job search."""
+
+    posted_after: Optional[datetime]
+    is_auto_calculated: bool
+    is_first_search: bool
+
+
+def _calculate_posted_after(
+    explicit_days: Optional[int],
+    job_repository: Optional[JobRepositoryProtocol],
+) -> DateCalculationResult:
+    """Calculate the posted_after date for job search.
+
+    Args:
+        explicit_days: Number of days explicitly provided by user, or None
+        job_repository: Repository to query for latest job timestamp
+
+    Returns:
+        DateCalculationResult with posted_after datetime and metadata flags
+    """
+    if explicit_days is not None:
+        # Explicit days provided - use it directly
+        posted_after = datetime.now(timezone.utc) - timedelta(days=explicit_days)
+        return DateCalculationResult(
+            posted_after=posted_after,
+            is_auto_calculated=False,
+            is_first_search=False,
+        )
+
+    # Auto-calculate from latest job timestamp
+    if job_repository is None:
+        # Fallback if no repository available
+        posted_after = datetime.now(timezone.utc) - timedelta(days=MAX_AUTO_DAYS)
+        return DateCalculationResult(
+            posted_after=posted_after,
+            is_auto_calculated=True,
+            is_first_search=True,
+        )
+
+    latest_updated_at = job_repository.get_latest_updated_at()
+
+    if latest_updated_at is None:
+        # No jobs exist - default to MAX_AUTO_DAYS
+        posted_after = datetime.now(timezone.utc) - timedelta(days=MAX_AUTO_DAYS)
+        return DateCalculationResult(
+            posted_after=posted_after,
+            is_auto_calculated=True,
+            is_first_search=True,
+        )
+
+    # Ensure latest_updated_at is timezone-aware for comparison
+    if latest_updated_at.tzinfo is None:
+        latest_updated_at = latest_updated_at.replace(tzinfo=timezone.utc)
+
+    # Calculate how many days ago the latest job was updated
+    now = datetime.now(timezone.utc)
+    days_since_last = (now - latest_updated_at).total_seconds() / (24 * 60 * 60)
+
+    if days_since_last > MAX_AUTO_DAYS:
+        # Cap at MAX_AUTO_DAYS
+        posted_after = now - timedelta(days=MAX_AUTO_DAYS)
+        return DateCalculationResult(
+            posted_after=posted_after,
+            is_auto_calculated=True,
+            is_first_search=True,  # Treat as "catching up"
+        )
+
+    # Use the latest job's timestamp
+    return DateCalculationResult(
+        posted_after=latest_updated_at,
+        is_auto_calculated=True,
+        is_first_search=False,
+    )
 
 
 async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -37,7 +130,13 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     args = context.args or []
-    params = {"min_salary": 4000, "employment_location": "remote", "days": 1, "timeout": 30}
+    params = {
+        "min_salary": DEFAULT_MIN_SALARY,
+        "employment_location": DEFAULT_EMPLOYMENT_LOCATION,
+        "days": None,
+        "timeout": DEFAULT_TIMEOUT,
+    }
+    explicit_days_provided = False
 
     for arg in args:
         if "=" in arg:
@@ -51,6 +150,8 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 if key in ("min_salary", "days", "timeout"):
                     try:
                         params[key] = int(value)
+                        if key == "days":
+                            explicit_days_provided = True
                     except ValueError:
                         await update.message.reply_text(
                             f"❌ Invalid value for {key}: {value}. Must be a number."
@@ -59,9 +160,14 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                 else:
                     params[key] = value
 
-    posted_after = None
-    if params["days"] is not None:
-        posted_after = datetime.now(timezone.utc) - timedelta(days=params["days"])
+    # Calculate posted_after date
+    explicit_days = params["days"] if explicit_days_provided else None
+    job_repository = None if explicit_days_provided else dependencies.job_repository_factory()
+
+    date_result = _calculate_posted_after(explicit_days, job_repository)
+    posted_after = date_result.posted_after
+    is_auto_calculated = date_result.is_auto_calculated
+    is_first_search = date_result.is_first_search
 
     if not orchestrator.has_cv(user_id):
         await update.message.reply_text(
@@ -73,7 +179,12 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await update.message.reply_text(
         formatter.format_search_parameters(
-            params["min_salary"], params["employment_location"], params["days"]
+            params["min_salary"],
+            params["employment_location"],
+            params["days"],
+            posted_after=posted_after,
+            is_auto_calculated=is_auto_calculated,
+            is_first_search=is_first_search,
         )
     )
 

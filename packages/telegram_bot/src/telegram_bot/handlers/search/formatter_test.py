@@ -218,3 +218,101 @@ class TestFormatSearchParameters:
         """Parameters message should include time warning."""
         message = format_search_parameters(5000, "remote", 1)
         assert "minute" in message.lower() or "take" in message.lower()
+
+
+class TestFormatSearchParametersAutoCalculated:
+    """Tests for format_search_parameters with auto-calculated date range.
+
+    These tests verify the NEW behavior where format_search_parameters
+    can display different messages for auto-calculated vs explicit date ranges.
+
+    REQ-6: Display the effective date range to user with indication of auto-calculation.
+    """
+
+    def test_formats_auto_calculated_date_differently(self):
+        """Formatter should indicate when date range was auto-calculated.
+
+        REQ-6: The message should distinguish auto-calculated from explicit ranges.
+        When is_auto_calculated=True, the message should indicate this.
+        """
+        from datetime import datetime, timezone
+
+        # Test with auto-calculated date
+        auto_date = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        message = format_search_parameters(
+            min_salary=5000,
+            employment_location="remote",
+            days=None,
+            posted_after=auto_date,
+            is_auto_calculated=True,
+        )
+
+        # Should contain indication that date was auto-calculated
+        assert any(
+            indicator in message.lower()
+            for indicator in ["since", "last stored", "based on", "auto", "resume"]
+        ), f"Expected auto-calculation indicator in message: {message}"
+
+    def test_formats_explicit_days_normally(self):
+        """Formatter should format explicit days parameter normally.
+
+        REQ-4: When explicit days is provided, format as before.
+        """
+        message = format_search_parameters(
+            min_salary=5000,
+            employment_location="remote",
+            days=7,
+            posted_after=None,
+            is_auto_calculated=False,
+        )
+
+        # Should contain "Last 7 days" or similar explicit format
+        assert "7" in message
+        assert "days" in message.lower()
+        # Should NOT contain auto-calculation indicators when explicit
+        assert "based on" not in message.lower()
+        assert "last stored" not in message.lower()
+
+    def test_formats_5_day_default_with_catching_up_message(self):
+        """Formatter should indicate catching up when defaulting to 5 days.
+
+        REQ-3: When no jobs exist, default to 5 days with appropriate message.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        # 5 days ago (the default when no jobs exist)
+        default_date = datetime.now(timezone.utc) - timedelta(days=5)
+        message = format_search_parameters(
+            min_salary=5000,
+            employment_location="remote",
+            days=None,
+            posted_after=default_date,
+            is_auto_calculated=True,
+            is_first_search=True,  # Indicates no previous jobs
+        )
+
+        # Should indicate first search or catching up
+        assert any(
+            indicator in message.lower() for indicator in ["5", "first", "catching up", "initial"]
+        ), f"Expected first-search indicator in message: {message}"
+
+    def test_includes_posted_after_date_in_message(self):
+        """Formatter should include the actual date being used.
+
+        REQ-6: Display the effective date range to user.
+        """
+        from datetime import datetime, timezone
+
+        posted_after = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+        message = format_search_parameters(
+            min_salary=5000,
+            employment_location="remote",
+            days=None,
+            posted_after=posted_after,
+            is_auto_calculated=True,
+        )
+
+        # Should include the date in some format (date string or relative)
+        assert (
+            "2024" in message or "Jan" in message or "15" in message or "since" in message.lower()
+        ), f"Expected date indication in message: {message}"

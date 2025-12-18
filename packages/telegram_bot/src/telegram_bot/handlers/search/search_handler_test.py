@@ -31,14 +31,24 @@ def mock_orchestrator():
 
 
 @pytest.fixture
-def mock_dependencies(mock_orchestrator):
+def mock_job_repository():
+    """Create a mock job repository."""
+    repo = MagicMock()
+    repo.get_latest_updated_at.return_value = None
+    return repo
+
+
+@pytest.fixture
+def mock_dependencies(mock_orchestrator, mock_job_repository):
     """Create mock dependencies for search tests."""
     orchestrator_factory = MagicMock(return_value=mock_orchestrator)
     cv_repository_factory = MagicMock()
+    job_repository_factory = MagicMock(return_value=mock_job_repository)
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        job_repository_factory=job_repository_factory,
     )
 
 
@@ -413,3 +423,223 @@ class TestSearchHandlerWithJobs:
 
         assert any("Python Developer" in text for text in message._reply_texts)
         assert any("Test Corp" in text for text in message._reply_texts)
+
+
+class TestSearchHandlerDateAutoCalculation:
+    """Tests for auto-calculation of search date range.
+
+    These tests verify the NEW behavior where the search date range is
+    automatically calculated based on the latest job's updated_at timestamp
+    when the days parameter is not provided.
+
+    REQ-1: Auto-calculate posted_after date from latest job when days omitted
+    REQ-2: Cap the auto-calculated date at 5 days maximum
+    REQ-3: Default to 5 days when no jobs exist in database
+    REQ-4: Respect explicitly provided days parameter
+    """
+
+    @pytest.fixture
+    def mock_job_repository(self):
+        """Create a mock job repository."""
+        repo = MagicMock()
+        repo.get_latest_updated_at.return_value = None
+        return repo
+
+    @pytest.fixture
+    def mock_dependencies_with_job_repo(self, mock_orchestrator, mock_job_repository):
+        """Create mock dependencies including job repository factory."""
+        orchestrator_factory = MagicMock(return_value=mock_orchestrator)
+        cv_repository_factory = MagicMock()
+        job_repository_factory = MagicMock(return_value=mock_job_repository)
+
+        return BotDependencies(
+            orchestrator_factory=orchestrator_factory,
+            cv_repository_factory=cv_repository_factory,
+            job_repository_factory=job_repository_factory,
+        )
+
+    async def test_uses_auto_calculated_date_when_days_not_provided(
+        self, mock_dependencies_with_job_repo, mock_orchestrator, mock_job_repository
+    ):
+        """Handler should use auto-calculated date from latest job when days omitted.
+
+        REQ-1: When days is not set, use the latest job's updated_at timestamp.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_orchestrator.has_cv.return_value = True
+
+        # Latest job was updated 2 days ago
+        latest_job_time = datetime.now(timezone.utc) - timedelta(days=2)
+        mock_job_repository.get_latest_updated_at.return_value = latest_job_time
+
+        user = MockUser(id=8001)
+        message = MockMessage(user=user)
+        update = MockUpdate(user=user, message=message)
+        # No days parameter provided
+        context = MockContext(args=[], dependencies=mock_dependencies_with_job_repo)
+
+        await search_jobs_handler(update, context)
+
+        # Verify the handler called get_latest_updated_at
+        mock_job_repository.get_latest_updated_at.assert_called_once()
+
+        # Verify scrape_jobs_streaming was called with a posted_after around 2 days ago
+        call_args = mock_orchestrator.scrape_jobs_streaming.call_args
+        posted_after_arg = call_args[0][2]  # Third positional argument
+        assert posted_after_arg is not None
+        # The posted_after should be approximately 2 days ago (the latest job time)
+        time_diff = abs((posted_after_arg - latest_job_time).total_seconds())
+        assert time_diff < 60  # Within 1 minute tolerance
+
+    async def test_caps_auto_calculated_date_at_5_days(
+        self, mock_dependencies_with_job_repo, mock_orchestrator, mock_job_repository
+    ):
+        """Handler should cap auto-calculated date at 5 days when job is older.
+
+        REQ-2: If the latest job is older than 5 days, cap at 5 days.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_orchestrator.has_cv.return_value = True
+
+        # Latest job was updated 10 days ago (older than 5-day cap)
+        old_job_time = datetime.now(timezone.utc) - timedelta(days=10)
+        mock_job_repository.get_latest_updated_at.return_value = old_job_time
+
+        user = MockUser(id=8002)
+        message = MockMessage(user=user)
+        update = MockUpdate(user=user, message=message)
+        context = MockContext(args=[], dependencies=mock_dependencies_with_job_repo)
+
+        await search_jobs_handler(update, context)
+
+        # Verify scrape_jobs_streaming was called with posted_after capped at 5 days
+        call_args = mock_orchestrator.scrape_jobs_streaming.call_args
+        posted_after_arg = call_args[0][2]
+        assert posted_after_arg is not None
+
+        # The posted_after should be approximately 5 days ago, not 10
+        expected_cap = datetime.now(timezone.utc) - timedelta(days=5)
+        time_diff = abs((posted_after_arg - expected_cap).total_seconds())
+        assert time_diff < 60  # Within 1 minute tolerance
+
+    async def test_defaults_to_5_days_when_no_jobs_exist(
+        self, mock_dependencies_with_job_repo, mock_orchestrator, mock_job_repository
+    ):
+        """Handler should default to 5 days when no jobs exist in database.
+
+        REQ-3: When no jobs exist (empty database), use current_time - 5 days.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_orchestrator.has_cv.return_value = True
+
+        # No jobs in database
+        mock_job_repository.get_latest_updated_at.return_value = None
+
+        user = MockUser(id=8003)
+        message = MockMessage(user=user)
+        update = MockUpdate(user=user, message=message)
+        context = MockContext(args=[], dependencies=mock_dependencies_with_job_repo)
+
+        await search_jobs_handler(update, context)
+
+        # Verify scrape_jobs_streaming was called with posted_after = 5 days ago
+        call_args = mock_orchestrator.scrape_jobs_streaming.call_args
+        posted_after_arg = call_args[0][2]
+        assert posted_after_arg is not None
+
+        expected_default = datetime.now(timezone.utc) - timedelta(days=5)
+        time_diff = abs((posted_after_arg - expected_default).total_seconds())
+        assert time_diff < 60  # Within 1 minute tolerance
+
+    async def test_respects_explicit_days_parameter(
+        self, mock_dependencies_with_job_repo, mock_orchestrator, mock_job_repository
+    ):
+        """Handler should respect explicit days parameter, ignoring auto-calculation.
+
+        REQ-4: When days=N is explicitly provided, use that value.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_orchestrator.has_cv.return_value = True
+
+        # Even though a job exists, explicit days should override
+        latest_job_time = datetime.now(timezone.utc) - timedelta(days=2)
+        mock_job_repository.get_latest_updated_at.return_value = latest_job_time
+
+        user = MockUser(id=8004)
+        message = MockMessage(user=user)
+        update = MockUpdate(user=user, message=message)
+        # Explicit days=7 provided
+        context = MockContext(args=["days=7"], dependencies=mock_dependencies_with_job_repo)
+
+        await search_jobs_handler(update, context)
+
+        # Verify get_latest_updated_at was NOT called (explicit days provided)
+        mock_job_repository.get_latest_updated_at.assert_not_called()
+
+        # Verify scrape_jobs_streaming was called with posted_after = 7 days ago
+        call_args = mock_orchestrator.scrape_jobs_streaming.call_args
+        posted_after_arg = call_args[0][2]
+        assert posted_after_arg is not None
+
+        expected_explicit = datetime.now(timezone.utc) - timedelta(days=7)
+        time_diff = abs((posted_after_arg - expected_explicit).total_seconds())
+        assert time_diff < 60  # Within 1 minute tolerance
+
+    async def test_displays_auto_calculated_date_message(
+        self, mock_dependencies_with_job_repo, mock_orchestrator, mock_job_repository
+    ):
+        """Handler should display message indicating auto-calculated date range.
+
+        REQ-6: Display the effective date range to user with indication of auto-calculation.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_orchestrator.has_cv.return_value = True
+
+        latest_job_time = datetime.now(timezone.utc) - timedelta(days=3)
+        mock_job_repository.get_latest_updated_at.return_value = latest_job_time
+
+        user = MockUser(id=8005)
+        message = MockMessage(user=user)
+        update = MockUpdate(user=user, message=message)
+        context = MockContext(args=[], dependencies=mock_dependencies_with_job_repo)
+
+        await search_jobs_handler(update, context)
+
+        # Should contain message indicating auto-calculated or "based on last" or similar
+        assert any(
+            "last" in text.lower() or "since" in text.lower() or "auto" in text.lower()
+            for text in message._reply_texts
+        ), f"Expected auto-calculation indicator in messages: {message._reply_texts}"
+
+    async def test_uses_utc_for_date_calculations(
+        self, mock_dependencies_with_job_repo, mock_orchestrator, mock_job_repository
+    ):
+        """Handler should use UTC for all date calculations.
+
+        REQ-7: All date comparisons use UTC timezone.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_orchestrator.has_cv.return_value = True
+
+        # Latest job time in UTC
+        latest_job_time = datetime.now(timezone.utc) - timedelta(days=2)
+        mock_job_repository.get_latest_updated_at.return_value = latest_job_time
+
+        user = MockUser(id=8006)
+        message = MockMessage(user=user)
+        update = MockUpdate(user=user, message=message)
+        context = MockContext(args=[], dependencies=mock_dependencies_with_job_repo)
+
+        await search_jobs_handler(update, context)
+
+        # Verify the posted_after argument has timezone info (UTC)
+        call_args = mock_orchestrator.scrape_jobs_streaming.call_args
+        posted_after_arg = call_args[0][2]
+        assert posted_after_arg is not None
+        assert posted_after_arg.tzinfo is not None, "posted_after should be timezone-aware"

@@ -19,28 +19,40 @@ def mock_cv_repository():
 
 
 @pytest.fixture
-def mock_dependencies_with_cv(mock_cv_repository):
+def mock_job_repository():
+    """Create a mock job repository."""
+    repo = MagicMock()
+    repo.get_latest_updated_at.return_value = None
+    return repo
+
+
+@pytest.fixture
+def mock_dependencies_with_cv(mock_cv_repository, mock_job_repository):
     """Create mock dependencies with CV repository."""
     orchestrator_factory = MagicMock()
     cv_repository_factory = MagicMock(return_value=mock_cv_repository)
+    job_repository_factory = MagicMock(return_value=mock_job_repository)
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        job_repository_factory=job_repository_factory,
     )
 
 
 @pytest.fixture
-def mock_dependencies_without_cv():
+def mock_dependencies_without_cv(mock_job_repository):
     """Create mock dependencies where CV doesn't exist."""
     orchestrator_factory = MagicMock()
     cv_repo = MagicMock()
     cv_repo.find.return_value = None
     cv_repository_factory = MagicMock(return_value=cv_repo)
+    job_repository_factory = MagicMock(return_value=mock_job_repository)
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        job_repository_factory=job_repository_factory,
     )
 
 

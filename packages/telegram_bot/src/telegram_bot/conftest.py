@@ -185,16 +185,28 @@ def mock_cv_repository() -> MagicMock:
 
 
 @pytest.fixture
+def mock_job_repository() -> MagicMock:
+    """Create a mock job repository."""
+    repo = MagicMock()
+    repo.get_latest_updated_at.return_value = None
+    return repo
+
+
+@pytest.fixture
 def mock_dependencies(
-    mock_orchestrator: MagicMock, mock_cv_repository: MagicMock
+    mock_orchestrator: MagicMock,
+    mock_cv_repository: MagicMock,
+    mock_job_repository: MagicMock,
 ) -> BotDependencies:
     """Create mock BotDependencies."""
     orchestrator_factory = MagicMock(return_value=mock_orchestrator)
     cv_repository_factory = MagicMock(return_value=mock_cv_repository)
+    job_repository_factory = MagicMock(return_value=mock_job_repository)
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        job_repository_factory=job_repository_factory,
     )
 
 

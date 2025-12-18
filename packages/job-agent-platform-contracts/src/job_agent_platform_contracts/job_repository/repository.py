@@ -1,6 +1,7 @@
 """Repository interface for job operations."""
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import List, Optional
 
 from job_scrapper_contracts import Job, JobDict
@@ -90,5 +91,19 @@ class IJobRepository(ABC):
 
         Returns:
             Count of jobs that were successfully saved (excluding duplicates)
+        """
+        pass
+
+    @abstractmethod
+    def get_latest_updated_at(self) -> Optional[datetime]:
+        """
+        Get the most recent updated_at timestamp from all jobs.
+
+        This method is used to auto-calculate the search date range when
+        the days parameter is not explicitly provided. It returns the latest
+        updated_at timestamp from the jobs table.
+
+        Returns:
+            The latest updated_at datetime if jobs exist, None otherwise.
         """
         pass

@@ -1274,3 +1274,139 @@ class TestJobRepositoryGetExistingUrlsIncludesFiltered:
         urls = repository.get_existing_urls_by_source("djinni")
 
         assert "https://djinni.co/jobs/irrelevant" in urls
+
+
+class TestJobRepositoryGetLatestUpdatedAt:
+    """Tests for get_latest_updated_at method.
+
+    These tests verify the NEW method that retrieves the most recent
+    updated_at timestamp from all jobs in the database.
+    REQ-5: Add repository method to get latest job timestamp.
+    """
+
+    @pytest.fixture
+    def repository(self, reference_data_service, job_mapper, db_session):
+        """Create a JobRepository instance."""
+        return JobRepository(reference_data_service, job_mapper, db_session)
+
+    def test_returns_none_when_no_jobs_exist(self, repository):
+        """Test that get_latest_updated_at returns None when database is empty.
+
+        REQ-3: When no jobs exist, the handler should default to 5 days.
+        This method returns None to signal that condition.
+        """
+        result = repository.get_latest_updated_at()
+
+        assert result is None
+
+    def test_returns_latest_updated_at_when_jobs_exist(self, repository, db_session):
+        """Test that get_latest_updated_at returns the most recent timestamp.
+
+        REQ-1: Auto-calculate posted_after date from latest job's updated_at.
+        """
+        from datetime import datetime, timedelta, UTC
+
+        now = datetime.now(UTC)
+        old_time = now - timedelta(days=10)
+        recent_time = now - timedelta(days=2)
+
+        # Handle timezone-naive column if needed
+        if not getattr(Job.__table__.c.updated_at.type, "timezone", False):
+            old_time = old_time.replace(tzinfo=None)
+            recent_time = recent_time.replace(tzinfo=None)
+
+        old_job = Job(
+            title="Old Job",
+            external_id="latest-test-old",
+            source="djinni",
+        )
+        # Manually set updated_at for old job
+        db_session.add(old_job)
+        db_session.flush()
+        db_session.execute(
+            Job.__table__.update()
+            .where(Job.__table__.c.id == old_job.id)
+            .values(updated_at=old_time)
+        )
+
+        recent_job = Job(
+            title="Recent Job",
+            external_id="latest-test-recent",
+            source="djinni",
+        )
+        db_session.add(recent_job)
+        db_session.flush()
+        db_session.execute(
+            Job.__table__.update()
+            .where(Job.__table__.c.id == recent_job.id)
+            .values(updated_at=recent_time)
+        )
+        db_session.commit()
+
+        result = repository.get_latest_updated_at()
+
+        assert result is not None
+        # Compare without microseconds due to DB precision
+        if result.tzinfo is None:
+            recent_time_compare = recent_time.replace(tzinfo=None)
+        else:
+            recent_time_compare = recent_time
+        assert abs((result - recent_time_compare).total_seconds()) < 1
+
+    def test_returns_correct_timestamp_with_multiple_jobs(self, repository, db_session):
+        """Test correct identification of latest timestamp across many jobs.
+
+        REQ-1: The system should query for the most recent updated_at from jobs table.
+        """
+        from datetime import datetime, timedelta, UTC
+
+        now = datetime.now(UTC)
+        timestamps = [
+            now - timedelta(days=30),
+            now - timedelta(days=15),
+            now - timedelta(days=7),
+            now - timedelta(days=1),  # This should be the latest
+            now - timedelta(days=20),
+        ]
+
+        if not getattr(Job.__table__.c.updated_at.type, "timezone", False):
+            timestamps = [ts.replace(tzinfo=None) for ts in timestamps]
+
+        for i, ts in enumerate(timestamps):
+            job = Job(
+                title=f"Job {i}",
+                external_id=f"multi-job-{i}",
+                source="djinni",
+            )
+            db_session.add(job)
+            db_session.flush()
+            db_session.execute(
+                Job.__table__.update().where(Job.__table__.c.id == job.id).values(updated_at=ts)
+            )
+        db_session.commit()
+
+        result = repository.get_latest_updated_at()
+
+        assert result is not None
+        expected_latest = timestamps[3]  # days=1 is the most recent
+        assert abs((result - expected_latest).total_seconds()) < 1
+
+    def test_returns_datetime_type(self, repository, db_session):
+        """Test that get_latest_updated_at returns a datetime object.
+
+        REQ-7: Handle timezone correctly for date comparisons.
+        """
+        from datetime import datetime
+
+        job = Job(
+            title="Test Job",
+            external_id="datetime-type-test",
+            source="djinni",
+        )
+        db_session.add(job)
+        db_session.commit()
+
+        result = repository.get_latest_updated_at()
+
+        assert result is not None
+        assert isinstance(result, datetime)

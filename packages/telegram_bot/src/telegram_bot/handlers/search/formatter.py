@@ -1,6 +1,7 @@
 """Formatter for search handler messages."""
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Optional
 
 
 def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int) -> str:
@@ -86,18 +87,39 @@ def format_search_summary(
     )
 
 
-def format_search_parameters(min_salary: int, employment_location: str, days: int | None) -> str:
+def format_search_parameters(
+    min_salary: int,
+    employment_location: str,
+    days: int | None,
+    posted_after: Optional[datetime] = None,
+    is_auto_calculated: bool = False,
+    is_first_search: bool = False,
+) -> str:
     """Format search parameters message.
 
     Args:
         min_salary: Minimum salary requirement
         employment_location: Employment type (e.g., 'remote')
         days: Number of days to look back (None for all jobs)
+        posted_after: The actual posted_after datetime being used (for auto-calculated dates)
+        is_auto_calculated: Whether the date range was auto-calculated from last job
+        is_first_search: Whether this is a first search (no previous jobs existed)
 
     Returns:
         Formatted parameters message
     """
-    date_info = f"• Last {days} days\n" if days else "• All available jobs\n"
+    if is_auto_calculated and posted_after is not None:
+        if is_first_search:
+            date_info = "• Last 5 days (first search / catching up)\n"
+        else:
+            # Format the date in a readable way
+            date_str = posted_after.strftime("%Y-%m-%d %H:%M UTC")
+            date_info = f"• Since {date_str} (based on last stored job)\n"
+    elif days is not None:
+        date_info = f"• Last {days} days\n"
+    else:
+        date_info = "• All available jobs\n"
+
     return (
         f"🔍 Starting job search...\n\n"
         f"Parameters:\n"
