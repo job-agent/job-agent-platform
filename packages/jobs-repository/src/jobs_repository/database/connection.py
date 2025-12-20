@@ -1,5 +1,6 @@
 """Database connection management."""
 
+import threading
 from typing import Optional
 from sqlalchemy import create_engine, Engine, text
 
@@ -8,6 +9,7 @@ from job_agent_platform_contracts.job_repository.exceptions import DatabaseConne
 
 
 _engine: Optional[Engine] = None
+_engine_lock = threading.Lock()
 
 
 def get_engine() -> Engine:
@@ -22,21 +24,25 @@ def get_engine() -> Engine:
     """
     global _engine
 
-    if _engine is None:
-        try:
-            config = get_database_config()
-            _engine = create_engine(
-                config.url,
-                pool_pre_ping=True,
-                pool_size=config.pool_size,
-                max_overflow=config.max_overflow,
-                echo=config.echo,
-            )
+    if _engine is not None:
+        return _engine
 
-            with _engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-        except Exception as e:
-            raise DatabaseConnectionError(f"Failed to connect to database: {e}") from e
+    with _engine_lock:
+        if _engine is None:
+            try:
+                config = get_database_config()
+                _engine = create_engine(
+                    config.url,
+                    pool_pre_ping=True,
+                    pool_size=config.pool_size,
+                    max_overflow=config.max_overflow,
+                    echo=config.echo,
+                )
+
+                with _engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+            except Exception as e:
+                raise DatabaseConnectionError(f"Failed to connect to database: {e}") from e
 
     return _engine
 
@@ -49,6 +55,7 @@ def reset_engine() -> None:
     """
     global _engine
 
-    if _engine is not None:
-        _engine.dispose()
-        _engine = None
+    with _engine_lock:
+        if _engine is not None:
+            _engine.dispose()
+            _engine = None

@@ -33,7 +33,6 @@ container = JobsRepositoryContainer()
 
 def get_job_repository() -> IJobRepository:
     """Provide a JobRepository instance with managed session lifecycle."""
-
     repository = container.job_repository()
     if callable(repository) and not isinstance(repository, IJobRepository):
         repository = repository()

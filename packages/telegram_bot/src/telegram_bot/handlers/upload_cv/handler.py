@@ -26,6 +26,7 @@ async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     processing_msg = await update.message.reply_text(messages.INFO_PROCESSING)
 
+    tmp_path = None
     try:
         file = await context.bot.get_file(document.file_id)
 
@@ -43,9 +44,11 @@ async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     except ValueError as e:
         print(f"Validation error handling CV upload: {e}")
-        Path(tmp_path).unlink(missing_ok=True)
-        await processing_msg.edit_text(f"❌ {str(e)}")
+        if tmp_path:
+            Path(tmp_path).unlink(missing_ok=True)
+        await processing_msg.edit_text(messages.ERROR_VALIDATION_FAILED)
     except Exception as e:
         print(f"Error handling CV upload: {e}")
-        Path(tmp_path).unlink(missing_ok=True)
+        if tmp_path:
+            Path(tmp_path).unlink(missing_ok=True)
         await processing_msg.edit_text(messages.ERROR_PROCESSING_FAILED)

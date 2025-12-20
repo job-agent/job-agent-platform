@@ -1,5 +1,6 @@
 """Database session management."""
 
+import threading
 from contextlib import contextmanager
 from typing import Generator, Optional
 from sqlalchemy.orm import sessionmaker, Session
@@ -10,6 +11,7 @@ from job_agent_platform_contracts.job_repository.exceptions import TransactionEr
 
 
 _SessionLocal: Optional[sessionmaker] = None
+_session_lock = threading.Lock()
 
 
 def get_session_factory() -> sessionmaker:
@@ -21,9 +23,13 @@ def get_session_factory() -> sessionmaker:
     """
     global _SessionLocal
 
-    if _SessionLocal is None:
-        engine = get_engine()
-        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    if _SessionLocal is not None:
+        return _SessionLocal
+
+    with _session_lock:
+        if _SessionLocal is None:
+            engine = get_engine()
+            _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     return _SessionLocal
 
@@ -90,4 +96,5 @@ def reset_session_factory() -> None:
     Useful for testing or when configuration changes.
     """
     global _SessionLocal
-    _SessionLocal = None
+    with _session_lock:
+        _SessionLocal = None

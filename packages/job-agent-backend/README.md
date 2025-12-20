@@ -63,11 +63,14 @@ orchestrator = JobAgentOrchestrator()
 orchestrator.upload_cv(user_id=42, file_path="resume.pdf")
 summary = orchestrator.run_complete_pipeline(
     user_id=42,
-    salary=5000,
-    employment="remote",
+    min_salary=5000,
+    employment_location="remote",
+    days=7,  # Optional: search jobs from last N days
 )
 print(summary)
 ```
+
+When `days` is omitted (or `None`), the orchestrator auto-calculates the date range based on the most recent job in the repository, capped at 5 days.
 
 The dependency injection container exposed at `job_agent_backend.container.container` lets you override components such as the scrapper manager, repositories, or filter service when wiring the backend into other applications or tests.
 

@@ -1,9 +1,65 @@
 """Test fixtures for core module tests."""
 
 from pathlib import Path
+from typing import Optional
+from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
+from dependency_injector import providers
+
+from job_agent_backend.container import ApplicationContainer
+from job_agent_backend.filter_service.filter import FilterService
+
+
+class StubJobRepository:
+    """Stub job repository for testing orchestrator.
+
+    This stub provides minimal implementations of IJobRepository methods
+    that are used by the orchestrator and filter service during tests.
+    """
+
+    def __init__(self):
+        self.saved_filtered_jobs: list = []
+        self.latest_updated_at: Optional[datetime] = None
+
+    def get_by_external_id(self, external_id, source=None):
+        return None
+
+    def has_active_job_with_title_and_company(self, title, company_name):
+        return False
+
+    def save_filtered_jobs(self, jobs):
+        self.saved_filtered_jobs.extend(jobs)
+        return len(jobs)
+
+    def get_latest_updated_at(self):
+        return self.latest_updated_at
+
+
+@pytest.fixture
+def stub_job_repository():
+    """Create a fresh StubJobRepository instance for testing."""
+    return StubJobRepository()
+
+
+@pytest.fixture
+def app_container_with_stub_repository(stub_job_repository):
+    """Provide an ApplicationContainer configured with a stub job repository.
+
+    This fixture creates an ApplicationContainer with the job_repository_factory
+    and filter_service overridden to use the stub repository. Test classes can
+    use this instead of creating their own container configuration.
+    """
+    container = ApplicationContainer()
+    container.job_repository_factory.override(providers.Object(lambda: stub_job_repository))
+    container.filter_service.override(
+        providers.Singleton(
+            FilterService,
+            job_repository_factory=container.job_repository_factory,
+        )
+    )
+    return container
 
 
 @pytest.fixture

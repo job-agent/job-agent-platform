@@ -1,7 +1,6 @@
 """Interface for job agent orchestration."""
 
 from abc import ABC, abstractmethod
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
@@ -35,10 +34,18 @@ class IJobAgentOrchestrator(ABC):
         self,
         min_salary: int = 4000,
         employment_location: str = "remote",
-        posted_after: Optional[datetime] = None,
+        days: Optional[int] = None,
         timeout: int = 30,
     ) -> list[JobDict]:
-        """Retrieve job listings matching the provided filters."""
+        """Retrieve job listings matching the provided filters.
+
+        Args:
+            min_salary: Minimum salary filter
+            employment_location: Employment type or location filter
+            days: Number of days to look back. If None, auto-calculates from latest
+                  job in repository
+            timeout: Request timeout in seconds
+        """
 
     @abstractmethod
     def filter_jobs_list(self, jobs: Sequence[JobDict]) -> list[JobDict]:
@@ -66,7 +73,16 @@ class IJobAgentOrchestrator(ABC):
         user_id: int,
         min_salary: int = 4000,
         employment_location: str = "remote",
-        posted_after: Optional[datetime] = None,
+        days: Optional[int] = None,
         timeout: int = 30,
     ) -> PipelineSummary:
-        """Execute the end-to-end job processing workflow and return summary data."""
+        """Execute the end-to-end job processing workflow and return summary data.
+
+        Args:
+            user_id: User identifier to load their CV
+            min_salary: Minimum salary filter
+            employment_location: Employment type or location filter
+            days: Number of days to look back. If None, auto-calculates from latest
+                  job in repository
+            timeout: Request timeout in seconds
+        """

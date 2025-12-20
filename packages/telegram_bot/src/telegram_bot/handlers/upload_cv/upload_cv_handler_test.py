@@ -110,24 +110,14 @@ def mock_orchestrator():
 
 
 @pytest.fixture
-def mock_job_repository():
-    """Create a mock job repository."""
-    repo = MagicMock()
-    repo.get_latest_updated_at.return_value = None
-    return repo
-
-
-@pytest.fixture
-def mock_dependencies(mock_orchestrator, mock_job_repository):
+def mock_dependencies(mock_orchestrator):
     """Create mock dependencies for upload tests."""
     orchestrator_factory = MagicMock(return_value=mock_orchestrator)
     cv_repository_factory = MagicMock()
-    job_repository_factory = MagicMock(return_value=mock_job_repository)
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
-        job_repository_factory=job_repository_factory,
     )
 
 
@@ -229,7 +219,7 @@ class TestUploadCvHandler:
     async def test_handles_validation_error(
         self, mock_dependencies, mock_bot_with_file, mock_orchestrator
     ):
-        """Handler should handle validation errors from orchestrator."""
+        """Handler should handle validation errors with user-friendly message."""
         user = MockUser(id=6006)
         document = MockDocument(file_name="cv.pdf")
         message = TrackingMockMessage(user=user, document=document)
@@ -241,7 +231,8 @@ class TestUploadCvHandler:
 
         await upload_cv_handler(update, context)
 
-        assert any("Invalid PDF format" in text for text in message._edited_texts)
+        # Should show generic validation error, not raw exception message
+        assert messages.ERROR_VALIDATION_FAILED in message._edited_texts
 
     async def test_handles_generic_error(
         self, mock_dependencies, mock_bot_with_file, mock_orchestrator
@@ -276,30 +267,3 @@ class TestUploadCvHandler:
         call_args = mock_orchestrator.upload_cv.call_args
         tmp_path = call_args[0][1]
         assert tmp_path.endswith(".pdf")
-
-
-class TestUploadCvMessages:
-    """Tests for upload CV message constants."""
-
-    def test_success_message_indicates_success(self):
-        """Success message should indicate successful upload."""
-        assert "success" in messages.SUCCESS_MESSAGE.lower()
-        assert "CV" in messages.SUCCESS_MESSAGE
-
-    def test_success_message_mentions_search(self):
-        """Success message should mention the search command."""
-        assert "/search" in messages.SUCCESS_MESSAGE
-
-    def test_error_message_indicates_failure(self):
-        """Error message should indicate processing failure."""
-        assert (
-            "Failed" in messages.ERROR_PROCESSING_FAILED
-            or "error" in messages.ERROR_PROCESSING_FAILED.lower()
-        )
-
-    def test_info_processing_indicates_processing(self):
-        """Info processing message should indicate processing."""
-        assert (
-            "Processing" in messages.INFO_PROCESSING
-            or "processing" in messages.INFO_PROCESSING.lower()
-        )

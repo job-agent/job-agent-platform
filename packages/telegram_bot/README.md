@@ -60,7 +60,7 @@ After the bot starts:
 
 ### Automatic Date Range Calculation
 
-When the `days` parameter is omitted, the bot automatically determines the search date range:
+When the `days` parameter is omitted, the backend automatically determines the search date range:
 
 - **If jobs exist in database**: Uses the `updated_at` timestamp of the most recent stored job as the cutoff date
 - **If no jobs exist**: Defaults to the last 5 days
@@ -69,6 +69,8 @@ When the `days` parameter is omitted, the bot automatically determines the searc
 This "resume from last search" behavior ensures you pick up where you left off without fetching duplicate jobs.
 
 To override this behavior, explicitly provide the `days` parameter (e.g., `/search days=3`).
+
+Note: The date calculation logic is handled by `JobAgentOrchestrator` in the backend, not by the bot itself. The bot simply passes the `days` parameter (or `None` if not specified) to the orchestrator.
 
 ### Docker
 

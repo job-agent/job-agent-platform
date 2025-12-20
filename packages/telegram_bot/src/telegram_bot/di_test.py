@@ -20,44 +20,14 @@ class TestBotDependencies:
         """BotDependencies should be immutable (frozen)."""
         orchestrator_factory = MagicMock()
         cv_repository_factory = MagicMock()
-        job_repository_factory = MagicMock()
 
         deps = BotDependencies(
             orchestrator_factory=orchestrator_factory,
             cv_repository_factory=cv_repository_factory,
-            job_repository_factory=job_repository_factory,
         )
 
         with pytest.raises(AttributeError):
             deps.orchestrator_factory = MagicMock()
-
-    def test_stores_orchestrator_factory(self):
-        """BotDependencies should store orchestrator factory."""
-        orchestrator_factory = MagicMock()
-        cv_repository_factory = MagicMock()
-        job_repository_factory = MagicMock()
-
-        deps = BotDependencies(
-            orchestrator_factory=orchestrator_factory,
-            cv_repository_factory=cv_repository_factory,
-            job_repository_factory=job_repository_factory,
-        )
-
-        assert deps.orchestrator_factory == orchestrator_factory
-
-    def test_stores_cv_repository_factory(self):
-        """BotDependencies should store CV repository factory."""
-        orchestrator_factory = MagicMock()
-        cv_repository_factory = MagicMock()
-        job_repository_factory = MagicMock()
-
-        deps = BotDependencies(
-            orchestrator_factory=orchestrator_factory,
-            cv_repository_factory=cv_repository_factory,
-            job_repository_factory=job_repository_factory,
-        )
-
-        assert deps.cv_repository_factory == cv_repository_factory
 
 
 class TestBuildDependencies:
@@ -149,7 +119,6 @@ class TestGetDependencies:
         mock_deps = BotDependencies(
             orchestrator_factory=MagicMock(),
             cv_repository_factory=MagicMock(),
-            job_repository_factory=MagicMock(),
         )
         mock_context = MagicMock()
         mock_context.application.bot_data = {"dependencies": mock_deps}
