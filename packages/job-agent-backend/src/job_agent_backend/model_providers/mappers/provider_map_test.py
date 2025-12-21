@@ -1,4 +1,4 @@
-"""Tests for PROVIDER_MAP in mappers directory (REQ-7)."""
+"""Tests for PROVIDER_MAP in mappers directory."""
 
 
 class TestProviderMap:

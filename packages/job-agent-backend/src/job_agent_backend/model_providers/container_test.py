@@ -1,4 +1,4 @@
-"""Tests for ModelProvidersContainer (REQ-4)."""
+"""Tests for ModelProvidersContainer."""
 
 
 class TestModelProvidersContainerProviders:

@@ -1,4 +1,4 @@
-"""ModelFactory dependency injection (REQ-8, REQ-9, REQ-10, REQ-11).
+"""ModelFactory dependency injection.
 
 These tests verify that ModelFactory accepts injected dependencies
 instead of using module-level singletons and class-level attributes.

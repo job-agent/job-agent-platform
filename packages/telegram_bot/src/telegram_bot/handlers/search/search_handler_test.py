@@ -307,11 +307,7 @@ class TestSearchHandlerDaysParameter:
 
     The handler now passes `days` directly to the orchestrator, which handles
     date calculation internally. These tests verify the handler correctly passes
-    the days parameter.
-
-    REQ-2: Telegram bot passes days parameter as-is to orchestrator
-    REQ-3: Handler passes None when days not specified
-    """
+    the days parameter."""
 
     async def test_passes_none_days_when_not_provided(
         self, handler_test_setup_factory, mock_orchestrator
@@ -333,10 +329,7 @@ class TestSearchHandlerDaysParameter:
     async def test_passes_explicit_days_to_orchestrator(
         self, handler_test_setup_factory, mock_orchestrator
     ):
-        """Handler should pass explicit days value to orchestrator.
-
-        REQ-2: When days=N is explicitly provided, pass it directly to orchestrator.
-        """
+        """Handler should pass explicit days value to orchestrator."""
         # mock_orchestrator defaults to has_cv=True
         setup = handler_test_setup_factory(user_id=8002, args=["days=7"])
 

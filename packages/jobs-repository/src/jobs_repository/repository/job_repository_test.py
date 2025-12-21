@@ -1282,12 +1282,7 @@ class TestJobRepositoryGetExistingUrlsIncludesFiltered:
 
 
 class TestJobRepositoryGetLatestUpdatedAt:
-    """Tests for get_latest_updated_at method.
-
-    These tests verify the NEW method that retrieves the most recent
-    updated_at timestamp from all jobs in the database.
-    REQ-5: Add repository method to get latest job timestamp.
-    """
+    """Tests for get_latest_updated_at method."""
 
     @pytest.fixture
     def repository(self, reference_data_service, job_mapper, db_session):
@@ -1295,20 +1290,13 @@ class TestJobRepositoryGetLatestUpdatedAt:
         return JobRepository(reference_data_service, job_mapper, db_session)
 
     def test_get_latest_updated_at_returns_none_when_no_jobs_exist(self, repository):
-        """Test that get_latest_updated_at returns None when database is empty.
-
-        REQ-3: When no jobs exist, the handler should default to 5 days.
-        This method returns None to signal that condition.
-        """
+        """Test that get_latest_updated_at returns None when database is empty."""
         result = repository.get_latest_updated_at()
 
         assert result is None
 
     def test_get_latest_updated_at_returns_most_recent_timestamp(self, repository, db_session):
-        """Test that get_latest_updated_at returns the most recent timestamp.
-
-        REQ-1: Auto-calculate posted_after date from latest job's updated_at.
-        """
+        """Test that get_latest_updated_at returns the most recent timestamp."""
         from datetime import datetime, timedelta, UTC
 
         now = datetime.now(UTC)
@@ -1361,10 +1349,7 @@ class TestJobRepositoryGetLatestUpdatedAt:
     def test_get_latest_updated_at_identifies_correct_timestamp_with_multiple_jobs(
         self, repository, db_session
     ):
-        """Test correct identification of latest timestamp across many jobs.
-
-        REQ-1: The system should query for the most recent updated_at from jobs table.
-        """
+        """Test correct identification of latest timestamp across many jobs."""
         from datetime import datetime, timedelta, UTC
 
         now = datetime.now(UTC)
@@ -1399,10 +1384,7 @@ class TestJobRepositoryGetLatestUpdatedAt:
         assert abs((result - expected_latest).total_seconds()) < 1
 
     def test_get_latest_updated_at_returns_datetime_type(self, repository, db_session):
-        """Test that get_latest_updated_at returns a datetime object.
-
-        REQ-7: Handle timezone correctly for date comparisons.
-        """
+        """Test that get_latest_updated_at returns a datetime object."""
         from datetime import datetime
 
         job = Job(

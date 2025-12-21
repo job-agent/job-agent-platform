@@ -1,4 +1,4 @@
-"""Tests for MODEL_PROVIDER_MAP in mappers directory (REQ-6)."""
+"""Tests for MODEL_PROVIDER_MAP in mappers directory."""
 
 
 class TestModelProviderMapRelocation:

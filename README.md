@@ -239,6 +239,7 @@ LANGSMITH_API_KEY=ls__...
 - `packages/job-agent-backend` — Core orchestrator with LangGraph workflows, RabbitMQ integration, CV loader, filter service, and dependency container.
 - `packages/telegram_bot` — Async Telegram client that guides users through uploading CVs, triggering searches, and reviewing relevant jobs.
 - `packages/jobs-repository` — SQLAlchemy and Alembic powered persistence layer for storing job metadata.
+- `packages/essay-repository` — SQLAlchemy and Alembic powered persistence layer for storing essay Q&A data.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
 
@@ -260,8 +261,9 @@ job-agent-platform/
 │   ├── job-agent-backend/
 │   ├── telegram_bot/
 │   ├── jobs-repository/
+│   ├── essay-repository/
 │   ├── cvs-repository/
-│   └── contracts/
+│   └── job-agent-platform-contracts/
 ├── docker-compose.yml
 ├── docker-start.sh
 ├── pyproject.toml
@@ -276,6 +278,7 @@ job-agent-platform/
 cd packages/job-agent-backend && pytest
 cd packages/telegram_bot && pytest
 cd packages/jobs-repository && pytest
+cd packages/essay-repository && pytest
 ```
 
 ### Code Formatting and Linting

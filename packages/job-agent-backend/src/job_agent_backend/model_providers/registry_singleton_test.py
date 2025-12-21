@@ -1,4 +1,4 @@
-"""Tests for _registry singleton removal (REQ-3)."""
+"""Tests for _registry singleton removal."""
 
 
 class TestRegistrySingletonRemoved:

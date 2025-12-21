@@ -18,6 +18,7 @@ PACKAGES=(
     "job-agent-platform-contracts"
     "cvs-repository"
     "jobs-repository"
+    "essay-repository"
     "job-agent-backend"
     "telegram_bot"
 )

@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "essay-repository"
+version = "0.1.0"
+description = "Essay repository package for PostgreSQL database operations"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "alembic>=1.13.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.2.1",
+    "dependency-injector>=4.41.0",
+    "job-agent-platform-contracts>=0.1.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-cov>=6.0.0",
+    "black>=25.9.0",
+    "ruff>=0.14.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["src"]
+pythonpath = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
