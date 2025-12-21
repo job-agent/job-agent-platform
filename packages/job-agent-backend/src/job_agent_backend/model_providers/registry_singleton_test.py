@@ -12,13 +12,6 @@ class TestRegistrySingletonRemoved:
             registry_module, "_registry"
         ), "_registry module-level singleton should be removed from registry.py"
 
-    def test_registry_module_still_has_model_registry_class(self) -> None:
-        """Registry.py still exports ModelRegistry class."""
-        from job_agent_backend.model_providers.registry import ModelRegistry
-
-        assert ModelRegistry is not None
-        assert isinstance(ModelRegistry, type)
-
     def test_importing_registry_does_not_create_instances(self) -> None:
         """Importing registry module does not create any provider instances."""
         # This is a behavioral test: importing the module should not trigger

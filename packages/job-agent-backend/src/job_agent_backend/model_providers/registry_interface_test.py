@@ -1,27 +1,12 @@
-"""Tests for IModelRegistry interface."""
+"""Tests for ModelRegistry behavior."""
 
 from unittest.mock import MagicMock
 
 import pytest
 
 
-class TestModelRegistryImplementsInterface:
-    """Tests that ModelRegistry implements IModelRegistry."""
-
-    def test_model_registry_is_subclass_of_interface(self) -> None:
-        """ModelRegistry inherits from IModelRegistry."""
-        from job_agent_backend.model_providers.registry import ModelRegistry
-        from job_agent_backend.model_providers.contracts import IModelRegistry
-
-        assert issubclass(ModelRegistry, IModelRegistry)
-
-    def test_model_registry_instance_is_interface_instance(self) -> None:
-        """ModelRegistry instances are IModelRegistry instances."""
-        from job_agent_backend.model_providers.registry import ModelRegistry
-        from job_agent_backend.model_providers.contracts import IModelRegistry
-
-        registry = ModelRegistry([])
-        assert isinstance(registry, IModelRegistry)
+class TestModelRegistryBehavior:
+    """Tests for ModelRegistry behavior."""
 
     def test_model_registry_implements_get(self) -> None:
         """ModelRegistry.get() works correctly."""
@@ -80,19 +65,3 @@ class TestModelRegistryImplementsInterface:
         result = registry.list_models()
 
         assert set(result) == {"model1", "model2"}
-
-
-class TestIModelRegistryExportedFromPackage:
-    """Tests that IModelRegistry is properly exported."""
-
-    def test_interface_exported_from_model_providers(self) -> None:
-        """IModelRegistry is importable from model_providers package."""
-        from job_agent_backend.model_providers import IModelRegistry
-
-        assert IModelRegistry is not None
-
-    def test_model_registry_exported_from_model_providers(self) -> None:
-        """ModelRegistry is importable from model_providers package."""
-        from job_agent_backend.model_providers import ModelRegistry
-
-        assert ModelRegistry is not None

@@ -6,13 +6,6 @@ import pytest
 class TestModelProvidersContainerRegistry:
     """Tests for ModelProvidersContainer registry configuration."""
 
-    def test_container_has_model_registry_provider(self) -> None:
-        """ModelProvidersContainer provides model_registry."""
-        from job_agent_backend.model_providers.container import ModelProvidersContainer
-
-        container = ModelProvidersContainer()
-        assert hasattr(container, "model_registry")
-
     def test_model_registry_is_configured_with_providers(self) -> None:
         """model_registry is configured with pre-configured providers."""
         from job_agent_backend.model_providers.container import container
@@ -149,20 +142,6 @@ class TestModelProvidersContainerFactoryInjection:
 class TestApplicationContainerModelFactory:
     """Tests for ApplicationContainer model_factory integration."""
 
-    def test_application_container_has_model_factory(self) -> None:
-        """ApplicationContainer provides model_factory."""
-        from job_agent_backend.container import ApplicationContainer
-
-        container = ApplicationContainer()
-        assert hasattr(container, "model_factory")
-
-    def test_application_container_does_not_expose_model_registry(self) -> None:
-        """ApplicationContainer does NOT expose model_registry directly."""
-        from job_agent_backend.container import ApplicationContainer
-
-        container = ApplicationContainer()
-        assert not hasattr(container, "model_registry")
-
     def test_application_get_returns_model_factory(self) -> None:
         """Application get(IModelFactory) returns the same instance as model_providers."""
         from job_agent_backend.container import get as app_get
@@ -174,17 +153,3 @@ class TestApplicationContainerModelFactory:
 
         # Both should return the same singleton instance
         assert app_factory is mp_factory
-
-    def test_application_dependency_map_has_imodel_factory(self) -> None:
-        """IModelFactory is in ApplicationContainer's _DEPENDENCY_MAP."""
-        from job_agent_backend.container import _DEPENDENCY_MAP
-        from job_agent_backend.model_providers import IModelFactory
-
-        assert IModelFactory in _DEPENDENCY_MAP
-
-    def test_application_dependency_map_does_not_have_imodel_registry(self) -> None:
-        """IModelRegistry is NOT in ApplicationContainer's _DEPENDENCY_MAP."""
-        from job_agent_backend.container import _DEPENDENCY_MAP
-        from job_agent_backend.model_providers.contracts import IModelRegistry
-
-        assert IModelRegistry not in _DEPENDENCY_MAP

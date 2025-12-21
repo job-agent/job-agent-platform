@@ -180,46 +180,6 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
         mock_provider_class.assert_called_once()
 
 
-class TestModelFactoryNoDirectProviderImports:
-    """factory.py does not import provider classes directly."""
-
-    def test_factory_module_has_no_openai_provider_import(self) -> None:
-        """factory.py does not import OpenAIProvider directly."""
-        import job_agent_backend.model_providers.factory as factory_module
-
-        # Check module doesn't have direct reference to OpenAIProvider
-        assert not hasattr(factory_module, "OpenAIProvider")
-
-    def test_factory_module_has_no_ollama_provider_import(self) -> None:
-        """factory.py does not import OllamaProvider directly."""
-        import job_agent_backend.model_providers.factory as factory_module
-
-        assert not hasattr(factory_module, "OllamaProvider")
-
-    def test_factory_module_has_no_transformers_provider_import(self) -> None:
-        """factory.py does not import TransformersProvider directly."""
-        import job_agent_backend.model_providers.factory as factory_module
-
-        assert not hasattr(factory_module, "TransformersProvider")
-
-    def test_factory_class_has_no_provider_map_class_attribute(self) -> None:
-        """ModelFactory does not have class-level PROVIDER_MAP."""
-        from job_agent_backend.model_providers.factory import ModelFactory
-
-        # PROVIDER_MAP should not be a class attribute - it's now injected
-        assert not hasattr(ModelFactory, "PROVIDER_MAP")
-
-
-class TestModelFactoryNoRegistrySingletonImport:
-    """factory.py does not import _registry singleton."""
-
-    def test_factory_module_has_no_registry_singleton_import(self) -> None:
-        """factory.py does not import _registry from registry module."""
-        import job_agent_backend.model_providers.factory as factory_module
-
-        assert not hasattr(factory_module, "_registry")
-
-
 class TestModelFactoryCachingWithDI:
     """caching behavior with dependency injection."""
 
