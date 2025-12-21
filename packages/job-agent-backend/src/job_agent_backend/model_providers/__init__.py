@@ -19,16 +19,16 @@ Example usage:
 """
 
 from .factory import ModelFactory
-from .factory_interface import IModelFactory
+from ..contracts.model_factory_interface import IModelFactory
 from .providers import (
-    IModelProvider,
     BaseModelProvider,
     OpenAIProvider,
     TransformersProvider,
     OllamaProvider,
 )
+from .contracts.provider_interface import IModelProvider
 from .registry import ModelRegistry
-from .registry_interface import IModelRegistry
+from .contracts.registry_interface import IModelRegistry
 
 __all__ = [
     "ModelFactory",

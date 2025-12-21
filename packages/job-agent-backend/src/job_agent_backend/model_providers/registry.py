@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, List, Optional
 
-from .providers import IModelProvider
-from .registry_interface import IModelRegistry
+from .contracts.provider_interface import IModelProvider
+from .contracts.registry_interface import IModelRegistry
 
 
 class ModelRegistry(IModelRegistry):

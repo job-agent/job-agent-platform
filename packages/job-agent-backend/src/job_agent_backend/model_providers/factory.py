@@ -2,10 +2,10 @@
 
 from typing import Any, Dict, Optional, Type
 
-from .factory_interface import IModelFactory
+from ..contracts.model_factory_interface import IModelFactory
 from .mappers import MODEL_PROVIDER_MAP
-from .providers import IModelProvider
-from .registry_interface import IModelRegistry
+from .contracts.provider_interface import IModelProvider
+from .contracts.registry_interface import IModelRegistry
 
 
 class ModelFactory(IModelFactory):

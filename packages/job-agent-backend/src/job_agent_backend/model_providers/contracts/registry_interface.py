@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional
 
-from .providers import IModelProvider
+from .provider_interface import IModelProvider
 
 
 class IModelRegistry(ABC):

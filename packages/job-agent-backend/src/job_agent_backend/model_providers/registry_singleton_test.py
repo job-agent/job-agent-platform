@@ -5,7 +5,7 @@ class TestRegistrySingletonRemoved:
     """Tests that _registry module-level singleton is removed from registry.py."""
 
     def test_registry_module_has_no_registry_singleton(self) -> None:
-        """REQ-3: registry.py no longer creates _registry singleton at import time."""
+        """Registry.py no longer creates _registry singleton at import time."""
         import job_agent_backend.model_providers.registry as registry_module
 
         assert not hasattr(
@@ -13,14 +13,14 @@ class TestRegistrySingletonRemoved:
         ), "_registry module-level singleton should be removed from registry.py"
 
     def test_registry_module_still_has_model_registry_class(self) -> None:
-        """REQ-3: registry.py still exports ModelRegistry class."""
+        """Registry.py still exports ModelRegistry class."""
         from job_agent_backend.model_providers.registry import ModelRegistry
 
         assert ModelRegistry is not None
         assert isinstance(ModelRegistry, type)
 
     def test_importing_registry_does_not_create_instances(self) -> None:
-        """REQ-3: Importing registry module does not create any provider instances."""
+        """Importing registry module does not create any provider instances."""
         # This is a behavioral test: importing the module should not trigger
         # creation of OllamaProvider or TransformersProvider instances
         import importlib

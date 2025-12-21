@@ -10,7 +10,7 @@ from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import IJobRepository
 
 from .filter_config import FilterConfig
-from .interfaces import IFilterService
+from ..contracts import IFilterService
 
 
 class FilterService(IFilterService):

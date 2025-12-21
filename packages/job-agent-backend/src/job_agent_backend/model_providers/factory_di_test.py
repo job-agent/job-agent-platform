@@ -1,4 +1,4 @@
-"""Tests for ModelFactory dependency injection (REQ-8, REQ-9, REQ-10, REQ-11).
+"""ModelFactory dependency injection (REQ-8, REQ-9, REQ-10, REQ-11).
 
 These tests verify that ModelFactory accepts injected dependencies
 instead of using module-level singletons and class-level attributes.
@@ -13,12 +13,12 @@ from job_agent_backend.model_providers.providers import IModelProvider
 
 
 class TestModelFactoryConstructorAcceptsRegistry:
-    """Tests for REQ-8: ModelFactory constructor accepts IModelRegistry."""
+    """ModelFactory constructor accepts IModelRegistry."""
 
     def test_constructor_accepts_registry_parameter(self) -> None:
-        """REQ-8: ModelFactory.__init__ accepts registry parameter."""
+        """ModelFactory.__init__ accepts registry parameter."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
         mock_provider_map: Dict[str, Type[IModelProvider]] = {}
@@ -28,9 +28,9 @@ class TestModelFactoryConstructorAcceptsRegistry:
         assert factory is not None
 
     def test_factory_uses_injected_registry_for_model_id_lookup(self) -> None:
-        """REQ-8: ModelFactory uses injected registry for model_id lookups."""
+        """ModelFactory uses injected registry for model_id lookups."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         mock_provider = MagicMock(spec=IModelProvider)
@@ -49,9 +49,9 @@ class TestModelFactoryConstructorAcceptsRegistry:
         mock_registry.get.assert_called_once_with("test-model")
 
     def test_factory_raises_error_when_model_id_not_in_registry(self) -> None:
-        """REQ-8: Error when model_id not found in injected registry."""
+        """Error when model_id not found in injected registry."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
         mock_registry.get.return_value = None
@@ -66,12 +66,12 @@ class TestModelFactoryConstructorAcceptsRegistry:
 
 
 class TestModelFactoryConstructorAcceptsProviderMap:
-    """Tests for REQ-9: ModelFactory constructor accepts provider_map."""
+    """ModelFactory constructor accepts provider_map."""
 
     def test_constructor_accepts_provider_map_parameter(self) -> None:
-        """REQ-9: ModelFactory.__init__ accepts provider_map parameter."""
+        """ModelFactory.__init__ accepts provider_map parameter."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
         mock_provider_map = {"openai": MagicMock}
@@ -81,9 +81,9 @@ class TestModelFactoryConstructorAcceptsProviderMap:
         assert factory is not None
 
     def test_factory_uses_injected_provider_map_for_on_the_fly_creation(self) -> None:
-        """REQ-9: ModelFactory uses injected provider_map for on-the-fly creation."""
+        """ModelFactory uses injected provider_map for on-the-fly creation."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         mock_provider_instance = MagicMock(spec=IModelProvider)
@@ -100,9 +100,9 @@ class TestModelFactoryConstructorAcceptsProviderMap:
         mock_provider_class.assert_called_once()
 
     def test_factory_raises_error_when_provider_not_in_map(self) -> None:
-        """REQ-9: Error when provider not in injected provider_map."""
+        """Error when provider not in injected provider_map."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
         mock_provider_map: Dict[str, Type[IModelProvider]] = {}
@@ -114,12 +114,12 @@ class TestModelFactoryConstructorAcceptsProviderMap:
 
 
 class TestModelFactoryConstructorAcceptsModelProviderMap:
-    """Tests for REQ-10: ModelFactory constructor accepts optional model_provider_map."""
+    """ModelFactory constructor accepts optional model_provider_map."""
 
     def test_constructor_accepts_optional_model_provider_map(self) -> None:
-        """REQ-10: ModelFactory.__init__ accepts model_provider_map parameter."""
+        """ModelFactory.__init__ accepts model_provider_map parameter."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
         mock_provider_map: Dict[str, Type[IModelProvider]] = {}
@@ -134,9 +134,9 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
         assert factory is not None
 
     def test_model_provider_map_defaults_to_standard_map(self) -> None:
-        """REQ-10: model_provider_map defaults to MODEL_PROVIDER_MAP when not provided."""
+        """model_provider_map defaults to MODEL_PROVIDER_MAP when not provided."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         mock_provider_instance = MagicMock(spec=IModelProvider)
@@ -155,9 +155,9 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
         mock_provider_class.assert_called_once()
 
     def test_factory_uses_injected_model_provider_map_for_auto_detection(self) -> None:
-        """REQ-10: Factory uses injected model_provider_map for provider auto-detection."""
+        """Factory uses injected model_provider_map for provider auto-detection."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         mock_provider_instance = MagicMock(spec=IModelProvider)
@@ -181,29 +181,29 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
 
 
 class TestModelFactoryNoDirectProviderImports:
-    """Tests for REQ-11: factory.py does not import provider classes directly."""
+    """factory.py does not import provider classes directly."""
 
     def test_factory_module_has_no_openai_provider_import(self) -> None:
-        """REQ-11: factory.py does not import OpenAIProvider directly."""
+        """factory.py does not import OpenAIProvider directly."""
         import job_agent_backend.model_providers.factory as factory_module
 
         # Check module doesn't have direct reference to OpenAIProvider
         assert not hasattr(factory_module, "OpenAIProvider")
 
     def test_factory_module_has_no_ollama_provider_import(self) -> None:
-        """REQ-11: factory.py does not import OllamaProvider directly."""
+        """factory.py does not import OllamaProvider directly."""
         import job_agent_backend.model_providers.factory as factory_module
 
         assert not hasattr(factory_module, "OllamaProvider")
 
     def test_factory_module_has_no_transformers_provider_import(self) -> None:
-        """REQ-11: factory.py does not import TransformersProvider directly."""
+        """factory.py does not import TransformersProvider directly."""
         import job_agent_backend.model_providers.factory as factory_module
 
         assert not hasattr(factory_module, "TransformersProvider")
 
     def test_factory_class_has_no_provider_map_class_attribute(self) -> None:
-        """REQ-11: ModelFactory does not have class-level PROVIDER_MAP."""
+        """ModelFactory does not have class-level PROVIDER_MAP."""
         from job_agent_backend.model_providers.factory import ModelFactory
 
         # PROVIDER_MAP should not be a class attribute - it's now injected
@@ -211,22 +211,22 @@ class TestModelFactoryNoDirectProviderImports:
 
 
 class TestModelFactoryNoRegistrySingletonImport:
-    """Tests for REQ-3: factory.py does not import _registry singleton."""
+    """factory.py does not import _registry singleton."""
 
     def test_factory_module_has_no_registry_singleton_import(self) -> None:
-        """REQ-3: factory.py does not import _registry from registry module."""
+        """factory.py does not import _registry from registry module."""
         import job_agent_backend.model_providers.factory as factory_module
 
         assert not hasattr(factory_module, "_registry")
 
 
 class TestModelFactoryCachingWithDI:
-    """Tests for caching behavior with dependency injection."""
+    """caching behavior with dependency injection."""
 
     def test_caches_registered_models_with_injected_registry(self) -> None:
         """Caching works correctly with injected registry."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         mock_provider = MagicMock(spec=IModelProvider)
@@ -250,7 +250,7 @@ class TestModelFactoryCachingWithDI:
     def test_caches_on_the_fly_models_with_injected_provider_map(self) -> None:
         """Caching works correctly with injected provider_map."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         call_count = 0
@@ -276,12 +276,12 @@ class TestModelFactoryCachingWithDI:
 
 
 class TestModelFactoryHandlesCaseInsensitiveProviderWithDI:
-    """Tests for case-insensitive provider handling with DI."""
+    """case-insensitive provider handling with DI."""
 
     def test_handles_case_insensitive_provider_with_injected_map(self) -> None:
         """Provider name is case-insensitive with injected provider_map."""
         from job_agent_backend.model_providers.factory import ModelFactory
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_model = MagicMock()
         mock_provider_instance = MagicMock(spec=IModelProvider)

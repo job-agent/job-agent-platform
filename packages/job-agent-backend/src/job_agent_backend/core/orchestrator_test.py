@@ -444,7 +444,7 @@ class TestJobAgentOrchestrator:
 
 
 class TestOrchestratorFilterJobsListWithRejected:
-    """Tests for filter_jobs_list integration with filtered jobs storage.
+    """filter_jobs_list integration with filtered jobs storage.
 
     These tests verify the NEW behavior where filter_jobs_list:
     1. Uses filter_with_rejected to get both passed and rejected jobs
@@ -640,11 +640,6 @@ class TestOrchestratorDateCalculation:
     These tests verify the NEW behavior where the orchestrator accepts a `days`
     parameter and auto-calculates `posted_after` from the job repository when
     `days=None`.
-
-    REQ-3: Orchestrator accepts days parameter instead of posted_after
-    REQ-4: Orchestrator auto-calculates posted_after when days is None
-    REQ-5: Orchestrator converts explicit days to posted_after
-    REQ-6: MAX_AUTO_DAYS constant moves to backend
     """
 
     @pytest.fixture
@@ -657,7 +652,7 @@ class TestOrchestratorDateCalculation:
     ):
         """Orchestrator should convert explicit days=7 to posted_after = now - 7 days.
 
-        REQ-5: When days is explicitly provided, calculate posted_after from it.
+        When days is explicitly provided, calculate posted_after from it.
         """
         mock_scrapper = MagicMock()
         mock_scrapper.scrape_jobs_streaming.return_value = iter([[{"title": "Test Job"}]])
@@ -689,7 +684,7 @@ class TestOrchestratorDateCalculation:
     ):
         """Orchestrator should auto-calculate posted_after from repository when days=None.
 
-        REQ-4: When days is None, query job_repository.get_latest_updated_at().
+        When days is None, query job_repository.get_latest_updated_at().
         """
         from datetime import datetime, timedelta, timezone
 
@@ -724,7 +719,7 @@ class TestOrchestratorDateCalculation:
     ):
         """Orchestrator should cap auto-calculated date at MAX_AUTO_DAYS (5 days).
 
-        REQ-4: If latest job is older than MAX_AUTO_DAYS, cap at MAX_AUTO_DAYS.
+        If latest job is older than MAX_AUTO_DAYS, cap at MAX_AUTO_DAYS.
         """
         from datetime import datetime, timedelta, timezone
 
@@ -760,7 +755,7 @@ class TestOrchestratorDateCalculation:
     ):
         """Orchestrator should default to MAX_AUTO_DAYS when no jobs exist.
 
-        REQ-4: When get_latest_updated_at returns None, use now - MAX_AUTO_DAYS.
+        When get_latest_updated_at returns None, use now - MAX_AUTO_DAYS.
         """
         from datetime import datetime, timedelta, timezone
 
@@ -794,7 +789,7 @@ class TestOrchestratorDateCalculation:
     ):
         """scrape_jobs_streaming should convert explicit days to posted_after.
 
-        REQ-5: Streaming variant should also support days parameter.
+        Streaming variant should also support days parameter.
         """
         from datetime import datetime, timedelta, timezone
 
@@ -824,7 +819,7 @@ class TestOrchestratorDateCalculation:
     ):
         """scrape_jobs_streaming should auto-calculate when days=None.
 
-        REQ-4: Streaming variant should also support auto-calculation.
+        Streaming variant should also support auto-calculation.
         """
         from datetime import datetime, timedelta, timezone
 
@@ -856,7 +851,7 @@ class TestOrchestratorDateCalculation:
     ):
         """run_complete_pipeline should accept days parameter.
 
-        REQ-3: All orchestrator methods should accept days instead of posted_after.
+        All orchestrator methods should accept days instead of posted_after.
         """
         from datetime import datetime, timedelta, timezone
 

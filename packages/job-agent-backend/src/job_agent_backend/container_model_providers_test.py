@@ -67,7 +67,7 @@ class TestModelProvidersContainerGet:
     def test_get_imodel_registry_returns_model_registry(self) -> None:
         """get(IModelRegistry) returns configured ModelRegistry."""
         from job_agent_backend.model_providers.container import get
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         registry = get(IModelRegistry)
 
@@ -185,6 +185,6 @@ class TestApplicationContainerModelFactory:
     def test_application_dependency_map_does_not_have_imodel_registry(self) -> None:
         """IModelRegistry is NOT in ApplicationContainer's _DEPENDENCY_MAP."""
         from job_agent_backend.container import _DEPENDENCY_MAP
-        from job_agent_backend.model_providers.registry_interface import IModelRegistry
+        from job_agent_backend.model_providers.contracts import IModelRegistry
 
         assert IModelRegistry not in _DEPENDENCY_MAP

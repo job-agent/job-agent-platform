@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from typing import Any
 
-from .provider_interface import IModelProvider
+from ..contracts.provider_interface import IModelProvider
 
 
 class BaseModelProvider(IModelProvider):

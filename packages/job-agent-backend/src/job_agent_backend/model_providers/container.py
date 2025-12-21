@@ -5,11 +5,11 @@ from typing import Type, TypeVar, overload
 from dependency_injector import containers, providers
 
 from .factory import ModelFactory
-from .factory_interface import IModelFactory
+from ..contracts.model_factory_interface import IModelFactory
 from .mappers import MODEL_PROVIDER_MAP, PROVIDER_MAP
 from .providers import OllamaProvider, TransformersProvider
 from .registry import ModelRegistry
-from .registry_interface import IModelRegistry
+from .contracts.registry_interface import IModelRegistry
 
 T = TypeVar("T")
 

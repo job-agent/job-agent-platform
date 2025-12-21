@@ -67,7 +67,7 @@ class TestBuildDependencies:
 
 
 class TestCreateCvRepository:
-    """Tests for _create_cv_repository function."""
+    """_create_cv_repository function."""
 
     @patch("telegram_bot.di.container")
     def test_creates_repository_for_user(self, mock_container):
@@ -102,7 +102,7 @@ class TestCreateCvRepository:
 
 
 class TestGetDependencies:
-    """Tests for get_dependencies function."""
+    """get_dependencies function."""
 
     def test_gets_dependencies_from_context(self):
         """get_dependencies should retrieve dependencies from context."""

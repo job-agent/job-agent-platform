@@ -73,3 +73,5 @@ Thumbs.db
 data/
 
 .langgraph_api
+
+.workflow

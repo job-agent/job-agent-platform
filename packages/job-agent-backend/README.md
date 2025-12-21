@@ -46,11 +46,13 @@ job-agent-backend/
 │   │   └── cvs/
 │   └── job_agent_backend/
 │       ├── container.py
+│       ├── contracts/           # Package-level interfaces
 │       ├── core/
 │       ├── cv_loader/
 │       ├── filter_service/
 │       ├── messaging/
 │       ├── model_providers/
+│       │   └── contracts/       # Service-level interfaces
 │       └── workflows/
 └── tests/
 ```
@@ -79,7 +81,7 @@ Pre-configured AI models (e.g., `"skill-extraction"`, `"pii-removal"`, `"embeddi
 
 ```python
 from job_agent_backend.container import get
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 
 factory = get(IModelFactory)
 model = factory.get_model(model_id="skill-extraction")
