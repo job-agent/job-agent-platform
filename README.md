@@ -192,6 +192,10 @@ Create a `.env` file in the repository root with the following variables:
 - `RABBITMQ_PORT` — Required. RabbitMQ AMQP port (default: 5672).
 - `RABBITMQ_MANAGEMENT_PORT` — Optional. RabbitMQ Management UI port (default: 15672).
 
+### Optional - Access Control
+
+- `TELEGRAM_ALLOWED_USER_IDS` — Optional. Comma-separated list of Telegram user IDs allowed to use the bot. If not set or empty, all users can access the bot. To find your Telegram user ID, message [@userinfobot](https://t.me/userinfobot). Example: `123456789,987654321`
+
 ### Optional - LangSmith Tracing
 
 - `LANGSMITH_API_KEY` — Optional. Enables LangSmith tracing and analytics for LangGraph workflow runs.
@@ -206,6 +210,8 @@ OPENAI_API_KEY=sk-...
 
 # Telegram
 TELEGRAM_BOT_TOKEN=1234567890:ABC...
+# Restrict bot access (optional, omit to allow all users)
+TELEGRAM_ALLOWED_USER_IDS=123456789
 
 # PostgreSQL
 DATABASE_URL=postgresql://jobagent:password123@localhost:5432/job_agent
@@ -382,6 +388,7 @@ If the bot doesn't respond to messages:
 2. Check bot logs: `docker compose logs telegram_bot -f`
 3. Ensure the bot is started: `docker compose ps telegram_bot`
 4. Verify RabbitMQ connection is established
+5. If `TELEGRAM_ALLOWED_USER_IDS` is set, verify your Telegram user ID is in the list (unauthorized users are silently ignored)
 
 ## Contributing
 

@@ -40,6 +40,20 @@ TELEGRAM_BOT_TOKEN=123456:example-token-from-botfather
 # Additional scrapper service variables as required by job-agent-backend
 ```
 
+### Access Control
+
+Optionally restrict bot access to specific Telegram users:
+
+```bash
+# Comma-separated list of allowed Telegram user IDs
+TELEGRAM_ALLOWED_USER_IDS=123456789,987654321
+```
+
+- If not set or empty, all users can access the bot (default behavior).
+- Unauthorized users are silently ignored (no response).
+- To find your Telegram user ID, message [@userinfobot](https://t.me/userinfobot).
+- Invalid entries (non-numeric values) are logged and skipped.
+
 Ensure the database is migrated before running the bot. The provided Docker entrypoint runs Alembic migrations for you.
 
 ## Usage
@@ -94,6 +108,7 @@ telegram_bot/
         ├── main.py
         ├── bot.py
         ├── di.py
+        ├── access_control.py   # User access control (allowlist)
         └── handlers/
             ├── start/
             ├── help/
