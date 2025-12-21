@@ -1,7 +1,7 @@
 """PII removal nodes package."""
 
-from .remove_pii import remove_pii_node
+from .remove_pii import create_remove_pii_node
 
 __all__ = [
-    "remove_pii_node",
+    "create_remove_pii_node",
 ]

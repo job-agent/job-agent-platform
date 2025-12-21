@@ -1,41 +1,55 @@
 """Helper functions for PII removal."""
 
-from job_agent_backend.model_providers import get_model
+from typing import Callable
+
+from job_agent_backend.model_providers import IModelFactory
 
 from .prompts import REMOVE_PII_PROMPT
 
 
-def anonymize_text(text: str) -> str:
+def create_anonymize_text(model_factory: IModelFactory) -> Callable[[str], str]:
     """
-    Anonymize PII in the given text using phi3:mini via Ollama.
+    Factory function to create an anonymize_text function with injected dependencies.
 
     Args:
-        text: Text containing potential PII
+        model_factory: Factory used to create model instances
 
     Returns:
-        Anonymized text with PII removed
-
-    Raises:
-        RuntimeError: If anonymization fails or returns invalid content
+        Configured anonymize_text function
     """
-    # Get model (provider auto-detected, cached by factory)
-    model = get_model(model_name="phi3:mini")
 
-    messages = REMOVE_PII_PROMPT.format_messages(cv_content=text)
+    def anonymize_text(text: str) -> str:
+        """
+        Anonymize PII in the given text using phi3:mini via Ollama.
 
-    try:
-        response = model.invoke(messages)
-    except Exception as e:
-        raise RuntimeError(f"Failed to invoke PII anonymization model: {e}") from e
+        Args:
+            text: Text containing potential PII
 
-    if hasattr(response, "content"):
-        anonymized_text = response.content
-    else:
-        anonymized_text = str(response)
+        Returns:
+            Anonymized text with PII removed
 
-    anonymized_text = anonymized_text.strip()
+        Raises:
+            RuntimeError: If anonymization fails or returns invalid content
+        """
+        model = model_factory.get_model(model_id="pii-removal")
 
-    if not anonymized_text:
-        raise RuntimeError("PII anonymization returned empty content")
+        messages = REMOVE_PII_PROMPT.format_messages(cv_content=text)
 
-    return anonymized_text
+        try:
+            response = model.invoke(messages)
+        except Exception as e:
+            raise RuntimeError(f"Failed to invoke PII anonymization model: {e}") from e
+
+        if hasattr(response, "content"):
+            anonymized_text = response.content
+        else:
+            anonymized_text = str(response)
+
+        anonymized_text = anonymized_text.strip()
+
+        if not anonymized_text:
+            raise RuntimeError("PII anonymization returned empty content")
+
+        return anonymized_text
+
+    return anonymize_text

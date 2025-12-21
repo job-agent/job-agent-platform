@@ -162,21 +162,12 @@ class TestFilterService:
         assert result[0]["job_id"] == sample_job_dict["job_id"]
         assert result[0]["title"] == sample_job_dict["title"]
 
-    def test_filter_excludes_jobs_present_in_repository(self):
-        class StubRepository:
-            def __init__(self):
-                self.external_ids = {"100"}
-                self.active_pairs = {("Duplicate Title", "Company A")}
-
-            def get_by_external_id(self, external_id, source=None):
-                if external_id in self.external_ids:
-                    return {"external_id": external_id}
-                return None
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                return (title, company_name) in self.active_pairs
-
-        service = FilterService(job_repository_factory=lambda: StubRepository())
+    def test_filter_excludes_jobs_present_in_repository(self, stub_job_repository_factory):
+        repo = stub_job_repository_factory(
+            external_ids={"100"},
+            active_pairs={("Duplicate Title", "Company A")},
+        )
+        service = FilterService(job_repository_factory=lambda: repo)
 
         jobs = [
             {
@@ -226,30 +217,25 @@ class TestFilterService:
         with pytest.raises(RuntimeError, match="Factory failure"):
             service.filter(jobs)
 
-    def test_filter_raises_when_get_by_external_id_throws(self):
+    def test_filter_raises_when_get_by_external_id_throws(self, failing_job_repository_factory):
         """Test that exception from repository.get_by_external_id propagates."""
-
-        class FailingRepository:
-            def get_by_external_id(self, external_id, source=None):
-                raise RuntimeError("get_by_external_id failure")
-
-        service = FilterService(job_repository_factory=lambda: FailingRepository())
+        repo = failing_job_repository_factory(
+            fail_on_get_by_external_id=True,
+            error_message="get_by_external_id failure",
+        )
+        service = FilterService(job_repository_factory=lambda: repo)
         jobs = [{"job_id": 1, "experience_months": 12, "location": {"can_apply": True}}]
 
         with pytest.raises(RuntimeError, match="get_by_external_id failure"):
             service.filter(jobs)
 
-    def test_filter_raises_when_has_active_job_throws(self):
+    def test_filter_raises_when_has_active_job_throws(self, failing_job_repository_factory):
         """Test that exception from repository.has_active_job_with_title_and_company propagates."""
-
-        class FailingRepository:
-            def get_by_external_id(self, external_id, source=None):
-                return None
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                raise RuntimeError("has_active_job failure")
-
-        service = FilterService(job_repository_factory=lambda: FailingRepository())
+        repo = failing_job_repository_factory(
+            fail_on_has_active_job=True,
+            error_message="has_active_job failure",
+        )
+        service = FilterService(job_repository_factory=lambda: repo)
         jobs = [
             {
                 "job_id": 1,
@@ -281,28 +267,18 @@ class TestFilterService:
         with pytest.raises(AttributeError):
             service.filter(jobs)
 
-    def test_filter_excludes_previously_stored_irrelevant_jobs(self):
+    def test_filter_excludes_previously_stored_irrelevant_jobs(self, stub_job_repository_factory):
         """Test that previously stored irrelevant jobs are filtered out.
 
         When a job was previously processed and stored as irrelevant (is_relevant=False),
         it should still be excluded from future searches to avoid re-processing.
         """
-
-        class StubRepository:
-            def __init__(self):
-                # Simulates a job that was stored as irrelevant
-                self.stored_jobs = {
-                    "123": {"external_id": "123", "is_relevant": False},
-                }
-
-            def get_by_external_id(self, external_id, source=None):
-                # Returns the job regardless of is_relevant value
-                return self.stored_jobs.get(external_id)
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                return False
-
-        service = FilterService(job_repository_factory=lambda: StubRepository())
+        repo = stub_job_repository_factory(
+            stored_jobs={
+                "123": {"external_id": "123", "is_relevant": False},
+            }
+        )
+        service = FilterService(job_repository_factory=lambda: repo)
 
         jobs = [
             {
@@ -477,26 +453,16 @@ class TestFilterServiceWithRejected:
         assert len(passed) == 0
         assert len(rejected) == 2
 
-    def test_filter_with_rejected_excludes_existing_jobs_into_neither_list(self):
+    def test_filter_with_rejected_excludes_existing_jobs_into_neither_list(
+        self, stub_job_repository_factory
+    ):
         """Test that existing repository jobs are excluded from BOTH lists.
 
         Jobs that already exist in the repository should not appear in either
         passed or rejected lists - they're simply skipped.
         """
-
-        class StubRepository:
-            def __init__(self):
-                self.external_ids = {"100"}
-
-            def get_by_external_id(self, external_id, source=None):
-                if external_id in self.external_ids:
-                    return {"external_id": external_id}
-                return None
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                return False
-
-        service = FilterService(job_repository_factory=lambda: StubRepository())
+        repo = stub_job_repository_factory(external_ids={"100"})
+        service = FilterService(job_repository_factory=lambda: repo)
         service.configure({"max_months_of_experience": 60})
 
         jobs = [

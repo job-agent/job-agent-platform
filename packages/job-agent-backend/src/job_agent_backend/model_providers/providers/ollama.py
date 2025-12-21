@@ -11,7 +11,7 @@ class OllamaProvider(BaseModelProvider):
 
     def __init__(
         self,
-        model_name: str = "phi3:mini",
+        model_name: str,
         temperature: float = 0.0,
         base_url: Optional[str] = None,
         **kwargs: Any,

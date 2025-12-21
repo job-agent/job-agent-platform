@@ -60,9 +60,9 @@ class JobMapper(IJobMapper):
         mapped_data["job_type"] = job_data.get("employment_type")
         mapped_data["experience_months"] = job_data.get("experience_months")
 
-        if must_have_skills := job_data.get("must_have_skills"):
+        if (must_have_skills := job_data.get("must_have_skills")) is not None:
             mapped_data["must_have_skills"] = must_have_skills
-        if nice_to_have_skills := job_data.get("nice_to_have_skills"):
+        if (nice_to_have_skills := job_data.get("nice_to_have_skills")) is not None:
             mapped_data["nice_to_have_skills"] = nice_to_have_skills
 
         mapped_data["is_relevant"] = job_data.get("is_relevant", True)

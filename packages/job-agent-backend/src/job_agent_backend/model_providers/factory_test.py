@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from job_agent_backend.model_providers.factory import ModelFactory
-from job_agent_backend.model_providers.config import ModelConfig, _registry
+from job_agent_backend.model_providers.config import _registry
 
 
 class TestModelFactoryGenerateCacheKey:
@@ -46,19 +46,19 @@ class TestModelFactoryGetModel:
     def test_raises_error_for_unknown_model_id(self) -> None:
         factory = ModelFactory()
 
-        with pytest.raises(ValueError, match="Model 'nonexistent-model' not found"):
+        with pytest.raises(ValueError, match="not found"):
             factory.get_model(model_id="nonexistent-model")
 
     def test_raises_error_for_unknown_model_name_without_provider(self) -> None:
         factory = ModelFactory()
 
-        with pytest.raises(ValueError, match="Cannot auto-detect provider for model"):
+        with pytest.raises(ValueError, match="Cannot auto-detect provider"):
             factory.get_model(model_name="unknown-model-xyz")
 
     def test_raises_error_for_unsupported_provider(self) -> None:
         factory = ModelFactory()
 
-        with pytest.raises(ValueError, match="Unsupported provider: unsupported"):
+        with pytest.raises(ValueError, match="Unsupported provider"):
             factory.get_model(provider="unsupported", model_name="some-model")
 
     def test_creates_model_with_explicit_provider_and_model_name(self) -> None:
@@ -89,92 +89,22 @@ class TestModelFactoryGetModel:
         assert result == mock_model
         mock_provider_class.assert_called_once()
 
-    def test_creates_model_from_model_id_config(self) -> None:
+    def test_creates_model_from_registered_provider(self) -> None:
         factory = ModelFactory()
         mock_model = MagicMock()
-        mock_provider_instance = MagicMock()
-        mock_provider_instance.get_model.return_value = mock_model
-        mock_provider_class = MagicMock(return_value=mock_provider_instance)
-        original_models = _registry._models.copy()
+        mock_provider = MagicMock()
+        mock_provider.get_model.return_value = mock_model
+        original_providers = _registry._providers.copy()
 
         try:
-            config = ModelConfig(
-                model_id="test-config-model",
-                provider="openai",
-                model_name="gpt-4",
-                temperature=0.7,
-                kwargs={"max_tokens": 100},
-            )
-            _registry.register(config)
+            _registry._providers["test-registered"] = mock_provider
 
-            factory.PROVIDER_MAP = {"openai": mock_provider_class}
-            result = factory.get_model(model_id="test-config-model", api_key="test-key")
+            result = factory.get_model(model_id="test-registered")
 
             assert result == mock_model
-            mock_provider_class.assert_called_once_with(
-                model_name="gpt-4", temperature=0.7, max_tokens=100, api_key="test-key"
-            )
+            mock_provider.get_model.assert_called_once()
         finally:
-            _registry._models = original_models
-
-    def test_overrides_config_temperature(self) -> None:
-        factory = ModelFactory()
-        mock_model = MagicMock()
-        mock_provider_instance = MagicMock()
-        mock_provider_instance.get_model.return_value = mock_model
-        mock_provider_class = MagicMock(return_value=mock_provider_instance)
-        original_models = _registry._models.copy()
-
-        try:
-            config = ModelConfig(
-                model_id="temp-override-model",
-                provider="openai",
-                model_name="gpt-4",
-                temperature=0.7,
-            )
-            _registry.register(config)
-
-            factory.PROVIDER_MAP = {"openai": mock_provider_class}
-            factory.get_model(model_id="temp-override-model", temperature=0.2, api_key="key")
-
-            mock_provider_class.assert_called_once_with(
-                model_name="gpt-4", temperature=0.2, api_key="key"
-            )
-        finally:
-            _registry._models = original_models
-
-    def test_merges_config_kwargs_with_call_kwargs(self) -> None:
-        factory = ModelFactory()
-        mock_model = MagicMock()
-        mock_provider_instance = MagicMock()
-        mock_provider_instance.get_model.return_value = mock_model
-        mock_provider_class = MagicMock(return_value=mock_provider_instance)
-        original_models = _registry._models.copy()
-
-        try:
-            config = ModelConfig(
-                model_id="kwargs-merge-model",
-                provider="openai",
-                model_name="gpt-4",
-                kwargs={"max_tokens": 100, "top_p": 0.9},
-            )
-            _registry.register(config)
-
-            factory.PROVIDER_MAP = {"openai": mock_provider_class}
-            factory.get_model(
-                model_id="kwargs-merge-model", top_p=0.5, new_param="value", api_key="key"
-            )
-
-            mock_provider_class.assert_called_once_with(
-                model_name="gpt-4",
-                temperature=0.0,
-                max_tokens=100,
-                top_p=0.5,
-                new_param="value",
-                api_key="key",
-            )
-        finally:
-            _registry._models = original_models
+            _registry._providers = original_providers
 
     def test_handles_case_insensitive_provider(self) -> None:
         factory = ModelFactory()
@@ -280,26 +210,20 @@ class TestModelFactoryCaching:
 
         assert factory.get_cache_size() == 0
 
-    def test_creates_new_model_after_cache_clear(self) -> None:
+    def test_caches_registered_models(self) -> None:
         factory = ModelFactory()
-        mock_model1 = MagicMock()
-        mock_model2 = MagicMock()
-        models = [mock_model1, mock_model2]
-        call_count = 0
+        mock_model = MagicMock()
+        mock_provider = MagicMock()
+        mock_provider.get_model.return_value = mock_model
+        original_providers = _registry._providers.copy()
 
-        def create_provider(*args, **kwargs):
-            nonlocal call_count
-            mock_instance = MagicMock()
-            mock_instance.get_model.return_value = models[call_count]
-            call_count += 1
-            return mock_instance
+        try:
+            _registry._providers["cached-test"] = mock_provider
 
-        mock_provider_class = MagicMock(side_effect=create_provider)
-        factory.PROVIDER_MAP = {"openai": mock_provider_class}
+            result1 = factory.get_model(model_id="cached-test")
+            result2 = factory.get_model(model_id="cached-test")
 
-        result1 = factory.get_model(provider="openai", model_name="gpt-4", api_key="key")
-        factory.clear_cache()
-        result2 = factory.get_model(provider="openai", model_name="gpt-4", api_key="key")
-
-        assert result1 is not result2
-        assert call_count == 2
+            assert result1 is result2
+            mock_provider.get_model.assert_called_once()
+        finally:
+            _registry._providers = original_providers

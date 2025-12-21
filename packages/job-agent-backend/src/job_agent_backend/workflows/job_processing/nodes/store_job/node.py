@@ -53,11 +53,11 @@ def create_store_job_node(
             # Pass is_relevant from workflow state (defaults to True for backwards compatibility)
             job_create_data["is_relevant"] = state.get("is_relevant", True)
 
-            if extracted_must_have_skills := state.get("extracted_must_have_skills"):
+            if (extracted_must_have_skills := state.get("extracted_must_have_skills")) is not None:
                 job_create_data["must_have_skills"] = extracted_must_have_skills
                 print(f"  Added {len(extracted_must_have_skills)} must-have skills")
 
-            if extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills"):
+            if (extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills")) is not None:
                 job_create_data["nice_to_have_skills"] = extracted_nice_to_have_skills
                 print(f"  Added {len(extracted_nice_to_have_skills)} nice-to-have skills")
 

@@ -23,7 +23,7 @@ class TestJobRepository:
         """Create a JobRepository instance."""
         return JobRepository(reference_data_service, job_mapper, db_session)
 
-    def test_get_by_external_id_found(self, repository, sample_job):
+    def test_get_by_external_id_returns_job_when_exists(self, repository, sample_job):
         """Test retrieving a job by external_id when it exists."""
         job = repository.get_by_external_id(sample_job.external_id, sample_job.source)
 
@@ -32,26 +32,26 @@ class TestJobRepository:
         assert job.external_id == sample_job.external_id
         assert job.source == sample_job.source
 
-    def test_get_by_external_id_not_found(self, repository):
+    def test_get_by_external_id_returns_none_when_not_exists(self, repository):
         """Test retrieving a job that doesn't exist returns None."""
         job = repository.get_by_external_id("nonexistent-id", "Unknown")
 
         assert job is None
 
-    def test_get_by_external_id_without_source(self, repository, sample_job):
+    def test_get_by_external_id_returns_job_when_source_omitted(self, repository, sample_job):
         """Test retrieving job by external_id without specifying source."""
         job = repository.get_by_external_id(sample_job.external_id)
 
         assert job is not None
         assert job.external_id == sample_job.external_id
 
-    def test_get_by_external_id_with_wrong_source(self, repository, sample_job):
+    def test_get_by_external_id_returns_none_when_source_mismatch(self, repository, sample_job):
         """Test that wrong source returns None even if external_id matches."""
         job = repository.get_by_external_id(sample_job.external_id, "WrongSource")
 
         assert job is None
 
-    def test_create_job_with_jobdict(self, repository, sample_job_dict, db_session):
+    def test_create_stores_all_jobdict_fields_correctly(self, repository, sample_job_dict, db_session):
         """Test creating a job from JobDict contract data."""
         job = repository.create(sample_job_dict)
 
@@ -75,7 +75,7 @@ class TestJobRepository:
         assert job.industry_rel is not None
         assert job.industry_rel.name == "Information Technology"
 
-    def test_create_job_with_jobcreate(self, repository, sample_job_create_dict, db_session):
+    def test_create_stores_skills_from_jobcreate(self, repository, sample_job_create_dict, db_session):
         """Test creating a job from JobCreate contract data with skills."""
         job = repository.create(sample_job_create_dict)
 
@@ -356,11 +356,12 @@ class TestJobRepository:
         assert retrieved is not None
         assert retrieved.id == job1.id
 
-    def test_create_with_empty_skills_arrays(self, repository):
+    def test_create_preserves_empty_skills_arrays(self, repository):
         """Test creating job with empty skills arrays.
 
-        Note: Empty arrays are not passed through by the mapper due to
-        truthy/falsy check, so they become None. This tests the current behavior.
+        Empty skill lists explicitly indicate "no skills found" which is
+        semantically different from "skills not extracted" (None/missing).
+        Empty lists SHOULD be preserved to maintain this distinction.
         """
         job_data = {
             "job_id": 888,
@@ -371,8 +372,8 @@ class TestJobRepository:
         }
         job = repository.create(job_data)
 
-        assert job.must_have_skills is None
-        assert job.nice_to_have_skills is None
+        assert job.must_have_skills == []
+        assert job.nice_to_have_skills == []
 
     def test_create_handles_mapped_data_correctly(self, repository, sample_job_dict):
         """Test that mapper transformations are applied before create."""
@@ -525,7 +526,7 @@ class TestJobRepositoryHasActiveJobWithTitleAndCompany:
         """Create a JobRepository instance."""
         return JobRepository(reference_data_service, job_mapper, db_session)
 
-    def test_returns_true_when_active_job_exists(
+    def test_has_active_job_returns_true_when_active_job_exists(
         self, repository, reference_data_service, db_session
     ):
         """Test returns True when matching active job exists."""
@@ -552,7 +553,7 @@ class TestJobRepositoryHasActiveJobWithTitleAndCompany:
 
         assert result is True
 
-    def test_returns_false_when_no_matching_job(self, repository, sample_job):
+    def test_has_active_job_returns_false_when_no_matching_job(self, repository, sample_job):
         """Test returns False when no job matches title and company."""
         result = repository.has_active_job_with_title_and_company(
             "Nonexistent Title", "Nonexistent Company"
@@ -560,13 +561,13 @@ class TestJobRepositoryHasActiveJobWithTitleAndCompany:
 
         assert result is False
 
-    def test_returns_false_when_title_matches_but_company_does_not(self, repository, sample_job):
+    def test_has_active_job_returns_false_when_title_mismatch(self, repository, sample_job):
         """Test returns False when title matches but company doesn't."""
         result = repository.has_active_job_with_title_and_company(sample_job.title, "Wrong Company")
 
         assert result is False
 
-    def test_returns_false_when_company_matches_but_title_does_not(self, repository, sample_job):
+    def test_has_active_job_returns_false_when_company_mismatch(self, repository, sample_job):
         """Test returns False when company matches but title doesn't."""
         result = repository.has_active_job_with_title_and_company(
             "Wrong Title", sample_job.company_rel.name
@@ -574,7 +575,7 @@ class TestJobRepositoryHasActiveJobWithTitleAndCompany:
 
         assert result is False
 
-    def test_returns_true_when_job_has_no_expiry(
+    def test_has_active_job_returns_true_when_job_has_no_expiry(
         self, repository, reference_data_service, db_session
     ):
         """Test returns True when matching job has no expiry date."""
@@ -592,7 +593,7 @@ class TestJobRepositoryHasActiveJobWithTitleAndCompany:
 
         assert result is True
 
-    def test_returns_false_when_job_is_expired(
+    def test_has_active_job_returns_false_when_job_is_expired(
         self, repository, reference_data_service, db_session
     ):
         """Test returns False when matching job is expired."""
@@ -617,7 +618,7 @@ class TestJobRepositoryHasActiveJobWithTitleAndCompany:
 
         assert result is False
 
-    def test_returns_true_when_job_expires_in_future(
+    def test_has_active_job_returns_true_when_job_expires_in_future(
         self, repository, reference_data_service, db_session
     ):
         """Test returns True when matching job expires in the future."""
@@ -651,13 +652,13 @@ class TestJobRepositoryGetExistingUrlsBySource:
         """Create a JobRepository instance."""
         return JobRepository(reference_data_service, job_mapper, db_session)
 
-    def test_returns_empty_list_when_no_jobs(self, repository):
+    def test_get_existing_urls_returns_empty_list_when_no_jobs(self, repository):
         """Test returns empty list when no jobs exist for source."""
         result = repository.get_existing_urls_by_source("nonexistent_source")
 
         assert result == []
 
-    def test_returns_urls_for_matching_source(self, repository, db_session):
+    def test_get_existing_urls_returns_urls_for_matching_source(self, repository, db_session):
         """Test returns URLs for jobs with matching source."""
         from datetime import datetime, UTC
 
@@ -688,7 +689,7 @@ class TestJobRepositoryGetExistingUrlsBySource:
         assert "https://djinni.co/jobs/1" in result
         assert "https://djinni.co/jobs/2" in result
 
-    def test_excludes_jobs_from_other_sources(self, repository, db_session):
+    def test_get_existing_urls_excludes_jobs_from_other_sources(self, repository, db_session):
         """Test excludes URLs from jobs with different source."""
         from datetime import datetime, UTC
 
@@ -719,7 +720,7 @@ class TestJobRepositoryGetExistingUrlsBySource:
         assert "https://djinni.co/jobs/1" in result
         assert "https://linkedin.com/jobs/2" not in result
 
-    def test_excludes_jobs_with_null_source_url(self, repository, db_session):
+    def test_get_existing_urls_excludes_jobs_with_null_source_url(self, repository, db_session):
         """Test excludes jobs where source_url is None."""
         from datetime import datetime, UTC
 
@@ -749,7 +750,7 @@ class TestJobRepositoryGetExistingUrlsBySource:
         assert len(result) == 1
         assert "https://djinni.co/jobs/1" in result
 
-    def test_filters_by_days_parameter(self, repository, db_session):
+    def test_get_existing_urls_filters_by_days_parameter(self, repository, db_session):
         """Test filters jobs by posted_at within days parameter."""
         from datetime import datetime, timedelta, UTC
 
@@ -784,7 +785,7 @@ class TestJobRepositoryGetExistingUrlsBySource:
         assert "https://djinni.co/jobs/recent" in result
         assert "https://djinni.co/jobs/old" not in result
 
-    def test_returns_all_urls_when_days_is_none(self, repository, db_session):
+    def test_get_existing_urls_returns_all_when_days_is_none(self, repository, db_session):
         """Test returns all URLs when days parameter is None."""
         from datetime import datetime, timedelta, UTC
 
@@ -819,7 +820,7 @@ class TestJobRepositoryGetExistingUrlsBySource:
         assert "https://djinni.co/jobs/recent" in result
         assert "https://djinni.co/jobs/old" in result
 
-    def test_returns_list_type(self, repository):
+    def test_get_existing_urls_returns_list_type(self, repository):
         """Test that return type is always a list."""
         result = repository.get_existing_urls_by_source("any_source")
 
@@ -1289,7 +1290,7 @@ class TestJobRepositoryGetLatestUpdatedAt:
         """Create a JobRepository instance."""
         return JobRepository(reference_data_service, job_mapper, db_session)
 
-    def test_returns_none_when_no_jobs_exist(self, repository):
+    def test_get_latest_updated_at_returns_none_when_no_jobs_exist(self, repository):
         """Test that get_latest_updated_at returns None when database is empty.
 
         REQ-3: When no jobs exist, the handler should default to 5 days.
@@ -1299,7 +1300,7 @@ class TestJobRepositoryGetLatestUpdatedAt:
 
         assert result is None
 
-    def test_returns_latest_updated_at_when_jobs_exist(self, repository, db_session):
+    def test_get_latest_updated_at_returns_most_recent_timestamp(self, repository, db_session):
         """Test that get_latest_updated_at returns the most recent timestamp.
 
         REQ-1: Auto-calculate posted_after date from latest job's updated_at.
@@ -1353,7 +1354,9 @@ class TestJobRepositoryGetLatestUpdatedAt:
             recent_time_compare = recent_time
         assert abs((result - recent_time_compare).total_seconds()) < 1
 
-    def test_returns_correct_timestamp_with_multiple_jobs(self, repository, db_session):
+    def test_get_latest_updated_at_identifies_correct_timestamp_with_multiple_jobs(
+        self, repository, db_session
+    ):
         """Test correct identification of latest timestamp across many jobs.
 
         REQ-1: The system should query for the most recent updated_at from jobs table.
@@ -1391,7 +1394,7 @@ class TestJobRepositoryGetLatestUpdatedAt:
         expected_latest = timestamps[3]  # days=1 is the most recent
         assert abs((result - expected_latest).total_seconds()) < 1
 
-    def test_returns_datetime_type(self, repository, db_session):
+    def test_get_latest_updated_at_returns_datetime_type(self, repository, db_session):
         """Test that get_latest_updated_at returns a datetime object.
 
         REQ-7: Handle timezone correctly for date comparisons.

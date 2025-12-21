@@ -1,10 +1,12 @@
-"""Base provider interface for AI model implementations."""
+"""Base provider class for AI model implementations."""
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
+from .provider_interface import IModelProvider
 
-class BaseModelProvider(ABC):
+
+class BaseModelProvider(IModelProvider):
     """Abstract base class for all AI model providers.
 
     All provider implementations (OpenAI, Ollama, Transformers, etc.) must inherit

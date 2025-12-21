@@ -1,6 +1,6 @@
 """Tests for job processing workflow."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 import pytest
 
 from job_agent_backend.workflows import run_job_processing
@@ -15,73 +15,75 @@ def create_mock_model(result_obj):
     return mock_model
 
 
-def create_mock_embedding_model(similarity_score=0.8):
-    """
-    Helper to create a mock embedding model.
+def create_mock_model_factory(
+    embedding_model=None,
+    must_have_model=None,
+    nice_to_have_model=None,
+):
+    """Create a mock model factory that returns different models based on call params."""
+    mock_factory = MagicMock()
 
-    Args:
-        similarity_score: The desired cosine similarity between CV and job embeddings.
-                         Values >= 0.4 result in relevant jobs, < 0.4 in irrelevant jobs.
+    def get_model_side_effect(**kwargs):
+        model_name = kwargs.get("model_name", "")
+        model_id = kwargs.get("model_id", "")
 
-    Returns:
-        Mock embedding model with embed_query method that returns valid embeddings.
-    """
-    import numpy as np
+        # Embedding model for relevance check
+        if "sentence-transformers" in model_name or kwargs.get("task") == "embedding":
+            return embedding_model
 
-    mock_model = MagicMock()
+        # Skills extraction models (identified by model_id containing "phi3")
+        if "phi3" in model_id or "phi3" in model_name:
+            # Return both models alternately for must-have and nice-to-have
+            if must_have_model is not None:
+                return must_have_model
 
-    # Create two embeddings that will produce the desired similarity score
-    # Using simple vectors for predictable cosine similarity
-    cv_embedding = np.array([1.0, 0.0, 0.0])
-    job_embedding = np.array([similarity_score, np.sqrt(1 - similarity_score**2), 0.0])
+        return MagicMock()
 
-    # Normalize to unit vectors for consistent cosine similarity
-    cv_embedding = cv_embedding / np.linalg.norm(cv_embedding)
-    job_embedding = job_embedding / np.linalg.norm(job_embedding)
-
-    # Set up the mock to return these embeddings
-    # First call returns CV embedding, second call returns job embedding
-    mock_model.embed_query.side_effect = [cv_embedding.tolist(), job_embedding.tolist()]
-
-    return mock_model
+    mock_factory.get_model.side_effect = get_model_side_effect
+    return mock_factory
 
 
 class TestJobProcessingWorkflow:
     """Test suite for job processing workflow."""
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_relevant_job_extracts_skills(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test that relevant job goes through complete skill extraction."""
-
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python", "Django", "PostgreSQL"]
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = ["Docker", "Kubernetes"]
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+
+        # Create a model factory that returns appropriate models
+        mock_factory = MagicMock()
+        call_count = {"value": 0}
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            # For skill extraction, alternate between must-have and nice-to-have
+            call_count["value"] += 1
+            if call_count["value"] == 1:
+                return create_mock_model(mock_must_result)
+            else:
+                return create_mock_model(mock_nice_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         result = run_job_processing(
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert result["is_relevant"] is True
@@ -89,23 +91,25 @@ class TestJobProcessingWorkflow:
         assert "extracted_nice_to_have_skills" in result
         assert result["status"] == "completed"
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     def test_irrelevant_job_skips_skill_extraction(
         self,
-        mock_relevance_chat,
         sample_irrelevant_job_dict,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test that irrelevant job skips skill extraction."""
-
         # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.3)
+
+        mock_factory = MagicMock()
+        mock_factory.get_model.return_value = embedding_model
 
         result = run_job_processing(
             sample_irrelevant_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert result["is_relevant"] is False
@@ -140,16 +144,18 @@ class TestJobProcessingWorkflow:
                 job_repository_factory=job_repository_factory_stub,
             )
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     def test_irrelevant_job_is_stored_with_is_relevant_false(
         self,
-        mock_relevance_chat,
         sample_irrelevant_job_dict,
         sample_cv_content,
+        mock_embedding_model_factory,
     ):
         """Test that irrelevant jobs are stored with is_relevant=False."""
         # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.3)
+
+        mock_factory = MagicMock()
+        mock_factory.get_model.return_value = embedding_model
 
         mock_repository = MagicMock()
         mock_repository.create.return_value = MagicMock(id=42)
@@ -159,6 +165,7 @@ class TestJobProcessingWorkflow:
             sample_irrelevant_job_dict,
             sample_cv_content,
             job_repository_factory=factory,
+            model_factory=mock_factory,
         )
 
         assert result["status"] in ["started", "completed"]
@@ -172,77 +179,75 @@ class TestJobProcessingWorkflow:
         assert "must_have_skills" not in created_job
         assert "nice_to_have_skills" not in created_job
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_workflow_state_includes_job_data(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test that final state includes original job data."""
-
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+
+        mock_factory = MagicMock()
+        call_count = {"value": 0}
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            call_count["value"] += 1
+            if call_count["value"] == 1:
+                return create_mock_model(mock_must_result)
+            else:
+                return create_mock_model(mock_nice_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         result = run_job_processing(
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert result["job"] == sample_job_dict
         assert result["cv_context"] == sample_cv_content
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_workflow_with_empty_skills_extracts(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test workflow handles empty skills extraction gracefully."""
-
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_must_result = MagicMock()
-        mock_must_result.skills = []
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
+        mock_empty_result = MagicMock()
+        mock_empty_result.skills = []
 
-        mock_nice_result = MagicMock()
-        mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+        mock_factory = MagicMock()
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            return create_mock_model(mock_empty_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         result = run_job_processing(
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert result["is_relevant"] is True
@@ -250,56 +255,43 @@ class TestJobProcessingWorkflow:
         assert result["extracted_nice_to_have_skills"] == []
         assert result["status"] == "completed"
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_workflow_cv_context_passed_to_all_nodes(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test that CV context is passed to all workflow nodes."""
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_must_result = MagicMock()
-        mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
+        mock_result = MagicMock()
+        mock_result.skills = ["Python"]
 
-        mock_nice_result = MagicMock()
-        mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+        mock_factory = MagicMock()
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            return create_mock_model(mock_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         result = run_job_processing(
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert result["cv_context"] == sample_cv_content
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_workflow_handles_job_without_salary(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test workflow handles job without salary information."""
         job_without_salary = {
@@ -316,41 +308,49 @@ class TestJobProcessingWorkflow:
         }
 
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_must_result = MagicMock()
-        mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
+        mock_result = MagicMock()
+        mock_result.skills = ["Python"]
 
-        mock_nice_result = MagicMock()
-        mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+        mock_factory = MagicMock()
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            return create_mock_model(mock_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         result = run_job_processing(
             job_without_salary,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert result["status"] == "completed"
         assert result["is_relevant"] is True
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
     def test_workflow_returns_final_state_structure(
         self,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
         job_repository_factory_stub,
+        mock_embedding_model_factory,
     ):
         """Test that workflow returns expected state structure."""
         # Mock embedding model for relevance check (similarity < 0.4 = irrelevant)
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.3)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.3)
+
+        mock_factory = MagicMock()
+        mock_factory.get_model.return_value = embedding_model
 
         result = run_job_processing(
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory_stub,
+            model_factory=mock_factory,
         )
 
         assert "job" in result
@@ -372,31 +372,34 @@ class TestJobProcessingWorkflow:
                 job_repository_factory="not_callable",
             )
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_relevant_job_stores_to_repository(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
+        mock_embedding_model_factory,
     ):
         """Test that relevant jobs are stored to the repository with extracted skills."""
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
         mock_must_result = MagicMock()
         mock_must_result.skills = ["Python", "Django"]
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
 
         mock_nice_result = MagicMock()
         mock_nice_result.skills = ["Docker"]
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+
+        mock_factory = MagicMock()
+        call_count = {"value": 0}
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            call_count["value"] += 1
+            if call_count["value"] == 1:
+                return create_mock_model(mock_must_result)
+            else:
+                return create_mock_model(mock_nice_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         mock_repository = MagicMock()
         mock_repository.create.return_value = MagicMock(id=42)
@@ -406,6 +409,7 @@ class TestJobProcessingWorkflow:
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory,
+            model_factory=mock_factory,
         )
 
         job_repository_factory.assert_called_once()
@@ -415,31 +419,26 @@ class TestJobProcessingWorkflow:
         assert created_job["nice_to_have_skills"] == ["Docker"]
         assert result["status"] == "completed"
 
-    @patch("job_agent_backend.workflows.job_processing.nodes.check_job_relevance.node.get_model")
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.node.get_model"
-    )
-    @patch(
-        "job_agent_backend.workflows.job_processing.nodes.extract_nice_to_have_skills.node.get_model"
-    )
     def test_workflow_continues_after_store_job_error(
         self,
-        mock_nice_chat,
-        mock_must_chat,
-        mock_relevance_chat,
         sample_job_dict,
         sample_cv_content,
+        mock_embedding_model_factory,
     ):
         """Test that workflow completes even when repository raises exception."""
-        mock_relevance_chat.return_value = create_mock_embedding_model(similarity_score=0.8)
+        embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_must_result = MagicMock()
-        mock_must_result.skills = ["Python"]
-        mock_must_chat.return_value = create_mock_model(mock_must_result)
+        mock_result = MagicMock()
+        mock_result.skills = ["Python"]
 
-        mock_nice_result = MagicMock()
-        mock_nice_result.skills = []
-        mock_nice_chat.return_value = create_mock_model(mock_nice_result)
+        mock_factory = MagicMock()
+
+        def get_model_side_effect(**kwargs):
+            if "sentence-transformers" in kwargs.get("model_name", ""):
+                return embedding_model
+            return create_mock_model(mock_result)
+
+        mock_factory.get_model.side_effect = get_model_side_effect
 
         mock_repository = MagicMock()
         mock_repository.create.side_effect = Exception("Database error")
@@ -449,6 +448,7 @@ class TestJobProcessingWorkflow:
             sample_job_dict,
             sample_cv_content,
             job_repository_factory=job_repository_factory,
+            model_factory=mock_factory,
         )
 
         # Workflow continues to completion despite store error

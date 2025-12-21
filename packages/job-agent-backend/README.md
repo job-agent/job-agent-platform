@@ -46,10 +46,11 @@ job-agent-backend/
 │   │   └── cvs/
 │   └── job_agent_backend/
 │       ├── container.py
-│       ├── contracts/
 │       ├── core/
 │       ├── cv_loader/
 │       ├── filter_service/
+│       ├── messaging/
+│       ├── model_providers/
 │       └── workflows/
 └── tests/
 ```

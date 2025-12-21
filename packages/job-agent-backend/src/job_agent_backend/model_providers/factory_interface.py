@@ -1,7 +1,13 @@
 """Abstract interface for model factory."""
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Optional
+
+# Type alias for model instances returned by the factory.
+# We use Any because the factory can return various model types
+# (LangChain ChatModel, Embeddings, HuggingFace pipelines, etc.)
+# and there is no common base class across these libraries.
+ModelInstance = Any
 
 
 class IModelFactory(ABC):
@@ -11,6 +17,7 @@ class IModelFactory(ABC):
     by enabling mock implementations.
     """
 
+    @abstractmethod
     def get_model(
         self,
         model_id: Optional[str] = None,
@@ -18,7 +25,7 @@ class IModelFactory(ABC):
         model_name: Optional[str] = None,
         temperature: Optional[float] = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> ModelInstance:
         """Get an AI model instance based on configuration.
 
         Args:
@@ -33,10 +40,12 @@ class IModelFactory(ABC):
         """
         ...
 
+    @abstractmethod
     def clear_cache(self) -> None:
         """Clear the model cache, forcing new instances to be created."""
         ...
 
+    @abstractmethod
     def get_cache_size(self) -> int:
         """Get the number of cached model instances.
 

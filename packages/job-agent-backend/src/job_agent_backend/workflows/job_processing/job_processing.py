@@ -4,18 +4,19 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from collections.abc import Mapping
-from typing import Callable, cast
+from typing import Callable, Tuple, cast
 
 from job_agent_platform_contracts import IJobRepository
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
 
+from job_agent_backend.model_providers import IModelFactory
 from job_agent_backend.workflows.job_processing.node_names import JobProcessingNode
 from job_agent_backend.workflows.job_processing.nodes import (
-    check_job_relevance_node,
-    extract_must_have_skills_node,
-    extract_nice_to_have_skills_node,
+    create_check_job_relevance_node,
+    create_extract_must_have_skills_node,
+    create_extract_nice_to_have_skills_node,
     print_jobs_node,
     create_store_job_node,
 )
@@ -51,13 +52,17 @@ def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
     Returns:
         Configured StateGraph ready for execution
     """
-    job_repository_factory = _resolve_dependencies(config)
+    job_repository_factory, model_factory = _resolve_dependencies(config)
 
     workflow = StateGraph(AgentState)
 
+    check_job_relevance_node = create_check_job_relevance_node(model_factory)
     workflow.add_node(JobProcessingNode.CHECK_JOB_RELEVANCE, check_job_relevance_node)
 
+    extract_must_have_skills_node = create_extract_must_have_skills_node(model_factory)
     workflow.add_node(JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS, extract_must_have_skills_node)
+
+    extract_nice_to_have_skills_node = create_extract_nice_to_have_skills_node(model_factory)
     workflow.add_node(
         JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
         extract_nice_to_have_skills_node,
@@ -97,15 +102,37 @@ def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
 
 def _resolve_dependencies(
     config: RunnableConfig,
-) -> Callable[[], IJobRepository]:
+) -> Tuple[Callable[[], IJobRepository], IModelFactory]:
+    """
+    Resolve required dependencies from the RunnableConfig.
+
+    Args:
+        config: Runnable configuration containing dependency overrides
+
+    Returns:
+        Tuple of (job_repository_factory, model_factory)
+
+    Raises:
+        ValueError: If required dependencies are not configured
+    """
     if isinstance(config, Mapping):
         config_values: Mapping[str, object] = config
         configurable = config.get("configurable")
         if isinstance(configurable, Mapping):
             config_values = configurable
 
-        override = config_values.get("job_repository_factory")
-        if callable(override):
-            return cast(Callable[[], IJobRepository], override)
+        job_repository_factory = config_values.get("job_repository_factory")
+        model_factory = config_values.get("model_factory")
 
-    raise ValueError("job_repository_factory dependency is not configured")
+        if not callable(job_repository_factory):
+            raise ValueError("job_repository_factory dependency is not configured")
+
+        if model_factory is None:
+            raise ValueError("model_factory dependency is not configured")
+
+        return (
+            cast(Callable[[], IJobRepository], job_repository_factory),
+            cast(IModelFactory, model_factory),
+        )
+
+    raise ValueError("Configuration is not a valid Mapping")

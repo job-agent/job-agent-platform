@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock
 
+import numpy as np
 import pytest
 
 
@@ -91,5 +92,47 @@ def job_repository_factory_stub():
         repository = MagicMock()
         repository.create.return_value = MagicMock(id=1)
         return repository
+
+    return factory
+
+
+@pytest.fixture
+def mock_embedding_model_factory():
+    """Factory fixture for creating mock embedding models with controlled similarity scores.
+
+    Creates embedding models that produce embeddings with a desired cosine similarity.
+    This is useful for testing relevance checks where similarity >= 0.4 means relevant
+    and similarity < 0.4 means irrelevant.
+
+    Usage:
+        def test_relevant_job(mock_embedding_model_factory):
+            mock_model = mock_embedding_model_factory(similarity_score=0.8)
+            # mock_model.embed_query will return embeddings with 0.8 similarity
+
+        def test_irrelevant_job(mock_embedding_model_factory):
+            mock_model = mock_embedding_model_factory(similarity_score=0.3)
+            # mock_model.embed_query will return embeddings with 0.3 similarity
+
+    Note: The factory uses simple unit vectors to produce predictable cosine similarity.
+    The first call to embed_query returns the CV embedding, the second returns the job embedding.
+    """
+
+    def factory(similarity_score: float) -> MagicMock:
+        mock_model = MagicMock()
+
+        # Create two embeddings that will produce the desired similarity score
+        # Using simple vectors for predictable cosine similarity
+        cv_embedding = np.array([1.0, 0.0, 0.0])
+        job_embedding = np.array([similarity_score, np.sqrt(1 - similarity_score**2), 0.0])
+
+        # Normalize to unit vectors for consistent cosine similarity
+        cv_embedding = cv_embedding / np.linalg.norm(cv_embedding)
+        job_embedding = job_embedding / np.linalg.norm(job_embedding)
+
+        # Set up the mock to return these embeddings
+        # First call returns CV embedding, second call returns job embedding
+        mock_model.embed_query.side_effect = [cv_embedding.tolist(), job_embedding.tolist()]
+
+        return mock_model
 
     return factory

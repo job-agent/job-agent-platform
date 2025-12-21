@@ -1,33 +1,21 @@
 """AI model abstraction layer for job-agent-backend.
 
-This package provides a flexible system for working with OpenAI and HuggingFace Transformers models
-through a unified interface.
+This package provides a flexible system for working with OpenAI, Ollama,
+and HuggingFace Transformers models through a unified interface.
 
-Supports various model types: chat models, embeddings, and more.
+Example usage:
+    from job_agent_backend.container import get
+    from job_agent_backend.model_providers import IModelFactory
 
-Quick Start:
-    1. Configure models via environment variables:
-        export MODEL_default_PROVIDER=openai
-        export MODEL_default_MODEL_NAME=gpt-4o-mini
-
-    2. Use in your code:
-        from job_agent_backend.model_providers import get_model
-
-        model = get_model(model_id="default")
-        result = model.invoke("Hello!")
-
-For more details, see the documentation in config.py and factory.py.
+    factory = get(IModelFactory)
+    model = factory.get_model(provider="openai", model_name="gpt-4o-mini")
+    result = model.invoke("Hello!")
 """
 
-from .config import (
-    ModelConfig,
-    register_model,
-    get_model_config,
-    list_available_models,
-)
-from .factory import get_model, ModelFactory
-from .interfaces import IModelFactory
+from .factory import ModelFactory
+from .factory_interface import IModelFactory
 from .providers import (
+    IModelProvider,
     BaseModelProvider,
     OpenAIProvider,
     TransformersProvider,
@@ -35,17 +23,9 @@ from .providers import (
 )
 
 __all__ = [
-    # Factory function (main entry point)
-    "get_model",
-    # Factory class and interface for DI
     "ModelFactory",
     "IModelFactory",
-    # Configuration
-    "ModelConfig",
-    "register_model",
-    "get_model_config",
-    "list_available_models",
-    # Provider classes (for advanced usage)
+    "IModelProvider",
     "BaseModelProvider",
     "OpenAIProvider",
     "TransformersProvider",

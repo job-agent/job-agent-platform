@@ -33,24 +33,71 @@ class MockDocument:
 
 
 class MockMessage:
-    """Mock Telegram Message with async methods."""
+    """Mock Telegram Message with async methods and optional shared tracking.
+
+    Supports two modes:
+    1. Local tracking (default): Each message instance has its own tracking lists.
+    2. Shared tracking: All chained messages share a tracker dict, so edits on
+       child messages returned by reply_text are visible on the parent.
+
+    To enable shared tracking, pass a tracker dict or use enable_shared_tracking=True.
+    """
 
     def __init__(
         self,
         text: str = "",
         document: Optional[MockDocument] = None,
         user: Optional[MockUser] = None,
+        tracker: Optional[dict] = None,
+        enable_shared_tracking: bool = False,
     ):
         self.text = text
         self.document = document
-        self._reply_texts: list[str] = []
-        self._reply_documents: list[tuple[BytesIO, str, str]] = []
-        self._edited_texts: list[str] = []
         self._user = user or MockUser()
+
+        # If tracker is provided, use shared tracking mode
+        # If enable_shared_tracking is True, create a new shared tracker
+        if tracker is not None:
+            self._tracker = tracker
+            self._shared_tracking = True
+        elif enable_shared_tracking:
+            self._tracker = {
+                "reply_texts": [],
+                "edited_texts": [],
+                "reply_documents": [],
+            }
+            self._shared_tracking = True
+        else:
+            # Local tracking mode (backward compatible)
+            self._tracker = None
+            self._shared_tracking = False
+            self._local_reply_texts: list[str] = []
+            self._local_reply_documents: list[tuple[BytesIO, str, str]] = []
+            self._local_edited_texts: list[str] = []
+
+    @property
+    def _reply_texts(self) -> list[str]:
+        if self._shared_tracking:
+            return self._tracker["reply_texts"]
+        return self._local_reply_texts
+
+    @property
+    def _edited_texts(self) -> list[str]:
+        if self._shared_tracking:
+            return self._tracker["edited_texts"]
+        return self._local_edited_texts
+
+    @property
+    def _reply_documents(self) -> list[tuple[BytesIO, str, str]]:
+        if self._shared_tracking:
+            return self._tracker["reply_documents"]
+        return self._local_reply_documents
 
     async def reply_text(self, text: str, **kwargs) -> "MockMessage":
         """Mock reply_text that records what was sent."""
         self._reply_texts.append(text)
+        if self._shared_tracking:
+            return MockMessage(text=text, tracker=self._tracker)
         return MockMessage(text=text)
 
     async def reply_document(
@@ -58,6 +105,8 @@ class MockMessage:
     ) -> "MockMessage":
         """Mock reply_document that records what was sent."""
         self._reply_documents.append((document, filename, caption))
+        if self._shared_tracking:
+            return MockMessage(tracker=self._tracker)
         return MockMessage()
 
     async def edit_text(self, text: str, **kwargs) -> "MockMessage":
@@ -74,9 +123,17 @@ class MockUpdate:
         user: Optional[MockUser] = None,
         message: Optional[MockMessage] = None,
         document: Optional[MockDocument] = None,
+        enable_shared_tracking: bool = False,
     ):
         self._user = user or MockUser()
-        self._message = message or MockMessage(user=self._user, document=document)
+        if message is not None:
+            self._message = message
+        else:
+            self._message = MockMessage(
+                user=self._user,
+                document=document,
+                enable_shared_tracking=enable_shared_tracking,
+            )
 
     @property
     def effective_user(self) -> MockUser:
@@ -88,14 +145,19 @@ class MockUpdate:
 
 
 class MockFile:
-    """Mock Telegram File."""
+    """Mock Telegram File with download capability."""
 
-    def __init__(self, file_path: str = "/tmp/test_file.pdf"):
+    def __init__(
+        self,
+        file_path: str = "/tmp/test_file.pdf",
+        content: bytes = b"mock pdf content",
+    ):
         self.file_path = file_path
+        self.content = content
 
     async def download_to_drive(self, path: str) -> None:
-        """Mock download that creates an empty file."""
-        Path(path).write_text("mock pdf content")
+        """Mock download that creates a file with content."""
+        Path(path).write_bytes(self.content)
 
 
 class MockBot:
@@ -161,17 +223,79 @@ def mock_context() -> MockContext:
 
 
 @pytest.fixture
-def mock_orchestrator() -> MagicMock:
-    """Create a mock orchestrator."""
-    orchestrator = MagicMock()
-    orchestrator.has_cv.return_value = True
-    orchestrator.load_cv.return_value = "Test CV content"
-    orchestrator.get_cv_path.return_value = Path("/tmp/test_cv")
-    orchestrator.upload_cv.return_value = None
-    orchestrator.filter_jobs_list.return_value = []
-    orchestrator.scrape_jobs_streaming.return_value = iter([])
-    orchestrator.process_jobs_iterator.return_value = iter([])
-    return orchestrator
+def mock_orchestrator_factory():
+    """Factory fixture for creating mock orchestrators with specific configurations.
+
+    Creates orchestrators with sensible defaults that can be overridden.
+    Reduces repetitive configuration in tests.
+
+    Usage:
+        def test_with_defaults(mock_orchestrator_factory):
+            orchestrator = mock_orchestrator_factory()  # has_cv=True, no jobs
+
+        def test_without_cv(mock_orchestrator_factory):
+            orchestrator = mock_orchestrator_factory(has_cv=False)
+
+        def test_with_jobs(mock_orchestrator_factory):
+            jobs = [{"id": 1, "title": "Developer"}]
+            orchestrator = mock_orchestrator_factory(
+                scraped_jobs=[(jobs, 1)],
+                filtered_jobs=jobs
+            )
+
+        def test_with_error(mock_orchestrator_factory):
+            orchestrator = mock_orchestrator_factory(load_cv_error=Exception("fail"))
+    """
+
+    def factory(
+        has_cv: bool = True,
+        cv_content: str = "Test CV content",
+        cv_path: Optional[Path] = None,
+        scraped_jobs: Optional[list[tuple[list[dict], int]]] = None,
+        filtered_jobs: Optional[list[dict]] = None,
+        processed_jobs: Optional[list[tuple[int, int, dict]]] = None,
+        load_cv_error: Optional[Exception] = None,
+        scrape_error: Optional[Exception] = None,
+        upload_cv_error: Optional[Exception] = None,
+    ) -> MagicMock:
+        orchestrator = MagicMock()
+        orchestrator.has_cv.return_value = has_cv
+        orchestrator.get_cv_path.return_value = cv_path or Path("/tmp/test_cv")
+        orchestrator.upload_cv.return_value = None
+
+        # Configure load_cv
+        if load_cv_error:
+            orchestrator.load_cv.side_effect = load_cv_error
+        else:
+            orchestrator.load_cv.return_value = cv_content
+
+        # Configure upload_cv error
+        if upload_cv_error:
+            orchestrator.upload_cv.side_effect = upload_cv_error
+
+        # Configure scrape_jobs_streaming
+        if scrape_error:
+            orchestrator.scrape_jobs_streaming.side_effect = scrape_error
+        else:
+            orchestrator.scrape_jobs_streaming.return_value = iter(scraped_jobs or [])
+
+        # Configure filter and process
+        orchestrator.filter_jobs_list.return_value = filtered_jobs or []
+        orchestrator.process_jobs_iterator.return_value = iter(processed_jobs or [])
+
+        return orchestrator
+
+    return factory
+
+
+@pytest.fixture
+def mock_orchestrator(mock_orchestrator_factory) -> MagicMock:
+    """Create a mock orchestrator with default configuration.
+
+    Uses mock_orchestrator_factory with defaults (has_cv=True, no jobs).
+    For custom configurations, use mock_orchestrator_factory directly.
+    """
+    return mock_orchestrator_factory()
 
 
 @pytest.fixture
@@ -203,3 +327,69 @@ def mock_dependencies(
 def mock_context_with_deps(mock_dependencies: BotDependencies) -> MockContext:
     """Create a mock context with dependencies injected."""
     return MockContext(dependencies=mock_dependencies)
+
+
+@dataclass
+class HandlerTestSetup:
+    """Container for standard handler test setup objects.
+
+    Provides convenient access to all mock objects needed for handler tests.
+    The message has shared tracking enabled, so edits on child messages
+    (returned by reply_text) are visible via message._reply_texts and
+    message._edited_texts.
+    """
+
+    user: MockUser
+    message: MockMessage
+    update: MockUpdate
+    context: MockContext
+
+
+@pytest.fixture
+def handler_test_setup_factory(mock_dependencies: BotDependencies):
+    """Factory fixture for creating standard handler test setup.
+
+    Creates user, message (with shared tracking), update, and context
+    in one call. Reduces repetitive setup code in handler tests.
+
+    Usage:
+        def test_example(handler_test_setup_factory):
+            setup = handler_test_setup_factory(user_id=1001)
+            await some_handler(setup.update, setup.context)
+            assert "expected" in setup.message._reply_texts
+
+        # With document:
+        def test_upload(handler_test_setup_factory):
+            doc = MockDocument(file_name="test.pdf")
+            setup = handler_test_setup_factory(user_id=1002, document=doc)
+            await upload_handler(setup.update, setup.context)
+
+        # With custom args:
+        def test_search(handler_test_setup_factory):
+            setup = handler_test_setup_factory(user_id=1003, args=["min_salary=5000"])
+            await search_handler(setup.update, setup.context)
+    """
+
+    def factory(
+        user_id: int = 12345,
+        document: Optional[MockDocument] = None,
+        args: Optional[list[str]] = None,
+        enable_shared_tracking: bool = True,
+    ) -> HandlerTestSetup:
+        user = MockUser(id=user_id)
+        message = MockMessage(
+            user=user,
+            document=document,
+            enable_shared_tracking=enable_shared_tracking,
+        )
+        update = MockUpdate(user=user, message=message, document=document)
+        context = MockContext(args=args, dependencies=mock_dependencies)
+
+        return HandlerTestSetup(
+            user=user,
+            message=message,
+            update=update,
+            context=context,
+        )
+
+    return factory

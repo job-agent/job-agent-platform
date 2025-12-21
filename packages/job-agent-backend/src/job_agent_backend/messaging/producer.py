@@ -19,7 +19,7 @@ class ScrapperProducer:
     """
 
     REQUEST_QUEUE = "job.scrape.request"
-    RESPONSE_TIMEOUT = 300  # 5 minutes timeout for scraping operations
+    RESPONSE_TIMEOUT = 600  # 10 minutes timeout for scraping operations
 
     def __init__(self, rabbitmq_url: Optional[str] = None):
         """Initialize the producer.
