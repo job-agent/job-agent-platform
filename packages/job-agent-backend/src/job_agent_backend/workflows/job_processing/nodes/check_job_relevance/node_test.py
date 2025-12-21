@@ -90,9 +90,7 @@ class TestCheckJobRelevanceNode:
 
         assert result["is_relevant"] is True
 
-    def test_returns_relevant_when_similarity_above_threshold(
-        self, mock_embedding_model_factory
-    ):
+    def test_returns_relevant_when_similarity_above_threshold(self, mock_embedding_model_factory):
         """Node returns is_relevant=True when cosine similarity >= 0.4."""
         mock_model = mock_embedding_model_factory(similarity_score=0.5)
         mock_factory = _create_mock_factory_with_model(mock_model)
@@ -108,9 +106,7 @@ class TestCheckJobRelevanceNode:
 
         assert result["is_relevant"] is True
 
-    def test_returns_relevant_when_similarity_equals_threshold(
-        self, mock_embedding_model_factory
-    ):
+    def test_returns_relevant_when_similarity_equals_threshold(self, mock_embedding_model_factory):
         """Node returns is_relevant=True when cosine similarity equals 0.4 exactly."""
         mock_model = mock_embedding_model_factory(similarity_score=0.4)
         mock_factory = _create_mock_factory_with_model(mock_model)
@@ -126,9 +122,7 @@ class TestCheckJobRelevanceNode:
 
         assert result["is_relevant"] is True
 
-    def test_returns_irrelevant_when_similarity_below_threshold(
-        self, mock_embedding_model_factory
-    ):
+    def test_returns_irrelevant_when_similarity_below_threshold(self, mock_embedding_model_factory):
         """Node returns is_relevant=False when cosine similarity < 0.4."""
         mock_model = mock_embedding_model_factory(similarity_score=0.3)
         mock_factory = _create_mock_factory_with_model(mock_model)

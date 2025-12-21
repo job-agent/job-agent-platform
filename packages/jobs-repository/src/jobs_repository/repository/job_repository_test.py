@@ -51,7 +51,9 @@ class TestJobRepository:
 
         assert job is None
 
-    def test_create_stores_all_jobdict_fields_correctly(self, repository, sample_job_dict, db_session):
+    def test_create_stores_all_jobdict_fields_correctly(
+        self, repository, sample_job_dict, db_session
+    ):
         """Test creating a job from JobDict contract data."""
         job = repository.create(sample_job_dict)
 
@@ -75,7 +77,9 @@ class TestJobRepository:
         assert job.industry_rel is not None
         assert job.industry_rel.name == "Information Technology"
 
-    def test_create_stores_skills_from_jobcreate(self, repository, sample_job_create_dict, db_session):
+    def test_create_stores_skills_from_jobcreate(
+        self, repository, sample_job_create_dict, db_session
+    ):
         """Test creating a job from JobCreate contract data with skills."""
         job = repository.create(sample_job_create_dict)
 

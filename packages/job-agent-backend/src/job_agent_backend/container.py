@@ -9,7 +9,10 @@ from job_agent_backend.core.orchestrator import JobAgentOrchestrator
 from job_agent_backend.cv_loader import CVLoader, ICVLoader
 from job_agent_backend.filter_service import FilterService, IFilterService
 from job_agent_backend.messaging import ScrapperClient, IScrapperClient
-from job_agent_backend.model_providers import ModelFactory, IModelFactory
+from job_agent_backend.model_providers import IModelFactory, ModelFactory
+from job_agent_backend.model_providers.container import (
+    get as get_model_provider,
+)
 from job_agent_platform_contracts import IJobAgentOrchestrator
 from jobs_repository import init_db
 from jobs_repository.container import get_job_repository
@@ -26,8 +29,8 @@ class ApplicationContainer(containers.DeclarativeContainer):
     cv_loader = providers.Singleton(CVLoader)
     job_repository_factory = providers.Object(get_job_repository)
 
-    # Model factory singleton - maintains model cache across the application
-    model_factory = providers.Singleton(ModelFactory)
+    # Model factory from model_providers container
+    model_factory = providers.Object(get_model_provider(IModelFactory))
 
     scrapper_manager = providers.Singleton(
         ScrapperClient,
@@ -56,7 +59,7 @@ container = ApplicationContainer()
 # Type-safe dependency resolution mapping
 # Maps interface types to their concrete implementations in the container
 _DEPENDENCY_MAP = {
-    # Map interface to resolver function
+    # Model factory retrieved from model_providers container
     IModelFactory: lambda: container.model_factory(),
     ICVLoader: lambda: container.cv_loader(),
     IScrapperClient: lambda: container.scrapper_manager(),
@@ -66,7 +69,6 @@ _DEPENDENCY_MAP = {
 
 
 # Type overloads for IDE autocomplete and type checking
-# Interface types (recommended for loose coupling)
 @overload
 def get(dependency_type: Type[IModelFactory]) -> IModelFactory: ...
 
@@ -130,15 +132,11 @@ def get(dependency_type: Type[T]) -> T:
         from job_agent_backend.model_providers import IModelFactory
 
         factory = get(IModelFactory)
-        model = factory.get_model(model_id="default")
-
-        # Using concrete type
-        from job_agent_backend.model_providers import ModelFactory
-        factory = get(ModelFactory)
+        model = factory.get_model(model_id="skill-extraction")
 
         # Other services
-        from job_agent_backend.messaging import IScrapperClient, ScrapperClient
-        scrapper = get(IScrapperClient)  # or get(ScrapperClient)
+        from job_agent_backend.messaging import IScrapperClient
+        scrapper = get(IScrapperClient)
     """
     resolver = _DEPENDENCY_MAP.get(dependency_type)
     if resolver is None:

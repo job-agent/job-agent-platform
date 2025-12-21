@@ -29,8 +29,8 @@ class TestOllamaProviderInit:
 
         assert provider.base_url == "http://param:9090"
 
-    def test_uses_default_model_name(self) -> None:
-        provider = OllamaProvider()
+    def test_stores_model_name(self) -> None:
+        provider = OllamaProvider(model_name="phi3:mini")
 
         assert provider.model_name == "phi3:mini"
 
@@ -40,17 +40,17 @@ class TestOllamaProviderInit:
         assert provider.model_name == "llama3"
 
     def test_uses_default_temperature(self) -> None:
-        provider = OllamaProvider()
+        provider = OllamaProvider(model_name="phi3:mini")
 
         assert provider.temperature == 0.0
 
     def test_stores_custom_temperature(self) -> None:
-        provider = OllamaProvider(temperature=0.7)
+        provider = OllamaProvider(model_name="phi3:mini", temperature=0.7)
 
         assert provider.temperature == 0.7
 
     def test_stores_additional_kwargs(self) -> None:
-        provider = OllamaProvider(num_ctx=4096, repeat_penalty=1.1)
+        provider = OllamaProvider(model_name="phi3:mini", num_ctx=4096, repeat_penalty=1.1)
 
         assert provider.kwargs == {"num_ctx": 4096, "repeat_penalty": 1.1}
 

@@ -69,6 +69,7 @@ def run_job_processing(
     resolved_model_factory = model_factory
     if resolved_model_factory is None:
         from job_agent_backend.container import container
+
         resolved_model_factory = container.model_factory()
 
     workflow_config = {

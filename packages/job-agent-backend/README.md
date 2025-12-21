@@ -75,6 +75,16 @@ When `days` is omitted (or `None`), the orchestrator auto-calculates the date ra
 
 The dependency injection container exposed at `job_agent_backend.container.container` lets you override components such as the scrapper manager, repositories, or filter service when wiring the backend into other applications or tests.
 
+Pre-configured AI models (e.g., `"skill-extraction"`, `"pii-removal"`, `"embedding"`) are registered in the container and can be accessed via:
+
+```python
+from job_agent_backend.container import get
+from job_agent_backend.model_providers import IModelFactory
+
+factory = get(IModelFactory)
+model = factory.get_model(model_id="skill-extraction")
+```
+
 For lower-level access, the workflows can also be invoked directly:
 
 ```python

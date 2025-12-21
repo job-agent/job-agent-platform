@@ -18,9 +18,7 @@ def mock_model_factory() -> MagicMock:
 class TestCreatePiiRemovalWorkflow:
     """Test suite for create_pii_removal_workflow function."""
 
-    def test_create_pii_removal_workflow_returns_compiled_state_graph(
-        self, mock_model_factory
-    ):
+    def test_create_pii_removal_workflow_returns_compiled_state_graph(self, mock_model_factory):
         """Test that create_pii_removal_workflow returns a CompiledStateGraph."""
         workflow = create_pii_removal_workflow(mock_model_factory)
 
@@ -39,9 +37,7 @@ class TestCreatePiiRemovalWorkflow:
 
         assert PIIRemovalNode.REMOVE_PII in nodes
 
-    def test_create_pii_removal_workflow_has_correct_entry_point(
-        self, mock_model_factory
-    ):
+    def test_create_pii_removal_workflow_has_correct_entry_point(self, mock_model_factory):
         """Test that workflow entry point is remove_pii node."""
         workflow = create_pii_removal_workflow(mock_model_factory)
         graph = workflow.get_graph()
@@ -50,15 +46,11 @@ class TestCreatePiiRemovalWorkflow:
         assert len(start_edges) == 1
         assert start_edges[0][1] == PIIRemovalNode.REMOVE_PII
 
-    def test_create_pii_removal_workflow_remove_pii_leads_to_end(
-        self, mock_model_factory
-    ):
+    def test_create_pii_removal_workflow_remove_pii_leads_to_end(self, mock_model_factory):
         """Test that remove_pii node transitions to END."""
         workflow = create_pii_removal_workflow(mock_model_factory)
         graph = workflow.get_graph()
 
-        remove_pii_edges = [
-            edge for edge in graph.edges if edge[0] == PIIRemovalNode.REMOVE_PII
-        ]
+        remove_pii_edges = [edge for edge in graph.edges if edge[0] == PIIRemovalNode.REMOVE_PII]
         assert len(remove_pii_edges) == 1
         assert remove_pii_edges[0][1] == "__end__"

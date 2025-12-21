@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from telegram_bot.conftest import MockContext, MockDocument, MockFile
+from telegram_bot.conftest import MockDocument, MockFile
 from telegram_bot.handlers.upload_cv.handler import upload_cv_handler
 from telegram_bot.handlers.upload_cv import messages
 
@@ -114,9 +114,7 @@ class TestUploadCvHandler:
 
         await upload_cv_handler(setup.update, setup.context)
 
-        assert any(
-            messages.ERROR_PROCESSING_FAILED in text for text in setup.message._edited_texts
-        )
+        assert any(messages.ERROR_PROCESSING_FAILED in text for text in setup.message._edited_texts)
 
     async def test_preserves_file_extension(
         self, handler_test_setup_factory, mock_bot_with_file, mock_orchestrator

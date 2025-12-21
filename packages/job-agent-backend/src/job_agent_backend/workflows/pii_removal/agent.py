@@ -53,6 +53,7 @@ def run_pii_removal(
     resolved_model_factory = model_factory
     if resolved_model_factory is None:
         from job_agent_backend.container import container
+
         resolved_model_factory = container.model_factory()
 
     workflow = create_pii_removal_workflow(resolved_model_factory)

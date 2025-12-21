@@ -1,23 +1,35 @@
 """Factory class for creating AI model instances."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Type
 
-from .config import _registry
 from .factory_interface import IModelFactory
-from .model_provider_map import MODEL_PROVIDER_MAP
-from .providers import OpenAIProvider, TransformersProvider, OllamaProvider
+from .mappers import MODEL_PROVIDER_MAP
+from .providers import IModelProvider
+from .registry_interface import IModelRegistry
 
 
 class ModelFactory(IModelFactory):
     """Factory class for creating and caching AI model instances."""
 
-    PROVIDER_MAP = {
-        "openai": OpenAIProvider,
-        "transformers": TransformersProvider,
-        "ollama": OllamaProvider,
-    }
+    def __init__(
+        self,
+        registry: IModelRegistry,
+        provider_map: Dict[str, Type[IModelProvider]],
+        model_provider_map: Optional[Dict[str, str]] = None,
+    ) -> None:
+        """Initialize the model factory with injected dependencies.
 
-    def __init__(self) -> None:
+        Args:
+            registry: The model registry for pre-configured models
+            provider_map: Mapping of provider names to provider classes
+            model_provider_map: Optional mapping of model names to provider names
+                              for auto-detection. Defaults to MODEL_PROVIDER_MAP.
+        """
+        self._registry = registry
+        self._provider_map = provider_map
+        self._model_provider_map = (
+            model_provider_map if model_provider_map is not None else MODEL_PROVIDER_MAP
+        )
         self._model_cache: Dict[str, Any] = {}
 
     def _generate_cache_key(
@@ -48,11 +60,10 @@ class ModelFactory(IModelFactory):
         """
         # Use pre-configured provider from registry
         if model_id:
-            provider_instance = _registry.get(model_id)
+            provider_instance = self._registry.get(model_id)
             if not provider_instance:
                 raise ValueError(
-                    f"Model '{model_id}' not found. "
-                    f"Available: {_registry.list_models()}"
+                    f"Model '{model_id}' not found. " f"Available: {self._registry.list_models()}"
                 )
             # Cache key for registered models
             cache_key = f"registered:{model_id}"
@@ -66,18 +77,18 @@ class ModelFactory(IModelFactory):
 
         # Auto-detect provider if not specified
         if not provider:
-            provider = MODEL_PROVIDER_MAP.get(model_name)
+            provider = self._model_provider_map.get(model_name)
             if not provider:
                 raise ValueError(
                     f"Cannot auto-detect provider for '{model_name}'. "
                     f"Specify 'provider' explicitly."
                 )
 
-        provider_class = self.PROVIDER_MAP.get(provider.lower())
+        provider_class = self._provider_map.get(provider.lower())
         if not provider_class:
             raise ValueError(
                 f"Unsupported provider: {provider}. "
-                f"Supported: {list(self.PROVIDER_MAP.keys())}"
+                f"Supported: {list(self._provider_map.keys())}"
             )
 
         final_temperature = temperature if temperature is not None else 0.0

@@ -1,0 +1,73 @@
+"""Tests for MODEL_PROVIDER_MAP in mappers directory (REQ-6)."""
+
+import pytest
+
+
+class TestModelProviderMapRelocation:
+    """Tests that MODEL_PROVIDER_MAP is correctly relocated to mappers directory."""
+
+    def test_model_provider_map_importable_from_mappers(self) -> None:
+        """REQ-6: MODEL_PROVIDER_MAP is importable from mappers.model_provider_map."""
+        from job_agent_backend.model_providers.mappers.model_provider_map import (
+            MODEL_PROVIDER_MAP,
+        )
+
+        assert MODEL_PROVIDER_MAP is not None
+
+    def test_model_provider_map_is_dict(self) -> None:
+        """REQ-6: MODEL_PROVIDER_MAP is a dictionary."""
+        from job_agent_backend.model_providers.mappers.model_provider_map import (
+            MODEL_PROVIDER_MAP,
+        )
+
+        assert isinstance(MODEL_PROVIDER_MAP, dict)
+
+    def test_model_provider_map_contains_gpt_4o_mini(self) -> None:
+        """REQ-6: MODEL_PROVIDER_MAP contains gpt-4o-mini -> openai mapping."""
+        from job_agent_backend.model_providers.mappers.model_provider_map import (
+            MODEL_PROVIDER_MAP,
+        )
+
+        assert "gpt-4o-mini" in MODEL_PROVIDER_MAP
+        assert MODEL_PROVIDER_MAP["gpt-4o-mini"] == "openai"
+
+    def test_model_provider_map_contains_phi3_mini(self) -> None:
+        """REQ-6: MODEL_PROVIDER_MAP contains phi3:mini -> ollama mapping."""
+        from job_agent_backend.model_providers.mappers.model_provider_map import (
+            MODEL_PROVIDER_MAP,
+        )
+
+        assert "phi3:mini" in MODEL_PROVIDER_MAP
+        assert MODEL_PROVIDER_MAP["phi3:mini"] == "ollama"
+
+    def test_model_provider_map_contains_transformers_model(self) -> None:
+        """REQ-6: MODEL_PROVIDER_MAP contains sentence-transformers model."""
+        from job_agent_backend.model_providers.mappers.model_provider_map import (
+            MODEL_PROVIDER_MAP,
+        )
+
+        model_name = "sentence-transformers/distiluse-base-multilingual-cased-v2"
+        assert model_name in MODEL_PROVIDER_MAP
+        assert MODEL_PROVIDER_MAP[model_name] == "transformers"
+
+
+class TestModelProviderMapExportedFromMappers:
+    """Tests for MODEL_PROVIDER_MAP export from mappers package."""
+
+    def test_model_provider_map_exported_from_mappers_init(self) -> None:
+        """REQ-6: MODEL_PROVIDER_MAP is exported from mappers/__init__.py."""
+        from job_agent_backend.model_providers.mappers import MODEL_PROVIDER_MAP
+
+        assert MODEL_PROVIDER_MAP is not None
+        assert isinstance(MODEL_PROVIDER_MAP, dict)
+
+
+class TestOriginalModelProviderMapRemoved:
+    """Tests that original model_provider_map.py is removed (REQ-6)."""
+
+    def test_original_location_import_fails(self) -> None:
+        """REQ-6: model_provider_map at original location should not exist."""
+        with pytest.raises(ImportError):
+            from job_agent_backend.model_providers.model_provider_map import (  # noqa: F401
+                MODEL_PROVIDER_MAP,
+            )

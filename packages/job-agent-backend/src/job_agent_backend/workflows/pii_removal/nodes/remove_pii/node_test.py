@@ -1,6 +1,6 @@
 """Tests for remove_pii_node."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

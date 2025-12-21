@@ -57,7 +57,9 @@ def create_store_job_node(
                 job_create_data["must_have_skills"] = extracted_must_have_skills
                 print(f"  Added {len(extracted_must_have_skills)} must-have skills")
 
-            if (extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills")) is not None:
+            if (
+                extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills")
+            ) is not None:
                 job_create_data["nice_to_have_skills"] = extracted_nice_to_have_skills
                 print(f"  Added {len(extracted_nice_to_have_skills)} nice-to-have skills")
 

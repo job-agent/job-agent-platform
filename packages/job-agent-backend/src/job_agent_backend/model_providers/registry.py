@@ -2,10 +2,11 @@
 
 from typing import Any, Dict, List, Optional
 
-from .providers import IModelProvider, OllamaProvider, TransformersProvider
+from .providers import IModelProvider
+from .registry_interface import IModelRegistry
 
 
-class ModelRegistry:
+class ModelRegistry(IModelRegistry):
     """Registry for pre-configured model providers."""
 
     def __init__(self, providers: List[tuple[str, IModelProvider]]) -> None:
@@ -28,13 +29,3 @@ class ModelRegistry:
     def list_models(self) -> List[str]:
         """List all registered model IDs."""
         return list(self._providers.keys())
-
-
-_registry = ModelRegistry([
-    ("skill-extraction", OllamaProvider(model_name="phi3:mini", temperature=0.0)),
-    ("pii-removal", OllamaProvider(model_name="phi3:mini", temperature=0.0)),
-    ("embedding", TransformersProvider(
-        model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
-        task="embedding",
-    )),
-])
