@@ -3,7 +3,7 @@
 from dependency_injector import containers, providers
 from job_agent_platform_contracts.essay_repository import IEssayRepository
 
-from essay_repository.database import get_session_factory
+from db_core import get_session_factory
 from essay_repository.repository.essay_repository import EssayRepository
 
 

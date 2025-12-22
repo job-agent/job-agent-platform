@@ -4,13 +4,13 @@ This module provides the EssayRepository class that implements
 the IEssayRepository interface for CRUD operations on essays.
 """
 
-from contextlib import contextmanager
-from typing import Callable, Generator, List, Optional
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select
 
+from db_core import BaseRepository, TransactionError
 from job_agent_platform_contracts.essay_repository import IEssayRepository
 from job_agent_platform_contracts.essay_repository.schemas import (
     EssayCreate,
@@ -18,13 +18,11 @@ from job_agent_platform_contracts.essay_repository.schemas import (
     Essay as EssaySchema,
 )
 from job_agent_platform_contracts.essay_repository.exceptions import EssayValidationError
-from job_agent_platform_contracts.job_repository.exceptions import TransactionError
 
 from essay_repository.models import Essay
-from essay_repository.database.session import get_session_factory
 
 
-class EssayRepository(IEssayRepository):
+class EssayRepository(IEssayRepository, BaseRepository):
     """Repository that persists essays to the database.
 
     The repository supports creating, reading, updating, and deleting
@@ -35,7 +33,7 @@ class EssayRepository(IEssayRepository):
     def __init__(
         self,
         session: Optional[Session] = None,
-        session_factory: Optional[Callable[[], Session]] = None,
+        session_factory=None,
     ):
         """
         Initialize the repository with a managed or external session.
@@ -48,44 +46,7 @@ class EssayRepository(IEssayRepository):
             ValueError: If both session and session_factory are provided
             TypeError: If session_factory is not callable
         """
-        if session is not None and session_factory is not None:
-            raise ValueError("Provide either session or session_factory, not both")
-
-        if session is not None:
-            self._session_factory: Callable[[], Session] = lambda: session
-            self._close_session = False
-        else:
-            factory_candidate = session_factory or get_session_factory()
-
-            if not callable(factory_candidate):
-                raise TypeError("session_factory must be callable")
-
-            self._session_factory = lambda: factory_candidate()
-            self._close_session = True
-
-    @contextmanager
-    def _session_scope(self, *, commit: bool) -> Generator[Session, None, None]:
-        """Context manager for session lifecycle.
-
-        Args:
-            commit: Whether to commit the transaction on success
-
-        Yields:
-            SQLAlchemy Session instance
-        """
-        session = self._session_factory()
-        close_session = self._close_session
-
-        try:
-            yield session
-            if commit:
-                session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            if close_session:
-                session.close()
+        super().__init__(session=session, session_factory=session_factory)
 
     def _model_to_schema(self, essay: Essay) -> EssaySchema:
         """Convert Essay model to Essay schema.

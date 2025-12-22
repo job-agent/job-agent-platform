@@ -1,18 +1,19 @@
 """Tests for database session management."""
 
 from unittest.mock import patch, MagicMock
+import threading
 
 import pytest
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from jobs_repository.database.session import (
+from db_core.session import (
     get_session_factory,
     get_db_session,
     transaction,
     reset_session_factory,
 )
-from job_agent_platform_contracts.job_repository.exceptions import TransactionError
+from db_core.exceptions import TransactionError
 
 
 class TestGetSessionFactory:
@@ -27,8 +28,8 @@ class TestGetSessionFactory:
         reset_session_factory()
 
     def test_creates_session_factory_on_first_call(self):
-        """Test that get_session_factory creates factory on first call."""
-        with patch("jobs_repository.database.session.get_engine") as mock_get_engine:
+        """get_session_factory creates factory on first call."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
             mock_engine = MagicMock()
             mock_get_engine.return_value = mock_engine
 
@@ -37,9 +38,9 @@ class TestGetSessionFactory:
             assert isinstance(factory, sessionmaker)
             mock_get_engine.assert_called_once()
 
-    def test_reuses_existing_factory(self):
-        """Test that get_session_factory reuses existing factory on subsequent calls."""
-        with patch("jobs_repository.database.session.get_engine") as mock_get_engine:
+    def test_reuses_existing_factory_singleton(self):
+        """get_session_factory reuses existing factory on subsequent calls."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
             mock_engine = MagicMock()
             mock_get_engine.return_value = mock_engine
 
@@ -50,8 +51,8 @@ class TestGetSessionFactory:
             mock_get_engine.assert_called_once()
 
     def test_factory_creates_sessions(self):
-        """Test that factory can create session instances."""
-        with patch("jobs_repository.database.session.get_engine") as mock_get_engine:
+        """Factory can create session instances."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
             mock_engine = MagicMock()
             mock_get_engine.return_value = mock_engine
 
@@ -60,13 +61,77 @@ class TestGetSessionFactory:
 
             assert session is not None
 
+    def test_session_factory_uses_autocommit_false(self):
+        """Session factory creates sessions with autocommit=False."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
+            mock_engine = MagicMock()
+            mock_get_engine.return_value = mock_engine
+
+            factory = get_session_factory()
+
+            # sessionmaker stores these in kw
+            assert factory.kw.get("autocommit", True) is False
+
+    def test_session_factory_uses_autoflush_false(self):
+        """Session factory creates sessions with autoflush=False."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
+            mock_engine = MagicMock()
+            mock_get_engine.return_value = mock_engine
+
+            factory = get_session_factory()
+
+            assert factory.kw.get("autoflush", True) is False
+
+
+class TestGetSessionFactoryThreadSafety:
+    """Test thread safety of get_session_factory."""
+
+    def setup_method(self):
+        """Reset session factory before each test."""
+        reset_session_factory()
+
+    def teardown_method(self):
+        """Clean up after each test."""
+        reset_session_factory()
+
+    def test_thread_safe_factory_creation(self):
+        """get_session_factory is thread-safe - multiple threads get same factory."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
+            mock_engine = MagicMock()
+            mock_get_engine.return_value = mock_engine
+
+            factories = []
+            errors = []
+
+            def get_factory_thread():
+                try:
+                    factory = get_session_factory()
+                    factories.append(factory)
+                except Exception as e:
+                    errors.append(e)
+
+            threads = [threading.Thread(target=get_factory_thread) for _ in range(10)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+            assert len(errors) == 0
+            assert len(factories) == 10
+            assert all(f is factories[0] for f in factories)
+            mock_get_engine.assert_called_once()
+
 
 class TestResetSessionFactory:
     """Test suite for reset_session_factory function."""
 
+    def teardown_method(self):
+        """Clean up after each test."""
+        reset_session_factory()
+
     def test_resets_factory_to_none(self):
-        """Test that reset_session_factory sets factory to None."""
-        with patch("jobs_repository.database.session.get_engine") as mock_get_engine:
+        """reset_session_factory sets factory to None."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
             mock_engine = MagicMock()
             mock_get_engine.return_value = mock_engine
 
@@ -77,8 +142,8 @@ class TestResetSessionFactory:
             assert mock_get_engine.call_count == 2
 
     def test_allows_new_factory_creation_after_reset(self):
-        """Test that new factory can be created after reset."""
-        with patch("jobs_repository.database.session.get_engine") as mock_get_engine:
+        """New factory can be created after reset."""
+        with patch("db_core.session.get_engine") as mock_get_engine:
             mock_engine = MagicMock()
             mock_get_engine.return_value = mock_engine
 
@@ -90,7 +155,7 @@ class TestResetSessionFactory:
 
 
 class TestGetDbSession:
-    """Test suite for get_db_session function."""
+    """Test suite for get_db_session generator."""
 
     def setup_method(self):
         """Reset session factory before each test."""
@@ -101,8 +166,8 @@ class TestGetDbSession:
         reset_session_factory()
 
     def test_yields_session(self):
-        """Test that get_db_session yields a session."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """get_db_session yields a session."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -112,8 +177,8 @@ class TestGetDbSession:
             assert session is mock_session
 
     def test_closes_session_after_use(self):
-        """Test that get_db_session closes session after use."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """get_db_session closes session after normal completion."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -128,8 +193,8 @@ class TestGetDbSession:
             mock_session.close.assert_called_once()
 
     def test_rolls_back_on_sqlalchemy_error(self):
-        """Test that get_db_session rolls back on SQLAlchemyError."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """get_db_session rolls back on SQLAlchemyError."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -143,8 +208,8 @@ class TestGetDbSession:
             mock_session.close.assert_called_once()
 
     def test_raises_transaction_error_on_sqlalchemy_error(self):
-        """Test that get_db_session raises TransactionError on SQLAlchemyError."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """get_db_session raises TransactionError on SQLAlchemyError."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -157,8 +222,8 @@ class TestGetDbSession:
             assert "Database operation failed" in str(exc_info.value)
 
     def test_closes_session_even_on_error(self):
-        """Test that session is closed even when error occurs."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """Session is closed even when error occurs."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -185,8 +250,8 @@ class TestTransaction:
         reset_session_factory()
 
     def test_yields_session(self):
-        """Test that transaction yields a session."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction yields a session."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -194,8 +259,8 @@ class TestTransaction:
                 assert session is mock_session
 
     def test_commits_on_success(self):
-        """Test that transaction commits on successful completion."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction commits on successful completion."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -205,8 +270,8 @@ class TestTransaction:
             mock_session.commit.assert_called_once()
 
     def test_closes_session_after_commit(self):
-        """Test that transaction closes session after commit."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction closes session after commit."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -216,8 +281,8 @@ class TestTransaction:
             mock_session.close.assert_called_once()
 
     def test_rolls_back_on_exception(self):
-        """Test that transaction rolls back on exception."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction rolls back on exception."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -229,8 +294,8 @@ class TestTransaction:
             mock_session.commit.assert_not_called()
 
     def test_raises_transaction_error_on_exception(self):
-        """Test that transaction raises TransactionError on exception."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction raises TransactionError on exception."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -241,8 +306,8 @@ class TestTransaction:
             assert "Transaction failed" in str(exc_info.value)
 
     def test_closes_session_even_on_error(self):
-        """Test that session is closed even when error occurs."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """Session is closed even when error occurs."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -255,8 +320,8 @@ class TestTransaction:
             mock_session.close.assert_called_once()
 
     def test_does_not_commit_on_rollback(self):
-        """Test that transaction does not commit after rollback."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction does not commit after rollback."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -270,8 +335,8 @@ class TestTransaction:
             mock_session.rollback.assert_called_once()
 
     def test_handles_sqlalchemy_error(self):
-        """Test that transaction handles SQLAlchemyError."""
-        with patch("jobs_repository.database.session.get_session_factory") as mock_factory:
+        """transaction handles SQLAlchemyError."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
             mock_session = MagicMock(spec=Session)
             mock_factory.return_value = MagicMock(return_value=mock_session)
 
@@ -280,3 +345,17 @@ class TestTransaction:
                     raise SQLAlchemyError("Database error")
 
             mock_session.rollback.assert_called_once()
+
+    def test_preserves_original_exception_as_cause(self):
+        """TransactionError preserves original exception in chain."""
+        with patch("db_core.session.get_session_factory") as mock_factory:
+            mock_session = MagicMock(spec=Session)
+            mock_factory.return_value = MagicMock(return_value=mock_session)
+
+            original_error = ValueError("original error")
+
+            with pytest.raises(TransactionError) as exc_info:
+                with transaction() as _:
+                    raise original_error
+
+            assert exc_info.value.__cause__ is original_error

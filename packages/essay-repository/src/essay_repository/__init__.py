@@ -1,7 +1,6 @@
 """Essay repository package for PostgreSQL database operations."""
 
-from essay_repository.database import (
-    Base,
+from db_core import (
     DatabaseConfig,
     get_database_config,
     get_engine,
@@ -12,6 +11,7 @@ from essay_repository.database import (
     init_db,
     drop_all_tables,
 )
+from essay_repository.models.base import Base
 from essay_repository.models import Essay
 from essay_repository.repository import EssayRepository
 from essay_repository.container import get_essay_repository

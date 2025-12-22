@@ -1,11 +1,17 @@
-"""Database connection management."""
+"""Database connection management.
+
+This module provides thread-safe database engine management:
+- get_engine: Get or create singleton SQLAlchemy engine
+- reset_engine: Dispose and reset the global engine
+"""
 
 import threading
 from typing import Optional
+
 from sqlalchemy import create_engine, Engine, text
 
-from essay_repository.database.config import get_database_config
-from job_agent_platform_contracts.job_repository.exceptions import DatabaseConnectionError
+from db_core.config import get_database_config
+from db_core.exceptions import DatabaseConnectionError
 
 
 _engine: Optional[Engine] = None
@@ -13,14 +19,17 @@ _engine_lock = threading.Lock()
 
 
 def get_engine() -> Engine:
-    """
-    Get or create the SQLAlchemy engine.
+    """Get or create the SQLAlchemy engine.
+
+    Creates a singleton engine instance with thread-safe initialization.
+    The engine is configured with pool_pre_ping for connection validation
+    and verifies connectivity with SELECT 1.
 
     Returns:
         SQLAlchemy engine instance
 
     Raises:
-        DatabaseConnectionError: If connection fails
+        DatabaseConnectionError: If connection fails or verification fails
     """
     global _engine
 
@@ -48,10 +57,10 @@ def get_engine() -> Engine:
 
 
 def reset_engine() -> None:
-    """
-    Reset the global engine.
+    """Reset the global engine.
 
-    Useful for testing or when configuration changes.
+    Disposes of the existing engine connection pool and resets the global
+    engine to None. Useful for testing or when configuration changes.
     """
     global _engine
 

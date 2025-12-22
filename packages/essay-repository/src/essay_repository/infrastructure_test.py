@@ -79,7 +79,7 @@ class TestAlembicSetup:
         ), "alembic.ini should have 'script_location = alembic' configuration"
 
     def test_alembic_env_imports_essay_repository_base(self) -> None:
-        """Verify alembic/env.py imports essay_repository.database.Base."""
+        """Verify alembic/env.py imports Base from essay_repository package."""
         package_root = get_package_root()
         env_py = package_root / "alembic" / "env.py"
 

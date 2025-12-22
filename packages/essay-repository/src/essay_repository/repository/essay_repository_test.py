@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from essay_repository.repository import EssayRepository
 from essay_repository.models import Essay
 from job_agent_platform_contracts.essay_repository import EssayValidationError
-from job_agent_platform_contracts.job_repository.exceptions import TransactionError
+from db_core import TransactionError
 
 
 class TestEssayRepositoryCreate:

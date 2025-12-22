@@ -4,7 +4,9 @@ These tests verify the DI container is properly configured and
 exports the get_essay_repository function.
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
+
+from dependency_injector import providers
 
 
 class TestEssayRepositoryContainer:
@@ -21,11 +23,15 @@ class TestEssayRepositoryContainer:
         from essay_repository.container import EssayRepositoryContainer
 
         test_container = EssayRepositoryContainer()
-        with patch("essay_repository.database.session.get_engine") as mock_engine:
-            mock_engine.return_value = MagicMock()
+        mock_factory = MagicMock()
+
+        test_container.session_factory.override(providers.Object(mock_factory))
+        try:
             factory1 = test_container.session_factory()
             factory2 = test_container.session_factory()
             assert factory1 is factory2
+        finally:
+            test_container.session_factory.reset_override()
 
     def test_essay_repository_is_factory(self):
         """Test that essay_repository creates new instances."""
@@ -33,13 +39,17 @@ class TestEssayRepositoryContainer:
         from essay_repository.repository import EssayRepository
 
         test_container = EssayRepositoryContainer()
-        with patch("essay_repository.container.get_session_factory") as mock_factory:
-            mock_factory.return_value = MagicMock()
+        mock_factory = MagicMock()
+
+        test_container.session_factory.override(providers.Object(mock_factory))
+        try:
             repo1 = test_container.essay_repository()
             repo2 = test_container.essay_repository()
             assert isinstance(repo1, EssayRepository)
             assert isinstance(repo2, EssayRepository)
             assert repo1 is not repo2
+        finally:
+            test_container.session_factory.reset_override()
 
 
 class TestGetEssayRepository:
@@ -54,23 +64,29 @@ class TestGetEssayRepository:
 
     def test_get_essay_repository_returns_repository_instance(self):
         """Test that get_essay_repository returns IEssayRepository instance."""
-        from essay_repository.container import get_essay_repository
+        from essay_repository.container import get_essay_repository, container
         from job_agent_platform_contracts.essay_repository import IEssayRepository
 
-        with patch("essay_repository.container.get_session_factory") as mock_factory:
-            mock_factory.return_value = MagicMock()
+        mock_factory = MagicMock()
+        container.session_factory.override(providers.Object(mock_factory))
+        try:
             repo = get_essay_repository()
             assert isinstance(repo, IEssayRepository)
+        finally:
+            container.session_factory.reset_override()
 
     def test_get_essay_repository_creates_new_instance(self):
         """Test that get_essay_repository creates new instance each time."""
-        from essay_repository.container import get_essay_repository
+        from essay_repository.container import get_essay_repository, container
 
-        with patch("essay_repository.container.get_session_factory") as mock_factory:
-            mock_factory.return_value = MagicMock()
+        mock_factory = MagicMock()
+        container.session_factory.override(providers.Object(mock_factory))
+        try:
             repo1 = get_essay_repository()
             repo2 = get_essay_repository()
             assert repo1 is not repo2
+        finally:
+            container.session_factory.reset_override()
 
 
 class TestContainerConfiguration:

@@ -1,7 +1,6 @@
 """Jobs Repository Package - PostgreSQL database operations for job listings."""
 
-from jobs_repository.database import (
-    Base,
+from db_core import (
     DatabaseConfig,
     get_database_config,
     get_engine,
@@ -13,6 +12,7 @@ from jobs_repository.database import (
     drop_all_tables,
 )
 
+from jobs_repository.models.base import Base
 from jobs_repository.models import Job, Company, Location, Category, Industry
 
 from jobs_repository.repository import JobRepository

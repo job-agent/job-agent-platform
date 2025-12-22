@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import Session, sessionmaker, declarative_base
 from sqlalchemy.types import TypeDecorator
 
-from essay_repository.database.base import Base
+from essay_repository.models.base import Base
 from essay_repository.models import Essay  # noqa: F401 - Import to register with Base.metadata
 
 

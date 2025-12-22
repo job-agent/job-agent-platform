@@ -5,28 +5,26 @@ category, industry) exist before a job is written, and exposes a small API for c
 jobs and looking them up by external identifier.
 """
 
-from contextlib import contextmanager
 from datetime import datetime, timedelta, UTC
-from typing import Callable, Generator, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, or_, func
 
+from db_core import BaseRepository, TransactionError
 from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
 from jobs_repository.models import Job, Company
-from jobs_repository.database.session import get_session_factory
 from jobs_repository.interfaces import IReferenceDataService, IJobMapper
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
-    TransactionError,
     ValidationError,
 )
 
 
-class JobRepository(IJobRepository):
+class JobRepository(IJobRepository, BaseRepository):
     """Repository that persists jobs and manages related reference data.
 
     The repository currently supports creating job records and fetching them by
@@ -39,7 +37,7 @@ class JobRepository(IJobRepository):
         reference_data_service: IReferenceDataService,
         mapper: IJobMapper,
         session: Optional[Session] = None,
-        session_factory: Optional[Callable[[], Session]] = None,
+        session_factory=None,
     ):
         """
         Initialize the repository with a managed or external session.
@@ -50,39 +48,9 @@ class JobRepository(IJobRepository):
             session: Existing SQLAlchemy session to reuse
             session_factory: Callable returning SQLAlchemy session instances
         """
-        if session is not None and session_factory is not None:
-            raise ValueError("Provide either session or session_factory, not both")
-
+        super().__init__(session=session, session_factory=session_factory)
         self.mapper = mapper
         self._reference_data_service = reference_data_service
-
-        if session is not None:
-            self._session_factory: Callable[[], Session] = lambda: session
-            self._close_session = False
-        else:
-            factory_candidate = session_factory or get_session_factory()
-
-            if not callable(factory_candidate):
-                raise TypeError("session_factory must be callable")
-
-            self._session_factory = lambda: factory_candidate()
-            self._close_session = True
-
-    @contextmanager
-    def _session_scope(self, *, commit: bool) -> Generator[Session, None, None]:
-        session = self._session_factory()
-        close_session = self._close_session
-
-        try:
-            yield session
-            if commit:
-                session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            if close_session:
-                session.close()
 
     def _apply_relationship_loading(self, stmt):
         """Apply eager loading options to a Job query statement.

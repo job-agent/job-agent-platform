@@ -10,9 +10,9 @@ from jobs_repository.repository import JobRepository
 from jobs_repository.models import Job, Company, Location, Category, Industry
 from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
-    TransactionError,
     ValidationError,
 )
+from db_core import TransactionError
 
 
 class TestJobRepository:

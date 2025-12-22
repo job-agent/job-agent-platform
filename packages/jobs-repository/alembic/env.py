@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 
-from jobs_repository.database import Base
+from jobs_repository.models.base import Base
 
 
 config = context.config

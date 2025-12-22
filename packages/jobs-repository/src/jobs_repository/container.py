@@ -3,7 +3,7 @@
 from dependency_injector import containers, providers
 from job_agent_platform_contracts import IJobRepository
 
-from jobs_repository.database import get_session_factory
+from db_core import get_session_factory
 from jobs_repository.repository.job_repository import JobRepository
 from jobs_repository.services import ReferenceDataService
 from jobs_repository.mapper import JobMapper
