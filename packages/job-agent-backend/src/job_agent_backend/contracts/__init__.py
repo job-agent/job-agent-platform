@@ -5,12 +5,14 @@ job-agent-backend but not by other packages.
 """
 
 from .cv_loader_interface import ICVLoader
+from .essay_search_service_interface import IEssaySearchService
 from .filter_service_interface import IFilterService
 from .model_factory_interface import IModelFactory
 from .scrapper_client_interface import IScrapperClient
 
 __all__ = [
     "ICVLoader",
+    "IEssaySearchService",
     "IFilterService",
     "IModelFactory",
     "IScrapperClient",

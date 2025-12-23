@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir /app/packages/job-agent-platform-contracts
 COPY packages/cvs-repository /app/packages/cvs-repository
 RUN pip install --no-cache-dir /app/packages/cvs-repository
 
+COPY packages/db-core /app/packages/db-core
+RUN pip install --no-cache-dir /app/packages/db-core
+
 COPY packages/jobs-repository /app/packages/jobs-repository
 RUN pip install --no-cache-dir /app/packages/jobs-repository
 

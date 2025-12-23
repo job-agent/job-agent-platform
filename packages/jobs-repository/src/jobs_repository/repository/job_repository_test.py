@@ -409,17 +409,19 @@ class TestJobRepository:
 
         assert job.id is not None
 
-    def test_get_job_repository_uses_container(self):
-        """Test that container factory produces repository instances."""
-        from jobs_repository.container import container, get_job_repository
+    def test_get_uses_container(self):
+        """Test that get() function retrieves from container."""
+        from dependency_injector import providers
+        from job_agent_platform_contracts import IJobRepository
+        from jobs_repository.container import get, container
 
-        mock_factory = MagicMock(return_value="repository")
-
-        with container.job_repository.override(mock_factory):
-            repo_instance = get_job_repository()
-
-        mock_factory.assert_called_once()
-        assert repo_instance == "repository"
+        mock_factory = MagicMock()
+        container.session_factory.override(providers.Object(mock_factory))
+        try:
+            repo = get(IJobRepository)
+            assert isinstance(repo, JobRepository)
+        finally:
+            container.session_factory.reset_override()
 
     def test_create_commits_transaction(self, repository, sample_job_dict, db_session):
         """Test that create() commits the transaction."""

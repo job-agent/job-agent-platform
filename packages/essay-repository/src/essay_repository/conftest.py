@@ -57,6 +57,8 @@ class SQLiteEssay(SQLiteTestBase):
     question = Column(Text, nullable=True)
     answer = Column(Text, nullable=False)
     keywords = Column(JSONArray, nullable=True)
+    embedding = Column(JSONArray, nullable=True)
+    search_vector = Column(String, nullable=True)  # TSVECTOR stored as String in SQLite
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
@@ -92,8 +94,12 @@ def in_memory_engine():
     for table in Base.metadata.tables.values():
         table.schema = None  # Remove schema for SQLite
         for column in table.columns:
-            if hasattr(column.type, "__class__") and column.type.__class__.__name__ == "ARRAY":
-                column.type = JSONArray()  # Convert ARRAY to JSONArray
+            if hasattr(column.type, "__class__"):
+                type_name = column.type.__class__.__name__
+                if type_name == "ARRAY":
+                    column.type = JSONArray()  # Convert ARRAY to JSONArray
+                elif type_name == "TSVECTOR":
+                    column.type = String()  # Convert TSVECTOR to String for SQLite
 
     # Also set up SQLiteTestBase for model-level tests
     SQLiteTestBase.metadata.create_all(engine)

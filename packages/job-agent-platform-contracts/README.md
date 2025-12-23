@@ -22,6 +22,7 @@ Interface for job persistence operations. Implementations must provide:
 
 Interface for essay persistence operations. Implementations must provide:
 
+**CRUD Operations:**
 - `create(essay_data)` - Create a new essay
 - `get_by_id(id)` - Retrieve essay by ID
 - `get_all()` - Retrieve all essays

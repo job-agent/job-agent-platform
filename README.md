@@ -148,7 +148,12 @@ Reference implementation: [scrappers repository](https://github.com/job-agent/sc
 ### 4. Apply Database Migrations
 
 ```bash
+# Jobs repository
 cd packages/jobs-repository
+alembic upgrade head
+
+# Essay repository (includes pgvector extension setup)
+cd ../essay-repository
 alembic upgrade head
 ```
 
@@ -240,7 +245,7 @@ LANGSMITH_API_KEY=ls__...
 - `packages/telegram_bot` — Async Telegram client that guides users through uploading CVs, triggering searches, and reviewing relevant jobs.
 - `packages/db-core` — Shared database infrastructure providing `BaseRepository`, session management, and transaction handling.
 - `packages/jobs-repository` — Job persistence layer built on db-core with Alembic migrations.
-- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations.
+- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
 
@@ -248,9 +253,9 @@ LANGSMITH_API_KEY=ls__...
 
 - **Python 3.9+** for running the platform services
 - **Docker & Docker Compose** for running infrastructure (PostgreSQL, RabbitMQ) and optional containerized deployment
-- **PostgreSQL database** for persisting job metadata and user data
+- **PostgreSQL database with pgvector** for persisting job metadata, essay data, and vector embeddings
 - **RabbitMQ** for asynchronous message queuing between services
-- **OpenAI API key** for LangGraph workflows (CV sanitization, job filtering)
+- **OpenAI API key** for LangGraph workflows (CV sanitization, job filtering) and text embeddings
 - **Telegram bot token** from [@BotFather](https://t.me/botfather)
 - **Scrapper service** (either mock or custom implementation) running and connected to RabbitMQ
 

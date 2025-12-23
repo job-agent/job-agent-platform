@@ -1,5 +1,7 @@
 """Dependency injection container for jobs repository services."""
 
+from typing import Type, TypeVar, overload
+
 from dependency_injector import containers, providers
 from job_agent_platform_contracts import IJobRepository
 
@@ -7,6 +9,9 @@ from db_core import get_session_factory
 from jobs_repository.repository.job_repository import JobRepository
 from jobs_repository.services import ReferenceDataService
 from jobs_repository.mapper import JobMapper
+
+
+T = TypeVar("T")
 
 
 class JobsRepositoryContainer(containers.DeclarativeContainer):
@@ -31,9 +36,31 @@ class JobsRepositoryContainer(containers.DeclarativeContainer):
 container = JobsRepositoryContainer()
 
 
-def get_job_repository() -> IJobRepository:
-    """Provide a JobRepository instance with managed session lifecycle."""
-    repository = container.job_repository()
-    if callable(repository) and not isinstance(repository, IJobRepository):
-        repository = repository()
-    return repository
+_DEPENDENCY_MAP = {
+    IJobRepository: lambda: container.job_repository(),
+}
+
+
+@overload
+def get(dependency_type: Type[IJobRepository]) -> IJobRepository: ...
+
+
+def get(dependency_type: Type[T]) -> T:
+    """Get a dependency from the container by its type.
+
+    Args:
+        dependency_type: The interface type to retrieve
+
+    Returns:
+        The resolved dependency instance
+
+    Raises:
+        KeyError: If the dependency type is not registered
+    """
+    resolver = _DEPENDENCY_MAP.get(dependency_type)
+    if resolver is None:
+        raise KeyError(
+            f"Dependency '{dependency_type.__name__}' not found in container. "
+            f"Available types: {', '.join(t.__name__ for t in _DEPENDENCY_MAP.keys())}"
+        )
+    return resolver()

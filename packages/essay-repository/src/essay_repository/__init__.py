@@ -14,7 +14,7 @@ from db_core import (
 from essay_repository.models.base import Base
 from essay_repository.models import Essay
 from essay_repository.repository import EssayRepository
-from essay_repository.container import get_essay_repository
+from essay_repository.container import get, get_essay_repository
 
 __version__ = "0.1.0"
 
@@ -35,5 +35,6 @@ __all__ = [
     # Repository
     "EssayRepository",
     # Container
-    "get_essay_repository",
+    "get",
+    "get_essay_repository",  # Deprecated: use get(IEssayRepository)
 ]

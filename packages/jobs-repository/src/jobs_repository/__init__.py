@@ -19,7 +19,7 @@ from jobs_repository.repository import JobRepository
 
 from jobs_repository.mapper import JobMapper
 
-from jobs_repository.container import get_job_repository
+from jobs_repository.container import get, get_job_repository
 
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
@@ -43,6 +43,7 @@ __all__ = [
     "Industry",
     "JobRepository",
     "JobMapper",
-    "get_job_repository",
+    "get",
+    "get_job_repository",  # Deprecated: use get(IJobRepository)
     "JobCreate",
 ]

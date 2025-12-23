@@ -2,8 +2,8 @@
 
 from datetime import datetime, UTC
 
-from sqlalchemy import Column, Integer, Text, DateTime
-from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR
+from sqlalchemy import Column, Integer, Text, DateTime, Float
+from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR, TSVECTOR
 
 from essay_repository.models.base import Base
 
@@ -19,6 +19,8 @@ class Essay(Base):
     question = Column(Text, nullable=True)
     answer = Column(Text, nullable=False)
     keywords = Column(ARRAY(VARCHAR), nullable=True)
+    embedding = Column(ARRAY(Float), nullable=True)
+    search_vector = Column(TSVECTOR, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(

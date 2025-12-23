@@ -5,14 +5,17 @@ from typing import Type, TypeVar, overload
 from dependency_injector import containers, providers
 
 from cvs_repository import CVRepository
+from essay_repository import get_essay_repository
 from job_agent_backend.core.orchestrator import JobAgentOrchestrator
+from job_agent_backend.contracts import IEssaySearchService
 from job_agent_backend.cv_loader import CVLoader, ICVLoader
 from job_agent_backend.filter_service import FilterService, IFilterService
 from job_agent_backend.messaging import ScrapperClient, IScrapperClient
-from job_agent_backend.model_providers import IModelFactory, ModelFactory
+from job_agent_backend.model_providers import IModelFactory
 from job_agent_backend.model_providers.container import (
     get as get_model_provider,
 )
+from job_agent_backend.services import EssaySearchService
 from job_agent_platform_contracts import IJobAgentOrchestrator
 from jobs_repository import init_db
 from jobs_repository.container import get_job_repository
@@ -42,6 +45,14 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     database_initializer = providers.Object(init_db)
 
+    # Essay repository and search service
+    essay_repository_factory = providers.Object(get_essay_repository)
+    essay_search_service = providers.Factory(
+        EssaySearchService,
+        repository=essay_repository_factory,
+        model_factory=model_factory,
+    )
+
     orchestrator = providers.Factory(
         JobAgentOrchestrator,
         cv_repository_class=cv_repository,
@@ -65,6 +76,7 @@ _DEPENDENCY_MAP = {
     IScrapperClient: lambda: container.scrapper_manager(),
     IFilterService: lambda: container.filter_service(),
     IJobAgentOrchestrator: lambda: container.orchestrator(),
+    IEssaySearchService: lambda: container.essay_search_service(),
 }
 
 
@@ -89,25 +101,8 @@ def get(dependency_type: Type[IFilterService]) -> IFilterService: ...
 def get(dependency_type: Type[IJobAgentOrchestrator]) -> IJobAgentOrchestrator: ...
 
 
-# Concrete types (for backward compatibility)
 @overload
-def get(dependency_type: Type[ModelFactory]) -> ModelFactory: ...
-
-
-@overload
-def get(dependency_type: Type[CVLoader]) -> CVLoader: ...
-
-
-@overload
-def get(dependency_type: Type[ScrapperClient]) -> ScrapperClient: ...
-
-
-@overload
-def get(dependency_type: Type[FilterService]) -> FilterService: ...
-
-
-@overload
-def get(dependency_type: Type[JobAgentOrchestrator]) -> JobAgentOrchestrator: ...
+def get(dependency_type: Type[IEssaySearchService]) -> IEssaySearchService: ...
 
 
 def get(dependency_type: Type[T]) -> T:

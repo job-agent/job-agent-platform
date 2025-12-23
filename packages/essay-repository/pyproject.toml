@@ -25,6 +25,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "black>=25.9.0",
     "ruff>=0.14.3",
+    "job-agent-backend>=0.1.0",
 ]
 
 [tool.setuptools.packages.find]

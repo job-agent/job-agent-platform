@@ -5,6 +5,7 @@ from job_agent_platform_contracts.essay_repository.schemas import (
     EssayCreate,
     EssayUpdate,
     Essay,
+    EssaySearchResult,
 )
 from job_agent_platform_contracts.essay_repository.exceptions import (
     EssayRepositoryError,
@@ -17,6 +18,7 @@ __all__ = [
     "EssayCreate",
     "EssayUpdate",
     "Essay",
+    "EssaySearchResult",
     "EssayRepositoryError",
     "EssayNotFoundError",
     "EssayValidationError",
