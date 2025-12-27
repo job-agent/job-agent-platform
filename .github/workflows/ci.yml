@@ -194,6 +194,7 @@ jobs:
           pip install -e "../db-core[dev]"
           pip install -e "../cvs-repository[dev]"
           pip install -e "../jobs-repository[dev]"
+          pip install -e "../essay-repository[dev]"
           pip install -e ".[dev]"
 
       - name: Run tests
@@ -244,6 +245,7 @@ jobs:
           pip install -e "../db-core[dev]"
           pip install -e "../cvs-repository[dev]"
           pip install -e "../jobs-repository[dev]"
+          pip install -e "../essay-repository[dev]"
           pip install -e "../job-agent-backend[dev]"
           pip install -e ".[dev]"
 
