@@ -105,6 +105,8 @@ class JobAgentBot:
         if not self.application:
             self.build_application()
 
+        assert self.application is not None  # ensured by build_application
+
         print("=" * 60)
         print("Job Agent Telegram Bot")
         print("=" * 60)

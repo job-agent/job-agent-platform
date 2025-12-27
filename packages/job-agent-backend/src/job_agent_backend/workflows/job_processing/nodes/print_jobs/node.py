@@ -1,9 +1,9 @@
 """Print jobs node implementation."""
 
-from ...state import AgentState
+from ...state import AgentState, AgentStateUpdate
 
 
-def print_jobs_node(state: AgentState) -> AgentState:
+def print_jobs_node(state: AgentState) -> AgentStateUpdate:
     """
     Process and print a single job.
 

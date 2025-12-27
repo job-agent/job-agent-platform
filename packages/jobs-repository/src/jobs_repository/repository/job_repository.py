@@ -6,7 +6,7 @@ jobs and looking them up by external identifier.
 """
 
 from datetime import datetime, timedelta, UTC
-from typing import Optional
+from typing import Optional, cast
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -17,6 +17,7 @@ from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
 from jobs_repository.models import Job, Company
 from jobs_repository.interfaces import IReferenceDataService, IJobMapper
+from jobs_repository.types import JobModelDict
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
@@ -97,7 +98,7 @@ class JobRepository(IJobRepository, BaseRepository):
         stmt = select(Job).where(combined_condition)
         return session.scalar(stmt)
 
-    def _resolve_reference_data(self, session: Session, mapped_data: dict) -> None:
+    def _resolve_reference_data(self, session: Session, mapped_data: JobModelDict) -> None:
         """Resolve reference data entities and update mapped_data with foreign keys.
 
         Pops company_name, location_region, category_name, and industry_name from
@@ -109,19 +110,19 @@ class JobRepository(IJobRepository, BaseRepository):
         """
         if company_name := mapped_data.pop("company_name", None):
             company = self._reference_data_service.get_or_create_company(session, company_name)
-            mapped_data["company_id"] = company.id
+            mapped_data["company_id"] = cast(int, company.id)
 
         if location_region := mapped_data.pop("location_region", None):
             location = self._reference_data_service.get_or_create_location(session, location_region)
-            mapped_data["location_id"] = location.id
+            mapped_data["location_id"] = cast(int, location.id)
 
         if category_name := mapped_data.pop("category_name", None):
             category = self._reference_data_service.get_or_create_category(session, category_name)
-            mapped_data["category_id"] = category.id
+            mapped_data["category_id"] = cast(int, category.id)
 
         if industry_name := mapped_data.pop("industry_name", None):
             industry = self._reference_data_service.get_or_create_industry(session, industry_name)
-            mapped_data["industry_id"] = industry.id
+            mapped_data["industry_id"] = cast(int, industry.id)
 
     def create(self, job_data: JobCreate) -> Job:
         """
@@ -250,7 +251,7 @@ class JobRepository(IJobRepository, BaseRepository):
             return list(results)
 
     def _bulk_find_existing_jobs(
-        self, session: Session, jobs_data: list[dict]
+        self, session: Session, jobs_data: list[JobModelDict]
     ) -> tuple[set[str], set[str]]:
         """Pre-fetch existing jobs by external_id and source_url in bulk.
 
@@ -278,7 +279,7 @@ class JobRepository(IJobRepository, BaseRepository):
         return existing_external_ids, existing_source_urls
 
     def _resolve_reference_data_with_cache(
-        self, session: Session, mapped_data: dict, cache: dict
+        self, session: Session, mapped_data: JobModelDict, cache: dict
     ) -> None:
         """Resolve reference data entities using a cache for batch operations.
 
@@ -293,7 +294,7 @@ class JobRepository(IJobRepository, BaseRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_company(
                     session, company_name
                 )
-            mapped_data["company_id"] = cache[cache_key].id
+            mapped_data["company_id"] = cast(int, cache[cache_key].id)
 
         if location_region := mapped_data.pop("location_region", None):
             cache_key = ("location", location_region)
@@ -301,7 +302,7 @@ class JobRepository(IJobRepository, BaseRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_location(
                     session, location_region
                 )
-            mapped_data["location_id"] = cache[cache_key].id
+            mapped_data["location_id"] = cast(int, cache[cache_key].id)
 
         if category_name := mapped_data.pop("category_name", None):
             cache_key = ("category", category_name)
@@ -309,7 +310,7 @@ class JobRepository(IJobRepository, BaseRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_category(
                     session, category_name
                 )
-            mapped_data["category_id"] = cache[cache_key].id
+            mapped_data["category_id"] = cast(int, cache[cache_key].id)
 
         if industry_name := mapped_data.pop("industry_name", None):
             cache_key = ("industry", industry_name)
@@ -317,7 +318,7 @@ class JobRepository(IJobRepository, BaseRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_industry(
                     session, industry_name
                 )
-            mapped_data["industry_id"] = cache[cache_key].id
+            mapped_data["industry_id"] = cast(int, cache[cache_key].id)
 
     def save_filtered_jobs(self, jobs: list[JobDict]) -> int:
         """

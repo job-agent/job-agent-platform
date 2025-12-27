@@ -108,6 +108,7 @@ class ScrapperProducer:
         )
 
         connection = self.rabbitmq_connection.connection
+        assert connection is not None, "Connection must be established before processing events"
         timeout_counter = 0
         last_yielded_index = 0
 

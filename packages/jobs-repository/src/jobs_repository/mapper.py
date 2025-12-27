@@ -1,6 +1,6 @@
 """Mapper service for transforming JobDict contract data to Job model format."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 from dateutil import parser as date_parser
 
 from job_scrapper_contracts import JobDict
@@ -52,21 +52,27 @@ class JobMapper(IJobMapper):
 
     def _map_simple_fields(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Map simple scalar fields from JobDict to Job model."""
-        mapped_data["title"] = job_data.get("title")
+        if "title" in job_data:
+            mapped_data["title"] = job_data["title"]
+        if "job_id" in job_data:
+            mapped_data["external_id"] = str(job_data["job_id"])
+
         mapped_data["description"] = job_data.get("description")
-        mapped_data["external_id"] = str(job_data.get("job_id"))
         mapped_data["source_url"] = job_data.get("url")
         mapped_data["source"] = job_data.get("source")
         mapped_data["job_type"] = job_data.get("employment_type")
-        mapped_data["experience_months"] = job_data.get("experience_months")
+        experience = job_data.get("experience_months")
+        mapped_data["experience_months"] = int(experience) if experience is not None else None
 
-        if (must_have_skills := job_data.get("must_have_skills")) is not None:
+        # These fields may be added dynamically, not in JobDict contract
+        job_data_any: Any = job_data
+        if (must_have_skills := job_data_any.get("must_have_skills")) is not None:
             mapped_data["must_have_skills"] = must_have_skills
-        if (nice_to_have_skills := job_data.get("nice_to_have_skills")) is not None:
+        if (nice_to_have_skills := job_data_any.get("nice_to_have_skills")) is not None:
             mapped_data["nice_to_have_skills"] = nice_to_have_skills
 
-        mapped_data["is_relevant"] = job_data.get("is_relevant", True)
-        mapped_data["is_filtered"] = job_data.get("is_filtered", False)
+        mapped_data["is_relevant"] = job_data_any.get("is_relevant", True)
+        mapped_data["is_filtered"] = job_data_any.get("is_filtered", False)
 
     def _map_company(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract company name from nested object."""
@@ -115,33 +121,35 @@ class JobMapper(IJobMapper):
         Returns:
             Type-safe dictionary with all job fields serialized
         """
-        return {
-            "id": job.id,
-            "title": job.title,
-            "company_id": job.company_id,
+        # SQLAlchemy model attributes are typed as Column[T] but return T at runtime
+        result: JobSerializedDict = {
+            "id": cast(int, job.id),
+            "title": cast(str, job.title),
+            "company_id": cast(Optional[int], job.company_id),
             "company_name": job.company_rel.name if job.company_rel else None,
-            "location_id": job.location_id,
+            "location_id": cast(Optional[int], job.location_id),
             "location_region": job.location_rel.region if job.location_rel else None,
-            "category_id": job.category_id,
+            "category_id": cast(Optional[int], job.category_id),
             "category_name": job.category_rel.name if job.category_rel else None,
-            "industry_id": job.industry_id,
+            "industry_id": cast(Optional[int], job.industry_id),
             "industry_name": job.industry_rel.name if job.industry_rel else None,
-            "description": job.description,
-            "must_have_skills": job.must_have_skills,
-            "nice_to_have_skills": job.nice_to_have_skills,
-            "job_type": job.job_type,
-            "experience_months": job.experience_months,
-            "salary_min": job.salary_min,
-            "salary_max": job.salary_max,
-            "salary_currency": job.salary_currency,
-            "external_id": job.external_id,
-            "source": job.source,
-            "source_url": job.source_url,
-            "is_remote": job.is_remote,
-            "is_relevant": job.is_relevant,
-            "is_filtered": job.is_filtered,
+            "description": cast(Optional[str], job.description),
+            "must_have_skills": cast(Optional[List[str]], job.must_have_skills),
+            "nice_to_have_skills": cast(Optional[List[str]], job.nice_to_have_skills),
+            "job_type": cast(Optional[str], job.job_type),
+            "experience_months": cast(Optional[int], job.experience_months),
+            "salary_min": cast(Optional[float], job.salary_min),
+            "salary_max": cast(Optional[float], job.salary_max),
+            "salary_currency": cast(Optional[str], job.salary_currency),
+            "external_id": cast(Optional[str], job.external_id),
+            "source": cast(Optional[str], job.source),
+            "source_url": cast(Optional[str], job.source_url),
+            "is_remote": cast(bool, job.is_remote),
+            "is_relevant": cast(bool, job.is_relevant),
+            "is_filtered": cast(bool, job.is_filtered),
             "posted_at": job.posted_at.isoformat() if job.posted_at else None,
             "expires_at": job.expires_at.isoformat() if job.expires_at else None,
             "created_at": job.created_at.isoformat() if job.created_at else None,
             "updated_at": job.updated_at.isoformat() if job.updated_at else None,
         }
+        return result

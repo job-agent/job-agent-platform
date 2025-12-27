@@ -76,12 +76,18 @@ class MockMessage:
     To enable shared tracking, pass a tracker dict or use enable_shared_tracking=True.
     """
 
+    _tracker: Optional[dict[str, Any]]
+    _shared_tracking: bool
+    _local_reply_texts: list[str]
+    _local_reply_documents: list[tuple[BytesIO, str, str]]
+    _local_edited_texts: list[str]
+
     def __init__(
         self,
         text: str = "",
         document: Optional[MockDocument] = None,
         user: Optional[MockUser] = None,
-        tracker: Optional[dict] = None,
+        tracker: Optional[dict[str, Any]] = None,
         enable_shared_tracking: bool = False,
     ):
         self.text = text
@@ -104,25 +110,25 @@ class MockMessage:
             # Local tracking mode (backward compatible)
             self._tracker = None
             self._shared_tracking = False
-            self._local_reply_texts: list[str] = []
-            self._local_reply_documents: list[tuple[BytesIO, str, str]] = []
-            self._local_edited_texts: list[str] = []
+        self._local_reply_texts = []
+        self._local_reply_documents = []
+        self._local_edited_texts = []
 
     @property
     def _reply_texts(self) -> list[str]:
-        if self._shared_tracking:
+        if self._shared_tracking and self._tracker is not None:
             return self._tracker["reply_texts"]
         return self._local_reply_texts
 
     @property
     def _edited_texts(self) -> list[str]:
-        if self._shared_tracking:
+        if self._shared_tracking and self._tracker is not None:
             return self._tracker["edited_texts"]
         return self._local_edited_texts
 
     @property
     def _reply_documents(self) -> list[tuple[BytesIO, str, str]]:
-        if self._shared_tracking:
+        if self._shared_tracking and self._tracker is not None:
             return self._tracker["reply_documents"]
         return self._local_reply_documents
 

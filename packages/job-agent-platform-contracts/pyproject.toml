@@ -9,15 +9,15 @@ description = "Shared contracts and data models for job-agent platform"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "pydantic>=2.0.0",
+    "pydantic>=2.12.5",
     "job-scrapper-contracts @ git+https://github.com/job-agent/job-scrapper-contracts.git@main",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=6.0.0",
-    "ruff>=0.14.3",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.10",
 ]
 
 [tool.setuptools.packages.find]

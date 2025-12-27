@@ -20,10 +20,7 @@ class DatabaseConfig(BaseModel):
         echo: Enable SQL query logging (default: False)
     """
 
-    model_config = {"env_prefix": "DB_"}
-
     url: str = Field(
-        default=None,
         description="PostgreSQL connection URL",
     )
     pool_size: int = Field(
@@ -41,17 +38,16 @@ class DatabaseConfig(BaseModel):
         description="Enable SQL query logging",
     )
 
-    def __init__(self, **data):
+    def __init__(self, url: str | None = None, **data):
         """Initialize DatabaseConfig, reading URL from environment if not provided."""
-        if "url" not in data or data["url"] is None:
+        if url is None:
             url = os.getenv("DATABASE_URL")
             if url is None:
                 raise ValueError(
                     "DATABASE_URL environment variable is required. "
                     "Set DATABASE_URL or provide url parameter."
                 )
-            data["url"] = url
-        super().__init__(**data)
+        super().__init__(url=url, **data)
 
 
 def get_database_config() -> DatabaseConfig:

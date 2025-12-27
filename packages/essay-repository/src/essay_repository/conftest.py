@@ -6,7 +6,7 @@ import json
 
 import pytest
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
-from sqlalchemy.orm import Session, sessionmaker, declarative_base
+from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase
 from sqlalchemy.types import TypeDecorator
 
 from essay_repository.models.base import Base
@@ -37,7 +37,10 @@ class JSONArray(TypeDecorator):
 
 
 # Create a test-specific Base for SQLite compatibility (used only in model tests)
-SQLiteTestBase = declarative_base()
+class SQLiteTestBase(DeclarativeBase):
+    """Base class for SQLite-compatible test models."""
+
+    pass
 
 
 class SQLiteEssay(SQLiteTestBase):

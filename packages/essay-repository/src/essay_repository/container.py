@@ -1,6 +1,6 @@
 """Dependency injection container for essay repository services."""
 
-from typing import Type, TypeVar, overload
+from typing import Any, Callable, Type, TypeVar
 
 from dependency_injector import containers, providers
 from job_agent_platform_contracts.essay_repository import (
@@ -30,13 +30,9 @@ class EssayRepositoryContainer(containers.DeclarativeContainer):
 container = EssayRepositoryContainer()
 
 
-_DEPENDENCY_MAP = {
+_DEPENDENCY_MAP: dict[Type[Any], Callable[[], Any]] = {
     IEssayRepository: lambda: container.essay_repository(),
 }
-
-
-@overload
-def get(dependency_type: Type[IEssayRepository]) -> IEssayRepository: ...
 
 
 def get(dependency_type: Type[T]) -> T:

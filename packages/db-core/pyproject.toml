@@ -9,15 +9,15 @@ description = "Shared database infrastructure for job-agent-platform repositorie
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "sqlalchemy>=2.0.0",
-    "pydantic>=2.0.0",
+    "sqlalchemy>=2.0.45",
+    "pydantic>=2.12.5",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=6.0.0",
-    "ruff>=0.14.3",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.10",
 ]
 
 [tool.setuptools]

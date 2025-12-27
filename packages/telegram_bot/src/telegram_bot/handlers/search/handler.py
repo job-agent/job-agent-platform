@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import traceback
+from typing import Any, cast
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -33,12 +34,15 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         /search min_salary=6000 employment_location=remote
         /search min_salary=5000 days=7  # Get jobs from last 7 days
     """
+    if update.message is None or update.effective_user is None:
+        return
+    message = update.message
     user_id = update.effective_user.id
     dependencies = get_dependencies(context)
     orchestrator = dependencies.orchestrator_factory()
 
     if active_searches.get(user_id, False):
-        await update.message.reply_text(
+        await message.reply_text(
             "⚠️ You already have a search running. Please wait for it to complete "
             "or use /cancel to stop it."
         )
@@ -56,7 +60,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         if "=" in arg:
             key, value = arg.split("=", 1)
             if key == "salary":
-                await update.message.reply_text(
+                await message.reply_text(
                     "❌ The parameter 'salary' is no longer supported. Please use 'min_salary'."
                 )
                 return
@@ -65,7 +69,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     try:
                         params[key] = int(value)
                     except ValueError:
-                        await update.message.reply_text(
+                        await message.reply_text(
                             f"❌ Invalid value for {key}: {value}. Must be a number."
                         )
                         return
@@ -73,18 +77,18 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     params[key] = value
 
     if not orchestrator.has_cv(user_id):
-        await update.message.reply_text(
+        await message.reply_text(
             "❌ No CV found!\n\n"
             "Please upload your CV first by sending it as a PDF document to this bot.\n"
             "Once uploaded, you can use /search to find relevant jobs."
         )
         return
 
-    await update.message.reply_text(
+    await message.reply_text(
         formatter.format_search_parameters(
-            params["min_salary"],
-            params["employment_location"],
-            params["days"],
+            cast(int, params["min_salary"]),
+            cast(str, params["employment_location"]),
+            cast(int, params["days"]) if params["days"] is not None else None,
         )
     )
 
@@ -92,20 +96,20 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     try:
 
-        def sync_logger(message: str) -> None:
+        def sync_logger(log_message: str) -> None:
             """Log workflow updates to stdout for orchestrator callbacks."""
-            print(f"[Telegram Bot] {message}")
+            print(f"[Telegram Bot] {log_message}")
 
         orchestrator = dependencies.orchestrator_factory(logger=sync_logger)
 
         loop = asyncio.get_running_loop()
 
-        await update.message.reply_text(
+        await message.reply_text(
             "📊 Starting job search...\nJobs will be displayed as they're found and processed."
         )
 
         cleaned_cv = await loop.run_in_executor(None, orchestrator.load_cv, user_id)
-        await update.message.reply_text("✅ CV loaded")
+        await message.reply_text("✅ CV loaded")
 
         total_scraped = 0
         total_filtered = 0
@@ -138,13 +142,11 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             batch_jobs, total_jobs_so_far = batch_result
 
             if not active_searches.get(user_id, False):
-                await update.message.reply_text("🛑 Search cancelled by user.")
+                await message.reply_text("🛑 Search cancelled by user.")
                 return
 
             total_scraped = total_jobs_so_far
-            await update.message.reply_text(
-                f"📄 Scraped {len(batch_jobs)} jobs (total: {total_scraped})"
-            )
+            await message.reply_text(f"📄 Scraped {len(batch_jobs)} jobs (total: {total_scraped})")
 
             filtered_batch = await loop.run_in_executor(
                 None, orchestrator.filter_jobs_list, batch_jobs
@@ -152,20 +154,18 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             total_filtered += len(filtered_batch)
 
             if not filtered_batch:
-                await update.message.reply_text("⏭️  No jobs passed filters, continuing...")
+                await message.reply_text("⏭️  No jobs passed filters, continuing...")
                 continue
 
-            await update.message.reply_text(
-                f"🔍 {len(filtered_batch)} jobs passed filters, processing..."
-            )
+            await message.reply_text(f"🔍 {len(filtered_batch)} jobs passed filters, processing...")
+
+            def process_batch() -> list[tuple[int, int, Any]]:
+                return list(orchestrator.process_jobs_iterator(filtered_batch, cleaned_cv))
 
             batch_relevant = []
-            for idx, total_batch, result in await loop.run_in_executor(
-                None,
-                lambda fb=filtered_batch: list(orchestrator.process_jobs_iterator(fb, cleaned_cv)),
-            ):
+            for idx, total_batch, result in await loop.run_in_executor(None, process_batch):
                 if not active_searches.get(user_id, False):
-                    await update.message.reply_text("🛑 Search cancelled by user.")
+                    await message.reply_text("🛑 Search cancelled by user.")
                     return
 
                 total_processed += 1
@@ -175,18 +175,18 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     relevant_count += 1
 
             if batch_relevant:
-                await update.message.reply_text(f"✨ Found {len(batch_relevant)} relevant job(s)!")
+                await message.reply_text(f"✨ Found {len(batch_relevant)} relevant job(s)!")
 
                 for result in batch_relevant:
                     sent_job_count += 1
-                    message = formatter.format_job_message(result, sent_job_count, relevant_count)
-                    await update.message.reply_text(message)
+                    job_message = formatter.format_job_message(
+                        result, sent_job_count, relevant_count
+                    )
+                    await message.reply_text(job_message)
             else:
-                await update.message.reply_text(
-                    f"⏭️  Processed {len(filtered_batch)} jobs, none relevant"
-                )
+                await message.reply_text(f"⏭️  Processed {len(filtered_batch)} jobs, none relevant")
 
-        await update.message.reply_text(
+        await message.reply_text(
             formatter.format_search_summary(
                 total_scraped=total_scraped,
                 passed_filters=total_filtered,
@@ -196,7 +196,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
 
         if relevant_count == 0:
-            await update.message.reply_text(
+            await message.reply_text(
                 "😔 No relevant jobs found matching your CV.\n"
                 "Try adjusting your search parameters or check back later."
             )
@@ -204,7 +204,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error("Error during job search: %s", e)
         logger.debug("Search error traceback:\n%s", traceback.format_exc())
-        await update.message.reply_text(
+        await message.reply_text(
             "❌ An error occurred during the search.\n\n"
             "Please try again or contact support if the issue persists."
         )

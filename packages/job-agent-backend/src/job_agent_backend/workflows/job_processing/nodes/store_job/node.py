@@ -7,7 +7,7 @@ from job_scrapper_contracts import JobDict
 
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
-from ...state import AgentState
+from ...state import AgentState, AgentStateUpdate
 
 
 def create_store_job_node(
@@ -23,7 +23,7 @@ def create_store_job_node(
         Configured store_job_node function
     """
 
-    def store_job_node(state: AgentState) -> AgentState:
+    def store_job_node(state: AgentState) -> AgentStateUpdate:
         """
         Store a relevant job to the database.
 

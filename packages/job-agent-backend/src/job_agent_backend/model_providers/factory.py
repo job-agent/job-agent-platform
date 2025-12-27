@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Type
 
 from ..contracts.model_factory_interface import IModelFactory
 from .mappers import MODEL_PROVIDER_MAP
-from .contracts.provider_interface import IModelProvider
+from .providers.base import BaseModelProvider
 from .contracts.registry_interface import IModelRegistry
 
 
@@ -14,7 +14,7 @@ class ModelFactory(IModelFactory):
     def __init__(
         self,
         registry: IModelRegistry,
-        provider_map: Dict[str, Type[IModelProvider]],
+        provider_map: Dict[str, Type[BaseModelProvider]],
         model_provider_map: Optional[Dict[str, str]] = None,
     ) -> None:
         """Initialize the model factory with injected dependencies.

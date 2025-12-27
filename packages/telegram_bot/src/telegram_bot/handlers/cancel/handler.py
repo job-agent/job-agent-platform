@@ -14,6 +14,8 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         update: Telegram update object
         context: Callback context
     """
+    if update.message is None or update.effective_user is None:
+        return
     user_id = update.effective_user.id
     is_active = active_searches.get(user_id, False)
 

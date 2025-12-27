@@ -1,7 +1,7 @@
 """Handler for adding essays via Telegram."""
 
 import re
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -111,13 +111,11 @@ async def add_essay_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         essay_service = dependencies.essay_service_factory()
 
         # Prepare essay data
-        essay_data = {
+        essay_data: dict[str, Any] = {
             "answer": answer.strip(),
         }
         if question:
             essay_data["question"] = question.strip()
-        else:
-            essay_data["question"] = None
 
         # Create the essay
         essay = essay_service.create(essay_data)

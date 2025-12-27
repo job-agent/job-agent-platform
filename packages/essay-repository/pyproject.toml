@@ -9,21 +9,21 @@ description = "Essay repository package for PostgreSQL database operations"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "sqlalchemy>=2.0.0",
+    "sqlalchemy>=2.0.45",
     "psycopg2-binary>=2.9.0",
-    "alembic>=1.13.0",
-    "pydantic>=2.0.0",
+    "alembic>=1.17.2",
+    "pydantic>=2.12.5",
     "python-dotenv>=1.2.1",
-    "dependency-injector>=4.41.0",
+    "dependency-injector>=4.48.3",
     "job-agent-platform-contracts>=0.1.0",
     "db-core>=0.1.0"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=6.0.0",
-    "ruff>=0.14.3",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.10",
 ]
 
 [tool.setuptools.packages.find]

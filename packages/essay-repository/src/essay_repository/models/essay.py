@@ -1,6 +1,7 @@
 """Essay model."""
 
 from datetime import datetime, UTC
+from typing import Optional
 
 from sqlalchemy import Column, Integer, Text, DateTime, Float
 from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR, TSVECTOR
@@ -18,8 +19,8 @@ class Essay(Base):
 
     question = Column(Text, nullable=True)
     answer = Column(Text, nullable=False)
-    keywords = Column(ARRAY(VARCHAR), nullable=True)
-    embedding = Column(ARRAY(Float), nullable=True)
+    keywords: Column[Optional[list[str]]] = Column(ARRAY(VARCHAR), nullable=True)
+    embedding: Column[Optional[list[float]]] = Column(ARRAY(Float), nullable=True)
     search_vector = Column(TSVECTOR, nullable=True)
 
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)

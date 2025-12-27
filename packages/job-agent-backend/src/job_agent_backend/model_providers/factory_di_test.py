@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from job_agent_backend.model_providers.providers import IModelProvider
+from job_agent_backend.model_providers.providers.base import BaseModelProvider
 
 
 class TestModelFactoryConstructorAcceptsRegistry:
@@ -21,7 +22,7 @@ class TestModelFactoryConstructorAcceptsRegistry:
         from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map: Dict[str, Type[IModelProvider]] = {}
+        mock_provider_map: Dict[str, Type[BaseModelProvider]] = {}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 
@@ -40,7 +41,7 @@ class TestModelFactoryConstructorAcceptsRegistry:
         mock_registry.get.return_value = mock_provider
         mock_registry.list_models.return_value = ["test-model"]
 
-        mock_provider_map: Dict[str, Type[IModelProvider]] = {}
+        mock_provider_map: Dict[str, Type[BaseModelProvider]] = {}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
         result = factory.get_model(model_id="test-model")
@@ -57,7 +58,7 @@ class TestModelFactoryConstructorAcceptsRegistry:
         mock_registry.get.return_value = None
         mock_registry.list_models.return_value = []
 
-        mock_provider_map: Dict[str, Type[IModelProvider]] = {}
+        mock_provider_map: Dict[str, Type[BaseModelProvider]] = {}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 
@@ -105,7 +106,7 @@ class TestModelFactoryConstructorAcceptsProviderMap:
         from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map: Dict[str, Type[IModelProvider]] = {}
+        mock_provider_map: Dict[str, Type[BaseModelProvider]] = {}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 
@@ -122,7 +123,7 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
         from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map: Dict[str, Type[IModelProvider]] = {}
+        mock_provider_map: Dict[str, Type[BaseModelProvider]] = {}
         custom_model_map = {"custom-model": "custom-provider"}
 
         factory = ModelFactory(
@@ -196,7 +197,7 @@ class TestModelFactoryCachingWithDI:
         mock_registry.get.return_value = mock_provider
         mock_registry.list_models.return_value = ["cached-test"]
 
-        mock_provider_map: Dict[str, Type[IModelProvider]] = {}
+        mock_provider_map: Dict[str, Type[BaseModelProvider]] = {}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 

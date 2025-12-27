@@ -17,7 +17,7 @@ async def upload_cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         update: The update object containing the message
         context: The context object for the handler
     """
-    if not update.message or not update.message.document:
+    if not update.message or not update.message.document or not update.effective_user:
         return
 
     user_id = update.effective_user.id

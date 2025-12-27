@@ -1,6 +1,7 @@
 """Job model."""
 
 from datetime import datetime, UTC
+from typing import Optional
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -19,8 +20,8 @@ class Job(Base):
 
     title = Column(String(500), nullable=False, index=True)
     description = Column(Text, nullable=True)
-    must_have_skills = Column(ARRAY(String), nullable=True)
-    nice_to_have_skills = Column(ARRAY(String), nullable=True)
+    must_have_skills: Column[Optional[list[str]]] = Column(ARRAY(String), nullable=True)
+    nice_to_have_skills: Column[Optional[list[str]]] = Column(ARRAY(String), nullable=True)
 
     company_id = Column(Integer, ForeignKey("jobs.companies.id"), nullable=True, index=True)
     location_id = Column(Integer, ForeignKey("jobs.locations.id"), nullable=True, index=True)

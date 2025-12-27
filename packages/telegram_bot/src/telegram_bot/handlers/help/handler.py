@@ -13,4 +13,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         update: Telegram update object
         context: Callback context
     """
+    if update.message is None:
+        return
     await update.message.reply_text(HELP_TEXT)
