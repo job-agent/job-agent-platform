@@ -11,6 +11,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 from telegram_bot.handlers import (
+    add_essay_handler,
     start_handler,
     help_handler,
     search_jobs_handler,
@@ -65,6 +66,7 @@ class JobAgentBot:
         self.application.add_handler(CommandHandler("status", require_access(status_handler)))
         self.application.add_handler(CommandHandler("cancel", require_access(cancel_handler)))
         self.application.add_handler(CommandHandler("cv", require_access(cv_handler)))
+        self.application.add_handler(CommandHandler("add_essay", require_access(add_essay_handler)))
 
         self.application.add_handler(
             MessageHandler(filters.Document.PDF, require_access(upload_cv_handler))
@@ -81,6 +83,7 @@ class JobAgentBot:
                 ("status", "Check current search status"),
                 ("cancel", "Cancel current job search"),
                 ("cv", "View your current CV content"),
+                ("add_essay", "Add an essay to the database"),
             ]
         )
 
@@ -119,12 +122,12 @@ def create_bot() -> JobAgentBot:
         Configured JobAgentBot instance
 
     Raises:
-        ValueError: If TELEGRAM_BOT_TOKEN is not set
+        ValueError: If JOB_AGENT_BOT_TOKEN is not set
     """
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    token = os.getenv("JOB_AGENT_BOT_TOKEN")
     if not token:
         raise ValueError(
-            "TELEGRAM_BOT_TOKEN environment variable is required. "
+            "JOB_AGENT_BOT_TOKEN environment variable is required. "
             "Get a token from @BotFather on Telegram."
         )
 

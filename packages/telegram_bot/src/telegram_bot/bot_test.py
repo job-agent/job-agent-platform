@@ -195,7 +195,7 @@ class TestCreateBot:
         """create_bot should create bot from environment variable."""
         mock_build_deps.return_value = MagicMock()
 
-        with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "env_token_456"}):
+        with patch.dict(os.environ, {"JOB_AGENT_BOT_TOKEN": "env_token_456"}):
             bot = create_bot()
 
         assert bot.token == "env_token_456"
@@ -206,10 +206,10 @@ class TestCreateBot:
         mock_build_deps.return_value = MagicMock()
 
         with patch.dict(os.environ, {}, clear=True):
-            if "TELEGRAM_BOT_TOKEN" in os.environ:
-                del os.environ["TELEGRAM_BOT_TOKEN"]
+            if "JOB_AGENT_BOT_TOKEN" in os.environ:
+                del os.environ["JOB_AGENT_BOT_TOKEN"]
 
-            with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
+            with pytest.raises(ValueError, match="JOB_AGENT_BOT_TOKEN"):
                 create_bot()
 
     @patch("telegram_bot.bot.build_dependencies")
@@ -217,7 +217,7 @@ class TestCreateBot:
         """create_bot should return JobAgentBot instance."""
         mock_build_deps.return_value = MagicMock()
 
-        with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "test_token"}):
+        with patch.dict(os.environ, {"JOB_AGENT_BOT_TOKEN": "test_token"}):
             bot = create_bot()
 
         assert isinstance(bot, JobAgentBot)

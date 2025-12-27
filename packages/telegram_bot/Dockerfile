@@ -1,4 +1,4 @@
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git openssh-client && \
@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir /app/packages/db-core
 
 COPY packages/jobs-repository /app/packages/jobs-repository
 RUN pip install --no-cache-dir /app/packages/jobs-repository
+
+COPY packages/essay-repository /app/packages/essay-repository
+RUN pip install --no-cache-dir /app/packages/essay-repository
 
 RUN --mount=type=ssh ssh -T git@github.com || true
 

@@ -1,14 +1,47 @@
 """Shared test fixtures for telegram_bot package."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Protocol
 from unittest.mock import MagicMock
 
 import pytest
 
-from telegram_bot.di import BotDependencies
+
+# Protocol definitions for DI mocking (avoid importing production BotDependencies)
+class OrchestratorFactory(Protocol):
+    def __call__(self, *, logger: Optional[Callable[[str], None]] = None) -> MagicMock: ...
+
+
+class CVRepositoryFactory(Protocol):
+    def __call__(self, user_id: int) -> MagicMock: ...
+
+
+class EssayServiceFactory(Protocol):
+    def __call__(self) -> MagicMock: ...
+
+
+@dataclass
+class MockBotDependencies:
+    """Mock BotDependencies for testing without importing production DI."""
+
+    orchestrator_factory: OrchestratorFactory
+    cv_repository_factory: CVRepositoryFactory
+    essay_service_factory: Optional[EssayServiceFactory] = None
+
+
+@dataclass(frozen=True)
+class MockEssay:
+    """Mock Essay object returned by essay service."""
+
+    id: int
+    question: Optional[str]
+    answer: str
+    keywords: Optional[list] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 @dataclass
@@ -178,7 +211,7 @@ class MockBot:
 class MockApplication:
     """Mock Telegram Application."""
 
-    def __init__(self, dependencies: Optional[BotDependencies] = None):
+    def __init__(self, dependencies: Optional[MockBotDependencies] = None):
         self.bot_data: dict[str, Any] = {}
         if dependencies:
             self.bot_data["dependencies"] = dependencies
@@ -191,7 +224,7 @@ class MockContext:
     def __init__(
         self,
         args: Optional[list[str]] = None,
-        dependencies: Optional[BotDependencies] = None,
+        dependencies: Optional[MockBotDependencies] = None,
     ):
         self.args = args or []
         self.application = MockApplication(dependencies)
@@ -309,22 +342,56 @@ def mock_cv_repository() -> MagicMock:
 
 
 @pytest.fixture
+def mock_essay_service() -> MagicMock:
+    """Create a mock essay service with default behavior.
+
+    Returns a MagicMock configured to return a MockEssay on create().
+    Tests can override the return_value or side_effect as needed.
+    """
+    service = MagicMock()
+    service.create.return_value = MockEssay(
+        id=42,
+        question="Test question",
+        answer="Test answer",
+    )
+    return service
+
+
+@pytest.fixture
 def mock_dependencies(
     mock_orchestrator: MagicMock,
     mock_cv_repository: MagicMock,
-) -> BotDependencies:
-    """Create mock BotDependencies."""
+) -> MockBotDependencies:
+    """Create mock BotDependencies without essay service."""
     orchestrator_factory = MagicMock(return_value=mock_orchestrator)
     cv_repository_factory = MagicMock(return_value=mock_cv_repository)
 
-    return BotDependencies(
+    return MockBotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
     )
 
 
 @pytest.fixture
-def mock_context_with_deps(mock_dependencies: BotDependencies) -> MockContext:
+def mock_dependencies_with_essay(
+    mock_orchestrator: MagicMock,
+    mock_cv_repository: MagicMock,
+    mock_essay_service: MagicMock,
+) -> MockBotDependencies:
+    """Create mock BotDependencies including essay service factory."""
+    orchestrator_factory = MagicMock(return_value=mock_orchestrator)
+    cv_repository_factory = MagicMock(return_value=mock_cv_repository)
+    essay_service_factory = MagicMock(return_value=mock_essay_service)
+
+    return MockBotDependencies(
+        orchestrator_factory=orchestrator_factory,
+        cv_repository_factory=cv_repository_factory,
+        essay_service_factory=essay_service_factory,
+    )
+
+
+@pytest.fixture
+def mock_context_with_deps(mock_dependencies: MockBotDependencies) -> MockContext:
     """Create a mock context with dependencies injected."""
     return MockContext(dependencies=mock_dependencies)
 
@@ -343,10 +410,11 @@ class HandlerTestSetup:
     message: MockMessage
     update: MockUpdate
     context: MockContext
+    essay_service: Optional[MagicMock] = None
 
 
 @pytest.fixture
-def handler_test_setup_factory(mock_dependencies: BotDependencies):
+def handler_test_setup_factory(mock_dependencies: MockBotDependencies):
     """Factory fixture for creating standard handler test setup.
 
     Creates user, message (with shared tracking), update, and context
@@ -375,9 +443,11 @@ def handler_test_setup_factory(mock_dependencies: BotDependencies):
         document: Optional[MockDocument] = None,
         args: Optional[list[str]] = None,
         enable_shared_tracking: bool = True,
+        message_text: str = "",
     ) -> HandlerTestSetup:
         user = MockUser(id=user_id)
         message = MockMessage(
+            text=message_text,
             user=user,
             document=document,
             enable_shared_tracking=enable_shared_tracking,
@@ -390,6 +460,51 @@ def handler_test_setup_factory(mock_dependencies: BotDependencies):
             message=message,
             update=update,
             context=context,
+        )
+
+    return factory
+
+
+@pytest.fixture
+def essay_handler_test_setup_factory(
+    mock_dependencies_with_essay: MockBotDependencies,
+    mock_essay_service: MagicMock,
+):
+    """Factory fixture for creating handler test setup with essay service.
+
+    Similar to handler_test_setup_factory but includes essay service mocking.
+    The setup includes essay_service attribute for test assertions.
+
+    Usage:
+        def test_essay_handler(essay_handler_test_setup_factory):
+            setup = essay_handler_test_setup_factory(
+                message_text="/add_essay Answer: test"
+            )
+            await add_essay_handler(setup.update, setup.context)
+            setup.essay_service.create.assert_called_once()
+    """
+
+    def factory(
+        user_id: int = 12345,
+        args: Optional[list[str]] = None,
+        enable_shared_tracking: bool = True,
+        message_text: str = "",
+    ) -> HandlerTestSetup:
+        user = MockUser(id=user_id)
+        message = MockMessage(
+            text=message_text,
+            user=user,
+            enable_shared_tracking=enable_shared_tracking,
+        )
+        update = MockUpdate(user=user, message=message)
+        context = MockContext(args=args, dependencies=mock_dependencies_with_essay)
+
+        return HandlerTestSetup(
+            user=user,
+            message=message,
+            update=update,
+            context=context,
+            essay_service=mock_essay_service,
         )
 
     return factory

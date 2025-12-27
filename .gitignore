@@ -74,4 +74,6 @@ data/
 
 .langgraph_api
 
-.workflow
+.task-reports
+
+*.db

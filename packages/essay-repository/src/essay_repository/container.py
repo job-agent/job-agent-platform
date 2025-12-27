@@ -58,3 +58,15 @@ def get(dependency_type: Type[T]) -> T:
             f"Available types: {', '.join(t.__name__ for t in _DEPENDENCY_MAP.keys())}"
         )
     return resolver()
+
+
+def get_essay_repository() -> IEssayRepository:
+    """Get an essay repository instance.
+
+    This is a convenience function for use as a factory in DI containers.
+    Equivalent to calling get(IEssayRepository).
+
+    Returns:
+        A configured EssayRepository instance
+    """
+    return container.essay_repository()

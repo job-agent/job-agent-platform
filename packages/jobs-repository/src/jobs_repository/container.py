@@ -64,3 +64,15 @@ def get(dependency_type: Type[T]) -> T:
             f"Available types: {', '.join(t.__name__ for t in _DEPENDENCY_MAP.keys())}"
         )
     return resolver()
+
+
+def get_job_repository() -> IJobRepository:
+    """Get a job repository instance.
+
+    This is a convenience function for use as a factory in DI containers.
+    Equivalent to calling get(IJobRepository).
+
+    Returns:
+        A configured JobRepository instance
+    """
+    return container.job_repository()

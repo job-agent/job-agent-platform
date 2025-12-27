@@ -178,7 +178,7 @@ Create a `.env` file in the repository root with the following variables:
 ### Core Services
 
 - `OPENAI_API_KEY` — Required. API key for OpenAI models used in LangGraph workflows for CV sanitization and job filtering.
-- `TELEGRAM_BOT_TOKEN` — Required. Token issued by @BotFather to connect your bot to Telegram.
+- `JOB_AGENT_BOT_TOKEN` — Required. Token issued by @BotFather to connect your bot to Telegram.
 
 ### Database (PostgreSQL)
 
@@ -214,7 +214,7 @@ Create a `.env` file in the repository root with the following variables:
 OPENAI_API_KEY=sk-...
 
 # Telegram
-TELEGRAM_BOT_TOKEN=1234567890:ABC...
+JOB_AGENT_BOT_TOKEN=1234567890:ABC...
 # Restrict bot access (optional, omit to allow all users)
 TELEGRAM_ALLOWED_USER_IDS=123456789
 
@@ -394,7 +394,7 @@ If Alembic migrations fail:
 
 If the bot doesn't respond to messages:
 
-1. Verify `TELEGRAM_BOT_TOKEN` is correct
+1. Verify `JOB_AGENT_BOT_TOKEN` is correct
 2. Check bot logs: `docker compose logs telegram_bot -f`
 3. Ensure the bot is started: `docker compose ps telegram_bot`
 4. Verify RabbitMQ connection is established

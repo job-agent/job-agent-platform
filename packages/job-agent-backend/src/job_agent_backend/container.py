@@ -46,7 +46,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     database_initializer = providers.Object(init_db)
 
     # Essay repository and search service
-    essay_repository_factory = providers.Object(get_essay_repository)
+    essay_repository_factory = providers.Factory(get_essay_repository)
     essay_search_service = providers.Factory(
         EssaySearchService,
         repository=essay_repository_factory,
