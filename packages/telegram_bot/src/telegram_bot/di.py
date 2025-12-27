@@ -1,5 +1,7 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Protocol
+from typing import Callable, Optional, Protocol
+
+from telegram.ext import ContextTypes
 
 from job_agent_backend.container import container
 from job_agent_backend.contracts import IEssaySearchService
@@ -48,5 +50,5 @@ def build_dependencies() -> BotDependencies:
     )
 
 
-def get_dependencies(context: Any) -> BotDependencies:
+def get_dependencies(context: ContextTypes.DEFAULT_TYPE) -> BotDependencies:
     return context.application.bot_data["dependencies"]

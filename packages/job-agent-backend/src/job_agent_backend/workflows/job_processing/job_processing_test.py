@@ -4,6 +4,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from job_agent_backend.workflows import run_job_processing
+from job_agent_backend.workflows.job_processing.nodes.extract_must_have_skills.schemas import (
+    SkillsExtraction,
+)
 
 
 def create_mock_model(result_obj):
@@ -266,8 +269,7 @@ class TestJobProcessingWorkflow:
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
         embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_result = MagicMock()
-        mock_result.skills = ["Python"]
+        mock_result = SkillsExtraction(skills=["Python"])
 
         mock_factory = MagicMock()
 
@@ -310,8 +312,7 @@ class TestJobProcessingWorkflow:
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
         embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_result = MagicMock()
-        mock_result.skills = ["Python"]
+        mock_result = SkillsExtraction(skills=["Python"])
 
         mock_factory = MagicMock()
 
@@ -383,8 +384,7 @@ class TestJobProcessingWorkflow:
 
         # Both skill extraction nodes use the same model_id and run in parallel,
         # so we use the same mock result for both to avoid race conditions
-        mock_skill_result = MagicMock()
-        mock_skill_result.skills = ["Python", "Django"]
+        mock_skill_result = SkillsExtraction(skills=["Python", "Django"])
 
         mock_factory = MagicMock()
 
@@ -424,8 +424,7 @@ class TestJobProcessingWorkflow:
         """Test that workflow completes even when repository raises exception."""
         embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_result = MagicMock()
-        mock_result.skills = ["Python"]
+        mock_result = SkillsExtraction(skills=["Python"])
 
         mock_factory = MagicMock()
 

@@ -6,7 +6,7 @@ jobs and looking them up by external identifier.
 """
 
 from datetime import datetime, timedelta, UTC
-from typing import Optional, cast
+from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -110,19 +110,19 @@ class JobRepository(BaseRepository, IJobRepository):
         """
         if company_name := mapped_data.pop("company_name", None):
             company = self._reference_data_service.get_or_create_company(session, company_name)
-            mapped_data["company_id"] = cast(int, company.id)
+            mapped_data["company_id"] = company.id
 
         if location_region := mapped_data.pop("location_region", None):
             location = self._reference_data_service.get_or_create_location(session, location_region)
-            mapped_data["location_id"] = cast(int, location.id)
+            mapped_data["location_id"] = location.id
 
         if category_name := mapped_data.pop("category_name", None):
             category = self._reference_data_service.get_or_create_category(session, category_name)
-            mapped_data["category_id"] = cast(int, category.id)
+            mapped_data["category_id"] = category.id
 
         if industry_name := mapped_data.pop("industry_name", None):
             industry = self._reference_data_service.get_or_create_industry(session, industry_name)
-            mapped_data["industry_id"] = cast(int, industry.id)
+            mapped_data["industry_id"] = industry.id
 
     def create(self, job_data: JobCreate) -> Job:
         """
@@ -270,11 +270,15 @@ class JobRepository(BaseRepository, IJobRepository):
 
         if external_ids:
             stmt = select(Job.external_id).where(Job.external_id.in_(external_ids))
-            existing_external_ids = set(session.execute(stmt).scalars().all())
+            existing_external_ids = {
+                eid for eid in session.execute(stmt).scalars().all() if eid is not None
+            }
 
         if source_urls:
             stmt = select(Job.source_url).where(Job.source_url.in_(source_urls))
-            existing_source_urls = set(session.execute(stmt).scalars().all())
+            existing_source_urls = {
+                url for url in session.execute(stmt).scalars().all() if url is not None
+            }
 
         return existing_external_ids, existing_source_urls
 
@@ -294,7 +298,7 @@ class JobRepository(BaseRepository, IJobRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_company(
                     session, company_name
                 )
-            mapped_data["company_id"] = cast(int, cache[cache_key].id)
+            mapped_data["company_id"] = cache[cache_key].id
 
         if location_region := mapped_data.pop("location_region", None):
             cache_key = ("location", location_region)
@@ -302,7 +306,7 @@ class JobRepository(BaseRepository, IJobRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_location(
                     session, location_region
                 )
-            mapped_data["location_id"] = cast(int, cache[cache_key].id)
+            mapped_data["location_id"] = cache[cache_key].id
 
         if category_name := mapped_data.pop("category_name", None):
             cache_key = ("category", category_name)
@@ -310,7 +314,7 @@ class JobRepository(BaseRepository, IJobRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_category(
                     session, category_name
                 )
-            mapped_data["category_id"] = cast(int, cache[cache_key].id)
+            mapped_data["category_id"] = cache[cache_key].id
 
         if industry_name := mapped_data.pop("industry_name", None):
             cache_key = ("industry", industry_name)
@@ -318,7 +322,7 @@ class JobRepository(BaseRepository, IJobRepository):
                 cache[cache_key] = self._reference_data_service.get_or_create_industry(
                     session, industry_name
                 )
-            mapped_data["industry_id"] = cast(int, cache[cache_key].id)
+            mapped_data["industry_id"] = cache[cache_key].id
 
     def save_filtered_jobs(self, jobs: list[JobDict]) -> int:
         """

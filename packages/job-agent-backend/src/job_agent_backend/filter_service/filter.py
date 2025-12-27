@@ -4,7 +4,7 @@ This module provides filtering capabilities for job posts coming from the
 scrapper service before they are passed to the workflows system.
 """
 
-from typing import Any, Callable, List, Mapping, Optional, Tuple, cast
+from typing import Callable, List, Optional, Tuple
 
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import IJobRepository
@@ -33,8 +33,8 @@ class FilterService(IFilterService):
         }
         self._job_repository_factory = job_repository_factory
 
-    def configure(self, config: Optional[Mapping[str, Any]]) -> None:
-        self.config = cast(FilterConfig, config) if config else {}
+    def configure(self, config: Optional[FilterConfig]) -> None:
+        self.config = config if config else {}
 
     def filter(self, jobs: List[JobDict]) -> List[JobDict]:
         """

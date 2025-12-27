@@ -1,8 +1,8 @@
 """Abstract interface for model registry."""
 
-from typing import Any, List, Optional, Protocol
+from typing import List, Optional, Protocol
 
-from .provider_interface import IModelProvider
+from .provider_interface import IModelProvider, ModelInstance
 
 
 class IModelRegistry(Protocol):
@@ -23,14 +23,14 @@ class IModelRegistry(Protocol):
         """
         ...
 
-    def get_model(self, model_id: str) -> Any:
+    def get_model(self, model_id: str) -> ModelInstance:
         """Get model instance by ID.
 
         Args:
             model_id: The identifier of the model to retrieve
 
         Returns:
-            The model instance
+            The model instance (BaseChatModel, Embeddings, or Pipeline)
 
         Raises:
             ValueError: If the model ID is not found

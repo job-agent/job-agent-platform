@@ -1,8 +1,8 @@
 """Model configuration registry."""
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from .contracts.provider_interface import IModelProvider
+from .contracts.provider_interface import IModelProvider, ModelInstance
 from .contracts.registry_interface import IModelRegistry
 
 
@@ -19,7 +19,7 @@ class ModelRegistry(IModelRegistry):
         """Get a provider by model ID."""
         return self._providers.get(model_id)
 
-    def get_model(self, model_id: str) -> Any:
+    def get_model(self, model_id: str) -> ModelInstance:
         """Get model instance by ID."""
         provider = self._providers.get(model_id)
         if not provider:

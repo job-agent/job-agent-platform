@@ -41,7 +41,8 @@ def create_anonymize_text(model_factory: IModelFactory) -> Callable[[str], str]:
             raise RuntimeError(f"Failed to invoke PII anonymization model: {e}") from e
 
         if hasattr(response, "content"):
-            anonymized_text = response.content
+            content = response.content
+            anonymized_text = content if isinstance(content, str) else str(content)
         else:
             anonymized_text = str(response)
 

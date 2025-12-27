@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from typing import Any
 
-from ..contracts.provider_interface import IModelProvider
+from ..contracts.provider_interface import IModelProvider, ModelInstance
 
 
 class BaseModelProvider(IModelProvider):
@@ -28,12 +28,11 @@ class BaseModelProvider(IModelProvider):
         self.kwargs = kwargs
 
     @abstractmethod
-    def get_model(self) -> Any:
+    def get_model(self) -> ModelInstance:
         """Get the model instance.
 
         Returns:
-            A model instance (e.g., LangChain chat model, embedding model, etc.)
-            The specific interface depends on the model type.
+            A model instance (BaseChatModel, Embeddings, or Pipeline).
         """
         pass
 

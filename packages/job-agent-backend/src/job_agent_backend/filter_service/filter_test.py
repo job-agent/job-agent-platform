@@ -339,7 +339,7 @@ class TestFilterServiceWithRejected:
     def test_filter_with_rejected_passed_jobs_match_filter_output(self, sample_jobs_list) -> None:
         """Test that passed jobs from filter_with_rejected match regular filter output."""
         service = FilterService()
-        config = {"max_months_of_experience": 36}
+        config: FilterConfig = {"max_months_of_experience": 36}
         service.configure(config)
 
         passed, _ = service.filter_with_rejected(sample_jobs_list)

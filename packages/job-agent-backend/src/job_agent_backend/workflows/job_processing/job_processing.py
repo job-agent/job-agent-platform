@@ -4,7 +4,7 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from collections.abc import Mapping
-from typing import Callable, Tuple, cast  # cast used in _resolve_dependencies
+from typing import Callable, Tuple, TypeGuard
 
 from job_agent_platform_contracts import IJobRepository
 from langgraph.graph import StateGraph, END
@@ -24,6 +24,16 @@ from job_agent_backend.workflows.job_processing.nodes.check_job_relevance import
     route_after_relevance_check,
 )
 from job_agent_backend.workflows.job_processing.state import AgentState, as_node
+
+
+def _is_job_repository_factory(val: object) -> TypeGuard[Callable[[], IJobRepository]]:
+    """Check if value is a valid job repository factory callable."""
+    return callable(val)
+
+
+def _is_model_factory(val: object) -> TypeGuard[IModelFactory]:
+    """Check if value is a valid model factory."""
+    return val is not None
 
 
 def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
@@ -126,15 +136,12 @@ def _resolve_dependencies(
         job_repository_factory = config_values.get("job_repository_factory")
         model_factory = config_values.get("model_factory")
 
-        if not callable(job_repository_factory):
+        if not _is_job_repository_factory(job_repository_factory):
             raise ValueError("job_repository_factory dependency is not configured")
 
-        if model_factory is None:
+        if not _is_model_factory(model_factory):
             raise ValueError("model_factory dependency is not configured")
 
-        return (
-            cast(Callable[[], IJobRepository], job_repository_factory),
-            cast(IModelFactory, model_factory),
-        )
+        return (job_repository_factory, model_factory)
 
     raise ValueError("Configuration is not a valid Mapping")

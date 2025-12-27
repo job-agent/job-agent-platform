@@ -11,6 +11,7 @@ import os
 from typing import Any, Optional
 
 from .base import BaseModelProvider
+from ..contracts.provider_interface import ModelInstance
 
 
 class TransformersProvider(BaseModelProvider):
@@ -47,7 +48,7 @@ class TransformersProvider(BaseModelProvider):
         self.pipeline_kwargs = pipeline_kwargs or {}
         self.task = task
 
-    def get_model(self) -> Any:
+    def get_model(self) -> ModelInstance:
         """Get HuggingFace pipeline model instance."""
         try:
             from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings

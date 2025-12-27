@@ -1,9 +1,14 @@
 """Location model."""
 
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import relationship
+from typing import TYPE_CHECKING
+
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from jobs_repository.models.base import Base
+
+if TYPE_CHECKING:
+    from jobs_repository.models.job import Job
 
 
 class Location(Base):
@@ -12,10 +17,10 @@ class Location(Base):
     __tablename__ = "locations"
     __table_args__ = {"schema": "jobs"}
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    region = Column(String(300), nullable=False, unique=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    region: Mapped[str] = mapped_column(String(300), unique=True, index=True)
 
-    jobs = relationship("Job", back_populates="location_rel")
+    jobs: Mapped[list["Job"]] = relationship(back_populates="location_rel")
 
     def __repr__(self) -> str:
         """String representation of Location."""

@@ -1,14 +1,17 @@
 """Filter service interface definitions."""
 
-from typing import Any, List, Mapping, Optional, Protocol, Tuple
+from typing import TYPE_CHECKING, List, Optional, Protocol, Tuple
 
 from job_scrapper_contracts import JobDict
+
+if TYPE_CHECKING:
+    from job_agent_backend.filter_service.filter_config import FilterConfig
 
 
 class IFilterService(Protocol):
     """Interface for services that filter job posts."""
 
-    def configure(self, config: Optional[Mapping[str, Any]]) -> None: ...
+    def configure(self, config: Optional["FilterConfig"]) -> None: ...
 
     def filter(self, jobs: List[JobDict]) -> List[JobDict]: ...
 

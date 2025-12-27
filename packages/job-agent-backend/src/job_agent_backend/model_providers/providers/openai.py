@@ -6,6 +6,7 @@ from typing import Any, Optional
 from pydantic import SecretStr
 
 from .base import BaseModelProvider
+from ..contracts.provider_interface import ModelInstance
 
 
 class OpenAIProvider(BaseModelProvider):
@@ -43,7 +44,7 @@ class OpenAIProvider(BaseModelProvider):
         """Return the API key value for backward compatibility."""
         return self._api_key.get_secret_value()
 
-    def get_model(self) -> Any:
+    def get_model(self) -> ModelInstance:
         """Get ChatOpenAI model instance."""
         try:
             from langchain_openai import ChatOpenAI

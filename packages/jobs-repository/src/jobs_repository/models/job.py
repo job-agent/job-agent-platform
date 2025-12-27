@@ -1,13 +1,19 @@
 """Job model."""
 
 from datetime import datetime, UTC
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from jobs_repository.models.base import Base
+
+if TYPE_CHECKING:
+    from jobs_repository.models.company import Company
+    from jobs_repository.models.location import Location
+    from jobs_repository.models.category import Category
+    from jobs_repository.models.industry import Industry
 
 
 class Job(Base):
@@ -16,46 +22,54 @@ class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = {"schema": "jobs"}
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
 
-    title = Column(String(500), nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    must_have_skills: Column[Optional[list[str]]] = Column(ARRAY(String), nullable=True)
-    nice_to_have_skills: Column[Optional[list[str]]] = Column(ARRAY(String), nullable=True)
+    title: Mapped[str] = mapped_column(String(500), index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    must_have_skills: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String), nullable=True)
+    nice_to_have_skills: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String), nullable=True)
 
-    company_id = Column(Integer, ForeignKey("jobs.companies.id"), nullable=True, index=True)
-    location_id = Column(Integer, ForeignKey("jobs.locations.id"), nullable=True, index=True)
-    category_id = Column(Integer, ForeignKey("jobs.categories.id"), nullable=True, index=True)
-    industry_id = Column(Integer, ForeignKey("jobs.industries.id"), nullable=True, index=True)
-
-    job_type = Column(String(100), nullable=True)
-    experience_months = Column(Integer, nullable=True)
-    salary_min = Column(Float, nullable=True)
-    salary_max = Column(Float, nullable=True)
-    salary_currency = Column(String(10), nullable=True, default="USD")
-
-    external_id = Column(String(300), unique=True, index=True, nullable=True)
-    source = Column(String(100), nullable=True, index=True)
-    source_url = Column(Text, nullable=True)
-
-    is_remote = Column(Boolean, default=False, index=True)
-    is_relevant = Column(Boolean, default=True, nullable=False, index=True)
-    is_filtered = Column(Boolean, default=False, nullable=False, index=True)
-    posted_at = Column(DateTime, nullable=True)
-    expires_at = Column(DateTime, nullable=True)
-
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = Column(
-        DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
-        nullable=False,
+    company_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("jobs.companies.id"), index=True, nullable=True
+    )
+    location_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("jobs.locations.id"), index=True, nullable=True
+    )
+    category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("jobs.categories.id"), index=True, nullable=True
+    )
+    industry_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("jobs.industries.id"), index=True, nullable=True
     )
 
-    company_rel = relationship("Company", back_populates="jobs")
-    location_rel = relationship("Location", back_populates="jobs")
-    category_rel = relationship("Category", back_populates="jobs")
-    industry_rel = relationship("Industry", back_populates="jobs")
+    job_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    experience_months: Mapped[Optional[int]] = mapped_column(nullable=True)
+    salary_min: Mapped[Optional[float]] = mapped_column(nullable=True)
+    salary_max: Mapped[Optional[float]] = mapped_column(nullable=True)
+    salary_currency: Mapped[Optional[str]] = mapped_column(String(10), default="USD", nullable=True)
+
+    external_id: Mapped[Optional[str]] = mapped_column(
+        String(300), unique=True, index=True, nullable=True
+    )
+    source: Mapped[Optional[str]] = mapped_column(String(100), index=True, nullable=True)
+    source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    is_remote: Mapped[bool] = mapped_column(default=False, index=True)
+    is_relevant: Mapped[bool] = mapped_column(default=True, index=True)
+    is_filtered: Mapped[bool] = mapped_column(default=False, index=True)
+    posted_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    company_rel: Mapped[Optional["Company"]] = relationship(back_populates="jobs")
+    location_rel: Mapped[Optional["Location"]] = relationship(back_populates="jobs")
+    category_rel: Mapped[Optional["Category"]] = relationship(back_populates="jobs")
+    industry_rel: Mapped[Optional["Industry"]] = relationship(back_populates="jobs")
 
     def __repr__(self) -> str:
         """String representation of Job."""

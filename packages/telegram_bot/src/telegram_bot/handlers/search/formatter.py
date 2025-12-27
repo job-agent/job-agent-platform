@@ -1,9 +1,21 @@
 """Formatter for search handler messages."""
 
-from typing import Any, Optional
+from typing import Optional
+
+from typing_extensions import TypedDict
+
+from job_scrapper_contracts import JobDict
 
 
-def format_job_message(result: dict[str, Any], job_number: int, total_jobs: int) -> str:
+class JobResultDict(TypedDict, total=False):
+    """Result dictionary containing job data and extracted skills."""
+
+    job: JobDict
+    extracted_must_have_skills: list[str]
+    extracted_nice_to_have_skills: list[str]
+
+
+def format_job_message(result: JobResultDict, job_number: int, total_jobs: int) -> str:
     """Format a job result into a Telegram message.
 
     Args:

@@ -102,7 +102,7 @@ class TestTypeChecking:
         - Import types resolve correctly
         """
         if not mypy_available:
-            pytest.skip(
+            pytest.fail(
                 "mypy not available. Install with: pip install mypy\n"
                 "Hint: mypy is required for type checking smoke tests."
             )
@@ -115,17 +115,9 @@ class TestTypeChecking:
 
         if returncode != 0:
             error_message = self._format_mypy_errors(stdout, stderr)
-            import warnings
-
-            warnings.warn(
-                f"Type checking issues in {package_dir_name}:\n{error_message}\n\n"
-                f"Run 'mypy {source_dir}' for full output.",
-                UserWarning,
-                stacklevel=1,
-            )
-            pytest.skip(
-                f"Type checking has issues in {package_dir_name} (see warning). "
-                "This is non-blocking for smoke tests."
+            pytest.fail(
+                f"Type checking failed in {package_dir_name}:\n{error_message}\n\n"
+                f"Run 'mypy {source_dir}' for full output."
             )
 
 

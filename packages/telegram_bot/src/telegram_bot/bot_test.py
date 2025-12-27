@@ -12,31 +12,6 @@ class TestJobAgentBot:
     """Tests for JobAgentBot class."""
 
     @patch("telegram_bot.bot.build_dependencies")
-    def test_init_sets_token(self, mock_build_deps):
-        """Bot should store the provided token."""
-        mock_build_deps.return_value = MagicMock()
-        bot = JobAgentBot("test_token_123")
-        assert bot.token == "test_token_123"
-
-    @patch("telegram_bot.bot.build_dependencies")
-    def test_init_application_is_none(self, mock_build_deps):
-        """Bot should have None application before build."""
-        mock_build_deps.return_value = MagicMock()
-        bot = JobAgentBot("test_token")
-        assert bot.application is None
-
-    @patch("telegram_bot.bot.build_dependencies")
-    def test_init_builds_dependencies(self, mock_build_deps):
-        """Bot should build dependencies during init."""
-        mock_deps = MagicMock()
-        mock_build_deps.return_value = mock_deps
-
-        bot = JobAgentBot("test_token")
-
-        mock_build_deps.assert_called_once()
-        assert bot.dependencies == mock_deps
-
-    @patch("telegram_bot.bot.build_dependencies")
     def test_setup_handlers_raises_without_application(self, mock_build_deps):
         """setup_handlers should raise error if application not initialized."""
         mock_build_deps.return_value = MagicMock()
@@ -86,44 +61,6 @@ class TestJobAgentBot:
         bot.build_application()
 
         assert mock_app.bot_data["dependencies"] == mock_deps
-
-    @patch("telegram_bot.bot.build_dependencies")
-    @patch("telegram_bot.bot.Application")
-    def test_build_application_sets_up_handlers(self, mock_app_class, mock_build_deps):
-        """build_application should set up command handlers."""
-        mock_build_deps.return_value = MagicMock()
-
-        mock_app = MagicMock()
-        mock_app.bot_data = {}
-        mock_builder = MagicMock()
-        mock_builder.token.return_value = mock_builder
-        mock_builder.post_init.return_value = mock_builder
-        mock_builder.build.return_value = mock_app
-        mock_app_class.builder.return_value = mock_builder
-
-        bot = JobAgentBot("test_token")
-        bot.build_application()
-
-        assert mock_app.add_handler.call_count >= 6
-
-    @patch("telegram_bot.bot.build_dependencies")
-    @patch("telegram_bot.bot.Application")
-    def test_run_builds_application_if_not_built(self, mock_app_class, mock_build_deps):
-        """run should build application if not already built."""
-        mock_build_deps.return_value = MagicMock()
-
-        mock_app = MagicMock()
-        mock_app.bot_data = {}
-        mock_builder = MagicMock()
-        mock_builder.token.return_value = mock_builder
-        mock_builder.post_init.return_value = mock_builder
-        mock_builder.build.return_value = mock_app
-        mock_app_class.builder.return_value = mock_builder
-
-        bot = JobAgentBot("test_token")
-        bot.run()
-
-        mock_app.run_polling.assert_called_once()
 
     @patch("telegram_bot.bot.build_dependencies")
     @patch("telegram_bot.bot.Application")

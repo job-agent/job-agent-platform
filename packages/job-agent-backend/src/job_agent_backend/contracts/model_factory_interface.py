@@ -1,12 +1,16 @@
 """Abstract interface for model factory."""
 
-from typing import Any, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Optional, Protocol, overload
 
-# Type alias for model instances returned by the factory.
-# We use Any because the factory can return various model types
-# (LangChain ChatModel, Embeddings, HuggingFace pipelines, etc.)
-# and there is no common base class across these libraries.
-ModelInstance = Any
+if TYPE_CHECKING:
+    from langchain_core.embeddings import Embeddings
+    from langchain_core.language_models import BaseChatModel
+
+    from job_agent_backend.model_providers.contracts.provider_interface import ModelInstance
+else:
+    ModelInstance = Any
+    Embeddings = Any
+    BaseChatModel = Any
 
 
 class IModelFactory(Protocol):
@@ -15,6 +19,34 @@ class IModelFactory(Protocol):
     This abstraction allows for dependency injection and makes testing easier
     by enabling mock implementations.
     """
+
+    @overload
+    def get_model(
+        self,
+        model_id: Literal["embedding"],
+        provider: None = None,
+        model_name: None = None,
+        temperature: None = None,
+    ) -> "Embeddings": ...
+
+    @overload
+    def get_model(
+        self,
+        model_id: Literal["pii-removal", "skill-extraction"],
+        provider: None = None,
+        model_name: None = None,
+        temperature: None = None,
+    ) -> "BaseChatModel": ...
+
+    @overload
+    def get_model(
+        self,
+        model_id: Optional[str] = None,
+        provider: Optional[str] = None,
+        model_name: Optional[str] = None,
+        temperature: Optional[float] = None,
+        **kwargs: Any,
+    ) -> ModelInstance: ...
 
     def get_model(
         self,
@@ -34,7 +66,7 @@ class IModelFactory(Protocol):
             **kwargs: Additional provider-specific parameters
 
         Returns:
-            An AI model instance
+            An AI model instance (BaseChatModel, Embeddings, or Pipeline)
         """
         ...
 

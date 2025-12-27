@@ -1,11 +1,16 @@
 """Factory class for creating AI model instances."""
 
-from typing import Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Type, overload
 
 from ..contracts.model_factory_interface import IModelFactory
 from .mappers import MODEL_PROVIDER_MAP
 from .providers.base import BaseModelProvider
+from .contracts.provider_interface import ModelInstance
 from .contracts.registry_interface import IModelRegistry
+
+if TYPE_CHECKING:
+    from langchain_core.embeddings import Embeddings
+    from langchain_core.language_models import BaseChatModel
 
 
 class ModelFactory(IModelFactory):
@@ -30,13 +35,41 @@ class ModelFactory(IModelFactory):
         self._model_provider_map = (
             model_provider_map if model_provider_map is not None else MODEL_PROVIDER_MAP
         )
-        self._model_cache: Dict[str, Any] = {}
+        self._model_cache: Dict[str, ModelInstance] = {}
 
     def _generate_cache_key(
         self, provider: str, model_name: str, temperature: float, kwargs: dict
     ) -> str:
         kwargs_str = "_".join(f"{k}={v}" for k, v in sorted(kwargs.items()))
         return f"{provider}:{model_name}:temp={temperature}:{kwargs_str}"
+
+    @overload
+    def get_model(
+        self,
+        model_id: Literal["embedding"],
+        provider: None = None,
+        model_name: None = None,
+        temperature: None = None,
+    ) -> "Embeddings": ...
+
+    @overload
+    def get_model(
+        self,
+        model_id: Literal["pii-removal", "skill-extraction"],
+        provider: None = None,
+        model_name: None = None,
+        temperature: None = None,
+    ) -> "BaseChatModel": ...
+
+    @overload
+    def get_model(
+        self,
+        model_id: Optional[str] = None,
+        provider: Optional[str] = None,
+        model_name: Optional[str] = None,
+        temperature: Optional[float] = None,
+        **kwargs: Any,
+    ) -> ModelInstance: ...
 
     def get_model(
         self,
@@ -45,7 +78,7 @@ class ModelFactory(IModelFactory):
         model_name: Optional[str] = None,
         temperature: Optional[float] = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> ModelInstance:
         """Get an AI model instance.
 
         Args:
@@ -56,7 +89,7 @@ class ModelFactory(IModelFactory):
             **kwargs: Additional provider-specific parameters
 
         Returns:
-            An AI model instance
+            An AI model instance (BaseChatModel, Embeddings, or Pipeline)
         """
         # Use pre-configured provider from registry
         if model_id:

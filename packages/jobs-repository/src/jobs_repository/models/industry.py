@@ -1,9 +1,14 @@
 """Industry model."""
 
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import relationship
+from typing import TYPE_CHECKING
+
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from jobs_repository.models.base import Base
+
+if TYPE_CHECKING:
+    from jobs_repository.models.job import Job
 
 
 class Industry(Base):
@@ -12,10 +17,10 @@ class Industry(Base):
     __tablename__ = "industries"
     __table_args__ = {"schema": "jobs"}
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(200), nullable=False, unique=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True, index=True)
 
-    jobs = relationship("Job", back_populates="industry_rel")
+    jobs: Mapped[list["Job"]] = relationship(back_populates="industry_rel")
 
     def __repr__(self) -> str:
         """String representation of Industry."""

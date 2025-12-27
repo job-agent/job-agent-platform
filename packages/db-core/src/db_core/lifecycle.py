@@ -5,16 +5,17 @@ This module provides database lifecycle functions:
 - drop_all_tables: Drop all tables from the database
 """
 
-from typing import Any, Optional
+from typing import Optional, Type
 
 from sqlalchemy import Engine
+from sqlalchemy.orm import DeclarativeBase
 
 from db_core.base import Base
 from db_core.connection import get_engine
 from db_core.exceptions import DatabaseConnectionError
 
 
-def init_db(base: Optional[Any] = None, engine: Optional[Engine] = None) -> None:
+def init_db(base: Optional[Type[DeclarativeBase]] = None, engine: Optional[Engine] = None) -> None:
     """Initialize the database by creating all tables.
 
     This should be called once when setting up the database.
@@ -37,7 +38,9 @@ def init_db(base: Optional[Any] = None, engine: Optional[Engine] = None) -> None
         raise DatabaseConnectionError(f"Failed to initialize database: {e}") from e
 
 
-def drop_all_tables(base: Optional[Any] = None, engine: Optional[Engine] = None) -> None:
+def drop_all_tables(
+    base: Optional[Type[DeclarativeBase]] = None, engine: Optional[Engine] = None
+) -> None:
     """Drop all tables from the database.
 
     WARNING: This will delete all data. Use with caution!

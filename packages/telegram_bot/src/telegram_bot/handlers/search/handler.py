@@ -3,10 +3,11 @@
 import asyncio
 import logging
 import traceback
-from typing import Any, cast
+from typing import Any, Optional
 
 from telegram import Update
 from telegram.ext import ContextTypes
+from typing_extensions import TypedDict
 
 from telegram_bot.di import get_dependencies
 
@@ -19,6 +20,15 @@ logger = logging.getLogger(__name__)
 DEFAULT_MIN_SALARY = 4000
 DEFAULT_EMPLOYMENT_LOCATION = "remote"
 DEFAULT_TIMEOUT = 30
+
+
+class SearchParams(TypedDict):
+    """Type definition for search parameters."""
+
+    min_salary: int
+    employment_location: str
+    days: Optional[int]
+    timeout: int
 
 
 async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -49,7 +59,7 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     args = context.args or []
-    params = {
+    params: SearchParams = {
         "min_salary": DEFAULT_MIN_SALARY,
         "employment_location": DEFAULT_EMPLOYMENT_LOCATION,
         "days": None,
@@ -64,17 +74,32 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
                     "❌ The parameter 'salary' is no longer supported. Please use 'min_salary'."
                 )
                 return
-            if key in params:
-                if key in ("min_salary", "days", "timeout"):
-                    try:
-                        params[key] = int(value)
-                    except ValueError:
-                        await message.reply_text(
-                            f"❌ Invalid value for {key}: {value}. Must be a number."
-                        )
-                        return
-                else:
-                    params[key] = value
+            if key == "min_salary":
+                try:
+                    params["min_salary"] = int(value)
+                except ValueError:
+                    await message.reply_text(
+                        f"❌ Invalid value for {key}: {value}. Must be a number."
+                    )
+                    return
+            elif key == "days":
+                try:
+                    params["days"] = int(value)
+                except ValueError:
+                    await message.reply_text(
+                        f"❌ Invalid value for {key}: {value}. Must be a number."
+                    )
+                    return
+            elif key == "timeout":
+                try:
+                    params["timeout"] = int(value)
+                except ValueError:
+                    await message.reply_text(
+                        f"❌ Invalid value for {key}: {value}. Must be a number."
+                    )
+                    return
+            elif key == "employment_location":
+                params["employment_location"] = value
 
     if not orchestrator.has_cv(user_id):
         await message.reply_text(
@@ -86,9 +111,9 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await message.reply_text(
         formatter.format_search_parameters(
-            cast(int, params["min_salary"]),
-            cast(str, params["employment_location"]),
-            cast(int, params["days"]) if params["days"] is not None else None,
+            params["min_salary"],
+            params["employment_location"],
+            params["days"],
         )
     )
 
