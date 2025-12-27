@@ -11,24 +11,34 @@ from db_core.config import DatabaseConfig
 from db_core.exceptions import DatabaseConnectionError
 
 
+def _create_mock_engine():
+    """Create a properly configured mock engine with connection context manager setup.
+
+    Returns:
+        tuple: (mock_engine, mock_connection) - the mock engine and its mock connection.
+    """
+    mock_engine = MagicMock(spec=Engine)
+    mock_connection = MagicMock()
+    mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
+    mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_engine, mock_connection
+
+
+@pytest.fixture(autouse=True)
+def reset_engine_singleton():
+    """Reset engine singleton before and after each test."""
+    reset_engine()
+    yield
+    reset_engine()
+
+
 class TestGetEngine:
     """Test suite for get_engine function."""
-
-    def setup_method(self):
-        """Reset engine before each test."""
-        reset_engine()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        reset_engine()
 
     def test_creates_engine_on_first_call(self):
         """get_engine creates engine on first call."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine, _ = _create_mock_engine()
             mock_create.return_value = mock_engine
 
             engine = get_engine()
@@ -39,10 +49,7 @@ class TestGetEngine:
     def test_reuses_existing_engine_singleton(self):
         """get_engine reuses existing engine on subsequent calls (singleton pattern)."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine, _ = _create_mock_engine()
             mock_create.return_value = mock_engine
 
             engine1 = get_engine()
@@ -55,10 +62,7 @@ class TestGetEngine:
         """get_engine uses URL from DatabaseConfig."""
         with patch("db_core.connection.create_engine") as mock_create:
             with patch("db_core.connection.get_database_config") as mock_config:
-                mock_engine = MagicMock(spec=Engine)
-                mock_connection = MagicMock()
-                mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-                mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+                mock_engine, _ = _create_mock_engine()
                 mock_create.return_value = mock_engine
 
                 config = DatabaseConfig(url="postgresql://test:5432/testdb")
@@ -78,10 +82,7 @@ class TestGetEngine:
         """get_engine uses pool settings from DatabaseConfig."""
         with patch("db_core.connection.create_engine") as mock_create:
             with patch("db_core.connection.get_database_config") as mock_config:
-                mock_engine = MagicMock(spec=Engine)
-                mock_connection = MagicMock()
-                mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-                mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+                mock_engine, _ = _create_mock_engine()
                 mock_create.return_value = mock_engine
 
                 config = DatabaseConfig(
@@ -105,10 +106,7 @@ class TestGetEngine:
     def test_verifies_connection_with_select_1(self):
         """get_engine verifies connection with SELECT 1."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine, mock_connection = _create_mock_engine()
             mock_create.return_value = mock_engine
 
             get_engine()
@@ -119,10 +117,7 @@ class TestGetEngine:
         """get_engine enables pool_pre_ping for connection validation."""
         with patch("db_core.connection.create_engine") as mock_create:
             with patch("db_core.connection.get_database_config") as mock_config:
-                mock_engine = MagicMock(spec=Engine)
-                mock_connection = MagicMock()
-                mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-                mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+                mock_engine, _ = _create_mock_engine()
                 mock_create.return_value = mock_engine
 
                 config = DatabaseConfig(url="postgresql://test:5432/db")
@@ -137,14 +132,6 @@ class TestGetEngine:
 class TestGetEngineErrorHandling:
     """Test suite for get_engine error handling."""
 
-    def setup_method(self):
-        """Reset engine before each test."""
-        reset_engine()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        reset_engine()
-
     def test_raises_database_connection_error_on_creation_failure(self):
         """get_engine raises DatabaseConnectionError on engine creation failure."""
         with patch("db_core.connection.create_engine") as mock_create:
@@ -158,11 +145,8 @@ class TestGetEngineErrorHandling:
     def test_raises_database_connection_error_on_verification_failure(self):
         """get_engine raises DatabaseConnectionError when connection verification fails."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
+            mock_engine, mock_connection = _create_mock_engine()
             mock_connection.execute.side_effect = Exception("Verification failed")
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
             mock_create.return_value = mock_engine
 
             with pytest.raises(DatabaseConnectionError) as exc_info:
@@ -185,21 +169,10 @@ class TestGetEngineErrorHandling:
 class TestGetEngineThreadSafety:
     """Test suite for get_engine thread safety."""
 
-    def setup_method(self):
-        """Reset engine before each test."""
-        reset_engine()
-
-    def teardown_method(self):
-        """Clean up after each test."""
-        reset_engine()
-
     def test_thread_safe_engine_creation(self):
         """get_engine is thread-safe - multiple threads get same engine."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine, _ = _create_mock_engine()
             mock_create.return_value = mock_engine
 
             engines = []
@@ -228,17 +201,10 @@ class TestGetEngineThreadSafety:
 class TestResetEngine:
     """Test suite for reset_engine function."""
 
-    def teardown_method(self):
-        """Clean up after each test."""
-        reset_engine()
-
     def test_disposes_existing_engine(self):
         """reset_engine disposes existing engine."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine, _ = _create_mock_engine()
             mock_create.return_value = mock_engine
 
             get_engine()
@@ -249,10 +215,7 @@ class TestResetEngine:
     def test_resets_engine_to_none(self):
         """reset_engine sets engine to None so next get_engine creates new one."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-            mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine, _ = _create_mock_engine()
             mock_create.return_value = mock_engine
 
             get_engine()
@@ -269,14 +232,8 @@ class TestResetEngine:
     def test_allows_new_engine_creation_after_reset(self):
         """New engine can be created after reset."""
         with patch("db_core.connection.create_engine") as mock_create:
-            mock_engine1 = MagicMock(spec=Engine)
-            mock_engine2 = MagicMock(spec=Engine)
-            mock_connection = MagicMock()
-
-            mock_engine1.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine1.connect.return_value.__exit__ = MagicMock(return_value=False)
-            mock_engine2.connect.return_value.__enter__ = MagicMock(return_value=mock_connection)
-            mock_engine2.connect.return_value.__exit__ = MagicMock(return_value=False)
+            mock_engine1, _ = _create_mock_engine()
+            mock_engine2, _ = _create_mock_engine()
 
             mock_create.side_effect = [mock_engine1, mock_engine2]
 

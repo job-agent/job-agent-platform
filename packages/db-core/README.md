@@ -285,5 +285,45 @@ cd packages/db-core
 pytest src/db_core/
 ```
 
-For tests, use `reset_engine()` and `reset_session_factory()` in fixtures
-to ensure test isolation.
+### Test Organization
+
+Test files live alongside their corresponding modules (`*_test.py` naming convention).
+A shared `conftest.py` provides a default `DATABASE_URL` environment variable for all tests.
+
+### Fixture Locations
+
+- `src/db_core/conftest.py` - Package-level conftest providing `set_database_url` autouse fixture
+- `src/db_core/connection_test.py` - Contains `reset_engine_singleton` autouse fixture
+- `src/db_core/session_test.py` - Contains `reset_session_factory_singleton` autouse fixture
+
+### Test Patterns
+
+**Singleton Reset:**
+Each test module that interacts with singletons uses an `autouse=True` fixture to reset state before and after each test:
+
+```python
+@pytest.fixture(autouse=True)
+def reset_engine_singleton():
+    """Reset engine singleton before and after each test."""
+    reset_engine()
+    yield
+    reset_engine()
+```
+
+**Mock Helpers:**
+Test files provide module-level helper functions for creating properly configured mocks:
+
+- `_create_mock_engine()` - Returns `(mock_engine, mock_connection)` tuple
+- `_create_mock_session_factory()` - Returns `(mock_factory, mock_session)` tuple
+- `_without_database_url()` - Context manager for testing missing env var behavior
+
+**Environment Variable Testing:**
+Tests that verify behavior when `DATABASE_URL` is missing should use:
+
+```python
+with _without_database_url():
+    # Test code expecting DATABASE_URL to be absent
+    pass
+```
+
+Or override the default with `patch.dict(os.environ, {"DATABASE_URL": "..."}, clear=True)`.

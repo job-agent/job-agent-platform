@@ -1,11 +1,24 @@
 """Tests for database configuration module."""
 
 import os
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
 
 from db_core.config import DatabaseConfig, get_database_config
+
+
+@contextmanager
+def _without_database_url():
+    """Context manager that removes DATABASE_URL from the environment.
+
+    This encapsulates the pattern of clearing DATABASE_URL for tests
+    that verify behavior when the environment variable is not set.
+    """
+    env = {k: v for k, v in os.environ.items() if k != "DATABASE_URL"}
+    with patch.dict(os.environ, env, clear=True):
+        yield
 
 
 class TestDatabaseConfig:
@@ -20,9 +33,7 @@ class TestDatabaseConfig:
 
     def test_url_requires_database_url_env_var(self):
         """DatabaseConfig should require DATABASE_URL when not set."""
-        # Clear DATABASE_URL from environment
-        env = {k: v for k, v in os.environ.items() if k != "DATABASE_URL"}
-        with patch.dict(os.environ, env, clear=True):
+        with _without_database_url():
             with pytest.raises(ValueError) as exc_info:
                 DatabaseConfig()
 
@@ -110,8 +121,7 @@ class TestGetDatabaseConfig:
 
     def test_raises_when_database_url_missing(self):
         """get_database_config should raise when DATABASE_URL is not set."""
-        env = {k: v for k, v in os.environ.items() if k != "DATABASE_URL"}
-        with patch.dict(os.environ, env, clear=True):
+        with _without_database_url():
             with pytest.raises(ValueError) as exc_info:
                 get_database_config()
 
