@@ -29,7 +29,8 @@ RUN --mount=type=ssh ssh -T git@github.com || true
 COPY packages/job-agent-backend /app/packages/job-agent-backend
 RUN --mount=type=ssh pip install --no-cache-dir /app/packages/job-agent-backend
 
-RUN cp -r /app/packages/job-agent-backend/src/data /usr/local/lib/python3.11/site-packages/data
+RUN mkdir -p /usr/local/lib/python3.11/site-packages/data/cvs && \
+    (cp -r /app/packages/job-agent-backend/src/data/* /usr/local/lib/python3.11/site-packages/data/ 2>/dev/null || true)
 
 COPY packages/telegram_bot /app/packages/telegram_bot
 RUN --mount=type=ssh pip install --no-cache-dir /app/packages/telegram_bot

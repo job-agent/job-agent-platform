@@ -84,7 +84,7 @@ jobs:
   test-cvs-repository:
     name: Test CVs Repository
     runs-on: ubuntu-latest
-    needs: smoke-tests
+    needs: [smoke-tests, docker-startup]
     defaults:
       run:
         working-directory: packages/cvs-repository
@@ -108,7 +108,7 @@ jobs:
   test-jobs-repository:
     name: Test Jobs Repository
     runs-on: ubuntu-latest
-    needs: smoke-tests
+    needs: [smoke-tests, docker-startup]
     services:
       postgres:
         image: postgres:15
