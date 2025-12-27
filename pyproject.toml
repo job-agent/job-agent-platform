@@ -7,10 +7,6 @@ dependencies = [
     "langgraph-runtime-inmem>=0.16.0,<0.17.0"
 ]
 
-[tool.black]
-line-length = 100
-target-version = ["py39"]
-
 [tool.ruff]
 line-length = 100
 target-version = "py39"

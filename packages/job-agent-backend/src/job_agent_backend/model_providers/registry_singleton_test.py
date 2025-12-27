@@ -8,9 +8,9 @@ class TestRegistrySingletonRemoved:
         """Registry.py no longer creates _registry singleton at import time."""
         import job_agent_backend.model_providers.registry as registry_module
 
-        assert not hasattr(
-            registry_module, "_registry"
-        ), "_registry module-level singleton should be removed from registry.py"
+        assert not hasattr(registry_module, "_registry"), (
+            "_registry module-level singleton should be removed from registry.py"
+        )
 
     def test_importing_registry_does_not_create_instances(self) -> None:
         """Importing registry module does not create any provider instances."""

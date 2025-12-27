@@ -291,7 +291,7 @@ cd packages/essay-repository && pytest
 ### Code Formatting and Linting
 
 ```bash
-black packages/*/src
+ruff format packages/*/src
 ruff check packages/*/src
 ```
 

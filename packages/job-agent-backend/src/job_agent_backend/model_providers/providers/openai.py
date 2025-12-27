@@ -39,7 +39,7 @@ class OpenAIProvider(BaseModelProvider):
             from langchain_openai import ChatOpenAI
         except ImportError:
             raise ImportError(
-                "langchain-openai not installed. " "Install it with: pip install langchain-openai"
+                "langchain-openai not installed. Install it with: pip install langchain-openai"
             )
 
         return ChatOpenAI(

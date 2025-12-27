@@ -99,5 +99,5 @@ result = run_job_processing(job_dict, clean_cv)
 ## Development
 
 - `pytest` to run the test suite
-- `black src/` for formatting
+- `ruff format src/` for formatting
 - `ruff check src/` for linting

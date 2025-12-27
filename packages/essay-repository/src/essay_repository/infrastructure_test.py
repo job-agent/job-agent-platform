@@ -39,8 +39,7 @@ class TestAlembicSetup:
         env_py = package_root / "alembic" / "env.py"
 
         assert env_py.exists(), (
-            f"alembic/env.py not found at {env_py}. "
-            "requires Alembic migration environment setup."
+            f"alembic/env.py not found at {env_py}. requires Alembic migration environment setup."
         )
         assert env_py.is_file(), f"{env_py} exists but is not a file"
 
@@ -74,9 +73,9 @@ class TestAlembicSetup:
             pytest.skip("alembic.ini does not exist yet")
 
         content = alembic_ini.read_text()
-        assert (
-            "script_location = alembic" in content
-        ), "alembic.ini should have 'script_location = alembic' configuration"
+        assert "script_location = alembic" in content, (
+            "alembic.ini should have 'script_location = alembic' configuration"
+        )
 
     def test_alembic_env_imports_essay_repository_base(self) -> None:
         """Verify alembic/env.py imports Base from essay_repository package."""
@@ -87,9 +86,9 @@ class TestAlembicSetup:
             pytest.skip("alembic/env.py does not exist yet")
 
         content = env_py.read_text()
-        assert (
-            "essay_repository" in content
-        ), "alembic/env.py should import from essay_repository package"
+        assert "essay_repository" in content, (
+            "alembic/env.py should import from essay_repository package"
+        )
         assert "Base" in content, "alembic/env.py should import Base for metadata"
 
     def test_initial_migration_exists(self) -> None:

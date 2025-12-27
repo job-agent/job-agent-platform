@@ -33,7 +33,7 @@ class OllamaProvider(BaseModelProvider):
             from langchain_ollama import ChatOllama
         except ImportError:
             raise ImportError(
-                "langchain-ollama not installed. " "Install it with: pip install langchain-ollama"
+                "langchain-ollama not installed. Install it with: pip install langchain-ollama"
             )
 
         return ChatOllama(

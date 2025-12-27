@@ -61,9 +61,9 @@ class TestEssayRepositoryInheritance:
         from db_core import BaseRepository
         from essay_repository.repository import EssayRepository
 
-        assert issubclass(
-            EssayRepository, BaseRepository
-        ), "EssayRepository must inherit from db_core.BaseRepository after migration"
+        assert issubclass(EssayRepository, BaseRepository), (
+            "EssayRepository must inherit from db_core.BaseRepository after migration"
+        )
 
     def test_essay_repository_instance_is_base_repository(self, db_session):
         """EssayRepository instance should pass isinstance check for BaseRepository.
@@ -75,9 +75,9 @@ class TestEssayRepositoryInheritance:
 
         repo = EssayRepository(session=db_session)
 
-        assert isinstance(
-            repo, BaseRepository
-        ), "EssayRepository instance must be an instance of BaseRepository"
+        assert isinstance(repo, BaseRepository), (
+            "EssayRepository instance must be an instance of BaseRepository"
+        )
 
     def test_essay_repository_inherits_session_scope_from_base_repository(self, db_session):
         """EssayRepository should have _session_scope method from BaseRepository.
@@ -95,9 +95,9 @@ class TestEssayRepositoryInheritance:
 
         # Verify it's using the BaseRepository implementation
         # by checking the method is from BaseRepository, not defined locally
-        assert (
-            EssayRepository._session_scope is BaseRepository._session_scope
-        ), "EssayRepository should use BaseRepository._session_scope, not define its own"
+        assert EssayRepository._session_scope is BaseRepository._session_scope, (
+            "EssayRepository should use BaseRepository._session_scope, not define its own"
+        )
 
     def test_essay_repository_init_calls_super_init(self):
         """EssayRepository __init__ should call super().__init__ with session params.
@@ -288,6 +288,6 @@ class TestAlembicBaseImportUpdate:
         )
 
         # Should NOT import from database anymore
-        assert (
-            "from essay_repository.database import Base" not in content
-        ), "alembic/env.py should NOT import from essay_repository.database after migration"
+        assert "from essay_repository.database import Base" not in content, (
+            "alembic/env.py should NOT import from essay_repository.database after migration"
+        )

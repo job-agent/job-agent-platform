@@ -18,10 +18,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-
     op.execute("CREATE SCHEMA IF NOT EXISTS essays")
 
 
 def downgrade() -> None:
-
     op.execute("DROP SCHEMA IF EXISTS essays CASCADE")

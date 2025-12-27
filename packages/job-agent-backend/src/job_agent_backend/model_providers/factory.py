@@ -63,7 +63,7 @@ class ModelFactory(IModelFactory):
             provider_instance = self._registry.get(model_id)
             if not provider_instance:
                 raise ValueError(
-                    f"Model '{model_id}' not found. " f"Available: {self._registry.list_models()}"
+                    f"Model '{model_id}' not found. Available: {self._registry.list_models()}"
                 )
             # Cache key for registered models
             cache_key = f"registered:{model_id}"
@@ -87,8 +87,7 @@ class ModelFactory(IModelFactory):
         provider_class = self._provider_map.get(provider.lower())
         if not provider_class:
             raise ValueError(
-                f"Unsupported provider: {provider}. "
-                f"Supported: {list(self._provider_map.keys())}"
+                f"Unsupported provider: {provider}. Supported: {list(self._provider_map.keys())}"
             )
 
         final_temperature = temperature if temperature is not None else 0.0

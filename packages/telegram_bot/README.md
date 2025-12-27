@@ -159,5 +159,5 @@ telegram_bot/
 ## Development
 
 - `pytest` once tests are added (project scaffold is ready for it).
-- `black src/` for formatting.
+- `ruff format src/` for formatting.
 - `ruff check src/` for linting.
