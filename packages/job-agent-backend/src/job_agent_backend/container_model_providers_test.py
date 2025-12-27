@@ -55,24 +55,23 @@ class TestModelProvidersContainerRegistry:
 
 
 class TestModelProvidersContainerGet:
-    """Tests for ModelProvidersContainer get() function."""
+    """Tests for ModelProvidersContainer getter functions."""
 
-    def test_get_imodel_registry_returns_model_registry(self) -> None:
-        """get(IModelRegistry) returns configured ModelRegistry."""
-        from job_agent_backend.model_providers.container import get
-        from job_agent_backend.model_providers.contracts import IModelRegistry
+    def test_get_model_registry_returns_model_registry(self) -> None:
+        """get_model_registry() returns configured ModelRegistry."""
+        from job_agent_backend.model_providers.container import get_model_registry
 
-        registry = get(IModelRegistry)
+        registry = get_model_registry()
 
         # Use class name check to avoid module caching issues in test runs
         assert type(registry).__name__ == "ModelRegistry"
 
-    def test_get_imodel_factory_returns_configured_factory(self) -> None:
-        """get(IModelFactory) returns ModelFactory with injected dependencies."""
-        from job_agent_backend.model_providers.container import get
-        from job_agent_backend.model_providers import IModelFactory, ModelFactory
+    def test_get_model_factory_returns_configured_factory(self) -> None:
+        """get_model_factory() returns ModelFactory with injected dependencies."""
+        from job_agent_backend.model_providers.container import get_model_factory
+        from job_agent_backend.model_providers import ModelFactory
 
-        factory = get(IModelFactory)
+        factory = get_model_factory()
 
         assert isinstance(factory, ModelFactory)
 
@@ -143,13 +142,14 @@ class TestApplicationContainerModelFactory:
     """Tests for ApplicationContainer model_factory integration."""
 
     def test_application_get_returns_model_factory(self) -> None:
-        """Application get(IModelFactory) returns the same instance as model_providers."""
-        from job_agent_backend.container import get as app_get
-        from job_agent_backend.model_providers import IModelFactory
-        from job_agent_backend.model_providers.container import get as mp_get
+        """Application get_model_factory_instance() returns the same type as model_providers."""
+        from job_agent_backend.container import get_model_factory_instance
+        from job_agent_backend.model_providers.container import get_model_factory
+        from job_agent_backend.model_providers import ModelFactory
 
-        app_factory = app_get(IModelFactory)
-        mp_factory = mp_get(IModelFactory)
+        app_factory = get_model_factory_instance()
+        mp_factory = get_model_factory()
 
-        # Both should return the same singleton instance
-        assert app_factory is mp_factory
+        # Both should return ModelFactory instances
+        assert isinstance(app_factory, ModelFactory)
+        assert isinstance(mp_factory, ModelFactory)

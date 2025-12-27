@@ -5,7 +5,7 @@ in the job-agent-platform-contracts package.
 """
 
 import pytest
-from abc import ABC
+from typing import Protocol
 
 
 class TestIEssayRepositoryInterface:
@@ -17,11 +17,11 @@ class TestIEssayRepositoryInterface:
 
         assert IEssayRepository is not None
 
-    def test_interface_is_abstract(self):
-        """Test that IEssayRepository is an abstract class."""
+    def test_interface_is_protocol(self):
+        """Test that IEssayRepository is a Protocol."""
         from job_agent_platform_contracts.essay_repository import IEssayRepository
 
-        assert issubclass(IEssayRepository, ABC)
+        assert issubclass(IEssayRepository, Protocol)
 
     def test_interface_has_create_method(self):
         """Test that interface defines create method."""

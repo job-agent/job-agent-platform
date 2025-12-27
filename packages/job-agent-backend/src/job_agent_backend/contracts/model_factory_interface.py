@@ -1,7 +1,6 @@
 """Abstract interface for model factory."""
 
-from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, Protocol
 
 # Type alias for model instances returned by the factory.
 # We use Any because the factory can return various model types
@@ -10,14 +9,13 @@ from typing import Any, Optional
 ModelInstance = Any
 
 
-class IModelFactory(ABC):
+class IModelFactory(Protocol):
     """Protocol defining the interface for model factories.
 
     This abstraction allows for dependency injection and makes testing easier
     by enabling mock implementations.
     """
 
-    @abstractmethod
     def get_model(
         self,
         model_id: Optional[str] = None,
@@ -40,12 +38,10 @@ class IModelFactory(ABC):
         """
         ...
 
-    @abstractmethod
     def clear_cache(self) -> None:
         """Clear the model cache, forcing new instances to be created."""
         ...
 
-    @abstractmethod
     def get_cache_size(self) -> int:
         """Get the number of cached model instances.
 

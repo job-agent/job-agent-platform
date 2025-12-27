@@ -3,13 +3,13 @@
 from typing import Callable, Dict, Any
 
 from job_agent_backend.model_providers import IModelFactory
-from ...state import PIIRemovalState
 from .helpers import create_anonymize_text
+from .result import RemovePIIResult
 
 
 def create_remove_pii_node(
     model_factory: IModelFactory,
-) -> Callable[[Dict[str, Any]], PIIRemovalState]:
+) -> Callable[[Dict[str, Any]], RemovePIIResult]:
     """
     Factory function to create a remove_pii_node with injected dependencies.
 
@@ -21,7 +21,7 @@ def create_remove_pii_node(
     """
     anonymize_text = create_anonymize_text(model_factory)
 
-    def remove_pii_node(state: Dict[str, Any]) -> PIIRemovalState:
+    def remove_pii_node(state: Dict[str, Any]) -> RemovePIIResult:
         """
         Anonymize PII from CV content.
 

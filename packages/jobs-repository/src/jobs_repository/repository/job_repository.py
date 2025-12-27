@@ -25,7 +25,7 @@ from job_agent_platform_contracts.job_repository.exceptions import (
 )
 
 
-class JobRepository(IJobRepository, BaseRepository):
+class JobRepository(BaseRepository, IJobRepository):
     """Repository that persists jobs and manages related reference data.
 
     The repository currently supports creating job records and fetching them by

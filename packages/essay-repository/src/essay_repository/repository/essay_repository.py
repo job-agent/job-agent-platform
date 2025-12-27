@@ -23,7 +23,7 @@ from job_agent_platform_contracts.essay_repository.exceptions import EssayValida
 from essay_repository.models import Essay
 
 
-class EssayRepository(IEssayRepository, BaseRepository):
+class EssayRepository(BaseRepository, IEssayRepository):
     """Repository that persists essays to the database.
 
     The repository supports creating, reading, updating, and deleting

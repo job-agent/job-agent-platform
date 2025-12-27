@@ -98,5 +98,6 @@ class TestLoadFromPdf:
         with patch("job_agent_backend.cv_loader.loader.PdfReader", return_value=mock_reader):
             result = loader.load_from_pdf(str(pdf_file))
 
+        assert result is not None
         assert "Page 1 content" in result
         assert "Page 2 content" in result

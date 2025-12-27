@@ -4,7 +4,7 @@ This module defines the graph structure and builds the complete workflow.
 """
 
 from collections.abc import Mapping
-from typing import Callable, Tuple, cast
+from typing import Callable, Tuple, cast  # cast used in _resolve_dependencies
 
 from job_agent_platform_contracts import IJobRepository
 from langgraph.graph import StateGraph, END
@@ -23,7 +23,7 @@ from job_agent_backend.workflows.job_processing.nodes import (
 from job_agent_backend.workflows.job_processing.nodes.check_job_relevance import (
     route_after_relevance_check,
 )
-from job_agent_backend.workflows.job_processing.state import AgentState
+from job_agent_backend.workflows.job_processing.state import AgentState, as_node
 
 
 def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
@@ -57,21 +57,23 @@ def create_workflow(config: RunnableConfig) -> CompiledStateGraph:
     workflow = StateGraph(AgentState)
 
     check_job_relevance_node = create_check_job_relevance_node(model_factory)
-    workflow.add_node(JobProcessingNode.CHECK_JOB_RELEVANCE, check_job_relevance_node)
+    workflow.add_node(JobProcessingNode.CHECK_JOB_RELEVANCE, as_node(check_job_relevance_node))
 
     extract_must_have_skills_node = create_extract_must_have_skills_node(model_factory)
-    workflow.add_node(JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS, extract_must_have_skills_node)
+    workflow.add_node(
+        JobProcessingNode.EXTRACT_MUST_HAVE_SKILLS, as_node(extract_must_have_skills_node)
+    )
 
     extract_nice_to_have_skills_node = create_extract_nice_to_have_skills_node(model_factory)
     workflow.add_node(
         JobProcessingNode.EXTRACT_NICE_TO_HAVE_SKILLS,
-        extract_nice_to_have_skills_node,
+        as_node(extract_nice_to_have_skills_node),
     )
 
     store_job_node = create_store_job_node(job_repository_factory)
-    workflow.add_node(JobProcessingNode.STORE_JOB, store_job_node)
+    workflow.add_node(JobProcessingNode.STORE_JOB, as_node(store_job_node))
 
-    workflow.add_node(JobProcessingNode.PROCESS_JOBS, print_jobs_node)
+    workflow.add_node(JobProcessingNode.PROCESS_JOBS, as_node(print_jobs_node))
 
     workflow.set_entry_point(JobProcessingNode.CHECK_JOB_RELEVANCE)
 

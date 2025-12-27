@@ -4,11 +4,12 @@ from typing import Callable
 
 from .....model_providers import IModelFactory
 from ...state import AgentState
+from .result import CheckRelevanceResult
 
 
 def create_check_job_relevance_node(
     model_factory: IModelFactory,
-) -> Callable[[AgentState], AgentState]:
+) -> Callable[[AgentState], CheckRelevanceResult]:
     """
     Factory function to create a check_job_relevance_node with injected dependencies.
 
@@ -19,7 +20,7 @@ def create_check_job_relevance_node(
         Configured check_job_relevance_node function
     """
 
-    def check_job_relevance_node(state: AgentState) -> AgentState:
+    def check_job_relevance_node(state: AgentState) -> CheckRelevanceResult:
         """
         Check if a job is relevant to the candidate based on their CV.
 
@@ -44,9 +45,7 @@ def create_check_job_relevance_node(
         if not cv_context:
             print(f"  Job (ID: {job_id}): No CV context available, assuming relevant")
             print("=" * 60 + "\n")
-            return {
-                "is_relevant": True,
-            }
+            return {"is_relevant": True}
 
         job_title = job.get("title", "Unknown")
         job_description = job.get("description", "")
@@ -54,9 +53,7 @@ def create_check_job_relevance_node(
         if not job_description:
             print(f"  Job (ID: {job_id}): No description available, assuming relevant")
             print("=" * 60 + "\n")
-            return {
-                "is_relevant": True,
-            }
+            return {"is_relevant": True}
 
         try:
             model = model_factory.get_model(model_id="embedding")
@@ -96,8 +93,6 @@ def create_check_job_relevance_node(
         print(f"Finished checking relevance for job ID {job_id}")
         print("=" * 60 + "\n")
 
-        return {
-            "is_relevant": is_relevant,
-        }
+        return {"is_relevant": is_relevant}
 
     return check_job_relevance_node

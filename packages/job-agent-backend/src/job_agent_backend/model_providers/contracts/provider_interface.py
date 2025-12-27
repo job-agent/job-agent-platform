@@ -1,7 +1,6 @@
 """Abstract interface for model providers."""
 
-from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol
 
 # Type alias for model instances returned by providers.
 # We use Any because providers can return various model types
@@ -10,15 +9,14 @@ from typing import Any
 ModelInstance = Any
 
 
-class IModelProvider(ABC):
-    """Abstract interface for all AI model providers.
+class IModelProvider(Protocol):
+    """Protocol for all AI model providers.
 
     This interface defines the contract that all model providers must implement.
     Concrete implementations (OpenAI, Ollama, Transformers, etc.) inherit from
     BaseModelProvider which implements this interface.
     """
 
-    @abstractmethod
     def get_model(self) -> ModelInstance:
         """Get the model instance.
 

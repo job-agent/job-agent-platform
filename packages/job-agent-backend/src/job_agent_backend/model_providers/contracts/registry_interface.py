@@ -1,19 +1,17 @@
 """Abstract interface for model registry."""
 
-from abc import ABC, abstractmethod
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Protocol
 
 from .provider_interface import IModelProvider
 
 
-class IModelRegistry(ABC):
-    """Interface for model registry that stores pre-configured model providers.
+class IModelRegistry(Protocol):
+    """Protocol for model registry that stores pre-configured model providers.
 
     This abstraction allows for dependency injection and makes testing easier
     by enabling mock implementations.
     """
 
-    @abstractmethod
     def get(self, model_id: str) -> Optional[IModelProvider]:
         """Get a provider by model ID.
 
@@ -25,7 +23,6 @@ class IModelRegistry(ABC):
         """
         ...
 
-    @abstractmethod
     def get_model(self, model_id: str) -> Any:
         """Get model instance by ID.
 
@@ -40,7 +37,6 @@ class IModelRegistry(ABC):
         """
         ...
 
-    @abstractmethod
     def list_models(self) -> List[str]:
         """List all registered model IDs.
 

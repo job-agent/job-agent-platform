@@ -56,7 +56,7 @@ class TestEssayRepositoryInheritance:
         """EssayRepository should be a subclass of db-core BaseRepository.
 
         After migration, EssayRepository class declaration should be:
-        class EssayRepository(IEssayRepository, BaseRepository)
+        class EssayRepository(BaseRepository, IEssayRepository)
         """
         from db_core import BaseRepository
         from essay_repository.repository import EssayRepository

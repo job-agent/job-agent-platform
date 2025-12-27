@@ -6,11 +6,12 @@ from .....model_providers import IModelFactory
 from ...state import AgentState
 from .schemas import SkillsExtraction
 from .prompts import EXTRACT_MUST_HAVE_SKILLS_PROMPT
+from .result import ExtractMustHaveSkillsResult
 
 
 def create_extract_must_have_skills_node(
     model_factory: IModelFactory,
-) -> Callable[[AgentState], AgentState]:
+) -> Callable[[AgentState], ExtractMustHaveSkillsResult]:
     """
     Factory function to create an extract_must_have_skills_node with injected dependencies.
 
@@ -21,7 +22,7 @@ def create_extract_must_have_skills_node(
         Configured extract_must_have_skills_node function
     """
 
-    def extract_must_have_skills_node(state: AgentState) -> AgentState:
+    def extract_must_have_skills_node(state: AgentState) -> ExtractMustHaveSkillsResult:
         """
         Extract must-have skills from a job description.
 
@@ -42,9 +43,7 @@ def create_extract_must_have_skills_node(
         if not description:
             print(f"  Job (ID: {job_id}): No description available, skipping...")
             print("=" * 60 + "\n")
-            return {
-                "extracted_must_have_skills": [],
-            }
+            return {"extracted_must_have_skills": []}
 
         try:
             base_model = model_factory.get_model(model_id="skill-extraction")
@@ -68,8 +67,6 @@ def create_extract_must_have_skills_node(
         print(f"Finished extracting skills for job ID {job_id}")
         print("=" * 60 + "\n")
 
-        return {
-            "extracted_must_have_skills": skills,
-        }
+        return {"extracted_must_have_skills": skills}
 
     return extract_must_have_skills_node

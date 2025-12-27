@@ -4,7 +4,7 @@ These tests verify that ModelFactory accepts injected dependencies
 instead of using module-level singletons and class-level attributes.
 """
 
-from typing import Dict, Type
+from typing import Any, Dict, Type
 from unittest.mock import MagicMock
 
 import pytest
@@ -75,7 +75,7 @@ class TestModelFactoryConstructorAcceptsProviderMap:
         from job_agent_backend.model_providers.contracts import IModelRegistry
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map = {"openai": MagicMock}
+        mock_provider_map: Dict[str, Any] = {"openai": MagicMock}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 
@@ -92,7 +92,7 @@ class TestModelFactoryConstructorAcceptsProviderMap:
         mock_provider_class = MagicMock(return_value=mock_provider_instance)
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map = {"openai": mock_provider_class}
+        mock_provider_map: Dict[str, Any] = {"openai": mock_provider_class}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
         result = factory.get_model(provider="openai", model_name="gpt-4", api_key="test-key")
@@ -145,7 +145,7 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
         mock_provider_class = MagicMock(return_value=mock_provider_instance)
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map = {"openai": mock_provider_class}
+        mock_provider_map: Dict[str, Any] = {"openai": mock_provider_class}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 
@@ -166,7 +166,7 @@ class TestModelFactoryConstructorAcceptsModelProviderMap:
         mock_provider_class = MagicMock(return_value=mock_provider_instance)
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map = {"custom-provider": mock_provider_class}
+        mock_provider_map: Dict[str, Any] = {"custom-provider": mock_provider_class}
         custom_model_map = {"custom-model-name": "custom-provider"}
 
         factory = ModelFactory(
@@ -225,7 +225,7 @@ class TestModelFactoryCachingWithDI:
 
         mock_provider_class = MagicMock(side_effect=create_provider)
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map = {"openai": mock_provider_class}
+        mock_provider_map: Dict[str, Any] = {"openai": mock_provider_class}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
 
@@ -250,7 +250,7 @@ class TestModelFactoryHandlesCaseInsensitiveProviderWithDI:
         mock_provider_class = MagicMock(return_value=mock_provider_instance)
 
         mock_registry = MagicMock(spec=IModelRegistry)
-        mock_provider_map = {"openai": mock_provider_class}
+        mock_provider_map: Dict[str, Any] = {"openai": mock_provider_class}
 
         factory = ModelFactory(registry=mock_registry, provider_map=mock_provider_map)
         result = factory.get_model(provider="OPENAI", model_name="gpt-4", api_key="test-key")

@@ -1,16 +1,14 @@
 """Scrapper client interface definitions."""
 
-from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Protocol
 
 from job_scrapper_contracts import JobDict
 
 
-class IScrapperClient(ABC):
+class IScrapperClient(Protocol):
     """Interface for components that provide job scraping capabilities."""
 
-    @abstractmethod
     def scrape_jobs_streaming(
         self,
         min_salary: Optional[int] = 4000,

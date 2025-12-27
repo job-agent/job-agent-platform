@@ -1,6 +1,6 @@
 """Dependency injection container for backend components."""
 
-from typing import Type, TypeVar, overload
+from typing import Any, Callable, Dict
 
 from dependency_injector import containers, providers
 
@@ -12,15 +12,11 @@ from job_agent_backend.cv_loader import CVLoader, ICVLoader
 from job_agent_backend.filter_service import FilterService, IFilterService
 from job_agent_backend.messaging import ScrapperClient, IScrapperClient
 from job_agent_backend.model_providers import IModelFactory
-from job_agent_backend.model_providers.container import (
-    get as get_model_provider,
-)
+from job_agent_backend.model_providers.container import get_model_factory
 from job_agent_backend.services import EssaySearchService
 from job_agent_platform_contracts import IJobAgentOrchestrator
 from jobs_repository import init_db
 from jobs_repository.container import get_job_repository
-
-T = TypeVar("T")
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
@@ -33,7 +29,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     job_repository_factory = providers.Object(get_job_repository)
 
     # Model factory from model_providers container
-    model_factory = providers.Object(get_model_provider(IModelFactory))
+    model_factory = providers.Factory(get_model_factory)
 
     scrapper_manager = providers.Singleton(
         ScrapperClient,
@@ -67,50 +63,58 @@ class ApplicationContainer(containers.DeclarativeContainer):
 container = ApplicationContainer()
 
 
+# Type-safe getter functions for each dependency
+def get_model_factory_instance() -> IModelFactory:
+    """Get the model factory from the container."""
+    return container.model_factory()
+
+
+def get_cv_loader() -> ICVLoader:
+    """Get the CV loader from the container."""
+    return container.cv_loader()
+
+
+def get_scrapper_client() -> IScrapperClient:
+    """Get the scrapper client from the container."""
+    return container.scrapper_manager()
+
+
+def get_filter_service() -> IFilterService:
+    """Get the filter service from the container."""
+    return container.filter_service()
+
+
+def get_orchestrator() -> IJobAgentOrchestrator:
+    """Get the orchestrator from the container."""
+    return container.orchestrator()
+
+
+def get_essay_search_service() -> IEssaySearchService:
+    """Get the essay search service from the container."""
+    return container.essay_search_service()
+
+
 # Type-safe dependency resolution mapping
-# Maps interface types to their concrete implementations in the container
-_DEPENDENCY_MAP = {
-    # Model factory retrieved from model_providers container
-    IModelFactory: lambda: container.model_factory(),
-    ICVLoader: lambda: container.cv_loader(),
-    IScrapperClient: lambda: container.scrapper_manager(),
-    IFilterService: lambda: container.filter_service(),
-    IJobAgentOrchestrator: lambda: container.orchestrator(),
-    IEssaySearchService: lambda: container.essay_search_service(),
+_DEPENDENCY_MAP: Dict[type, Callable[[], Any]] = {
+    IModelFactory: get_model_factory_instance,
+    ICVLoader: get_cv_loader,
+    IScrapperClient: get_scrapper_client,
+    IFilterService: get_filter_service,
+    IJobAgentOrchestrator: get_orchestrator,
+    IEssaySearchService: get_essay_search_service,
 }
 
 
-# Type overloads for IDE autocomplete and type checking
-@overload
-def get(dependency_type: Type[IModelFactory]) -> IModelFactory: ...
-
-
-@overload
-def get(dependency_type: Type[ICVLoader]) -> ICVLoader: ...
-
-
-@overload
-def get(dependency_type: Type[IScrapperClient]) -> IScrapperClient: ...
-
-
-@overload
-def get(dependency_type: Type[IFilterService]) -> IFilterService: ...
-
-
-@overload
-def get(dependency_type: Type[IJobAgentOrchestrator]) -> IJobAgentOrchestrator: ...
-
-
-@overload
-def get(dependency_type: Type[IEssaySearchService]) -> IEssaySearchService: ...
-
-
-def get(dependency_type: Type[T]) -> T:
+def get(dependency_type: type) -> Any:
     """Get a dependency from the container by its type.
 
-    This provides a type-safe way to resolve dependencies using types
-    (either interfaces or concrete classes) instead of provider names.
-    Works with both abstract interfaces (protocols) and concrete classes.
+    Note: For type-safe access, prefer using the specific getter functions:
+    - get_model_factory_instance() -> IModelFactory
+    - get_cv_loader() -> ICVLoader
+    - get_scrapper_client() -> IScrapperClient
+    - get_filter_service() -> IFilterService
+    - get_orchestrator() -> IJobAgentOrchestrator
+    - get_essay_search_service() -> IEssaySearchService
 
     Args:
         dependency_type: The type (interface or class) of the dependency to retrieve
@@ -122,21 +126,16 @@ def get(dependency_type: Type[T]) -> T:
         KeyError: If the dependency type is not registered in the container
 
     Examples:
-        # Using interface type (recommended - loose coupling)
-        from job_agent_backend.container import get
-        from job_agent_backend.model_providers import IModelFactory
+        from job_agent_backend.container import get_model_factory_instance
 
-        factory = get(IModelFactory)
+        factory = get_model_factory_instance()
         model = factory.get_model(model_id="skill-extraction")
-
-        # Other services
-        from job_agent_backend.messaging import IScrapperClient
-        scrapper = get(IScrapperClient)
     """
     resolver = _DEPENDENCY_MAP.get(dependency_type)
     if resolver is None:
+        dep_name = getattr(dependency_type, "__name__", str(dependency_type))
+        available = ", ".join(t.__name__ for t in _DEPENDENCY_MAP.keys())
         raise KeyError(
-            f"Dependency '{dependency_type.__name__}' not found in container. "
-            f"Available types: {', '.join(t.__name__ for t in _DEPENDENCY_MAP.keys())}"
+            f"Dependency '{dep_name}' not found in container. Available types: {available}"
         )
     return resolver()

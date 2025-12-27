@@ -1,6 +1,6 @@
 """Local dependency injection container for model providers."""
 
-from typing import Type, TypeVar, overload
+from typing import Any, Callable, Dict
 
 from dependency_injector import containers, providers
 
@@ -10,8 +10,6 @@ from .mappers import MODEL_PROVIDER_MAP, PROVIDER_MAP
 from .providers import OllamaProvider, TransformersProvider
 from .registry import ModelRegistry
 from .contracts.registry_interface import IModelRegistry
-
-T = TypeVar("T")
 
 
 class ModelProvidersContainer(containers.DeclarativeContainer):
@@ -59,31 +57,29 @@ class ModelProvidersContainer(containers.DeclarativeContainer):
 container = ModelProvidersContainer()
 
 
+def get_model_factory() -> IModelFactory:
+    """Get the model factory from the container."""
+    return container.model_factory()
+
+
+def get_model_registry() -> IModelRegistry:
+    """Get the model registry from the container."""
+    return container.model_registry()
+
+
 # Type-safe dependency resolution mapping
-_DEPENDENCY_MAP = {
-    IModelFactory: lambda: container.model_factory(),
-    IModelRegistry: lambda: container.model_registry(),
+_DEPENDENCY_MAP: Dict[type, Callable[[], Any]] = {
+    IModelFactory: get_model_factory,
+    IModelRegistry: get_model_registry,
 }
 
 
-@overload
-def get(dependency_type: Type[IModelFactory]) -> IModelFactory: ...
-
-
-@overload
-def get(dependency_type: Type[IModelRegistry]) -> IModelRegistry: ...
-
-
-@overload
-def get(dependency_type: Type[ModelFactory]) -> ModelFactory: ...
-
-
-@overload
-def get(dependency_type: Type[ModelRegistry]) -> ModelRegistry: ...
-
-
-def get(dependency_type: Type[T]) -> T:
+def get(dependency_type: type) -> Any:
     """Get a dependency from the model providers container by its type.
+
+    Note: For type-safe access, prefer using the specific getter functions:
+    - get_model_factory() -> IModelFactory
+    - get_model_registry() -> IModelRegistry
 
     Args:
         dependency_type: The type (interface or class) of the dependency to retrieve
@@ -95,16 +91,16 @@ def get(dependency_type: Type[T]) -> T:
         KeyError: If the dependency type is not registered in the container
 
     Examples:
-        from job_agent_backend.model_providers.container import get
-        from job_agent_backend.model_providers import IModelFactory
+        from job_agent_backend.model_providers.container import get_model_factory
 
-        factory = get(IModelFactory)
+        factory = get_model_factory()
         model = factory.get_model(model_id="skill-extraction")
     """
     resolver = _DEPENDENCY_MAP.get(dependency_type)
     if resolver is None:
+        dep_name = getattr(dependency_type, "__name__", str(dependency_type))
+        available = ", ".join(t.__name__ for t in _DEPENDENCY_MAP.keys())
         raise KeyError(
-            f"Dependency '{dependency_type.__name__}' not found in container. "
-            f"Available types: {', '.join(t.__name__ for t in _DEPENDENCY_MAP.keys())}"
+            f"Dependency '{dep_name}' not found in container. Available types: {available}"
         )
     return resolver()

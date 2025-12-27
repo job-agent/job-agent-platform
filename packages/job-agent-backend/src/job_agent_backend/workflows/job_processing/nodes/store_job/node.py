@@ -7,12 +7,13 @@ from job_scrapper_contracts import JobDict
 
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
-from ...state import AgentState, AgentStateUpdate
+from ...state import AgentState
+from .result import StoreJobResult
 
 
 def create_store_job_node(
     job_repository_factory: Callable[[], IJobRepository],
-) -> Callable:
+) -> Callable[[AgentState], StoreJobResult]:
     """
     Factory function to create a store_job_node with injected dependencies.
 
@@ -23,7 +24,7 @@ def create_store_job_node(
         Configured store_job_node function
     """
 
-    def store_job_node(state: AgentState) -> AgentStateUpdate:
+    def store_job_node(state: AgentState) -> StoreJobResult:
         """
         Store a relevant job to the database.
 

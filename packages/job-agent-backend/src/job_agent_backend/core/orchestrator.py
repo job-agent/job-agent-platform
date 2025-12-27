@@ -65,7 +65,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
                             default configuration-based implementation is used.
         """
         self.logger: Callable[[str], None] = logger or print
-        repository_factory = cv_repository_class or CVRepository
+        repository_factory = CVRepository if cv_repository_class is None else cv_repository_class
         self.cv_repository_class: CVRepositoryFactory = repository_factory
         self.cv_loader: ICVLoader = cv_loader
         if job_repository_factory is None:

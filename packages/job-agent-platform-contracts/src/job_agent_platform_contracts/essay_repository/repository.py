@@ -1,7 +1,6 @@
 """Repository interface for essay operations."""
 
-from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Protocol, runtime_checkable
 
 from job_agent_platform_contracts.essay_repository.schemas import (
     EssayCreate,
@@ -11,7 +10,8 @@ from job_agent_platform_contracts.essay_repository.schemas import (
 )
 
 
-class IEssayRepository(ABC):
+@runtime_checkable
+class IEssayRepository(Protocol):
     """
     Interface for essay repository operations.
 
@@ -19,7 +19,6 @@ class IEssayRepository(ABC):
     must follow, ensuring consistency across different storage backends.
     """
 
-    @abstractmethod
     def create(self, essay_data: EssayCreate) -> Essay:
         """
         Create a new essay from an `EssayCreate` payload.
@@ -34,9 +33,8 @@ class IEssayRepository(ABC):
             EssayValidationError: If data validation fails (e.g., missing answer)
             TransactionError: If database transaction fails
         """
-        pass
+        ...
 
-    @abstractmethod
     def get_by_id(self, essay_id: int) -> Optional[Essay]:
         """
         Get essay by ID.
@@ -47,9 +45,8 @@ class IEssayRepository(ABC):
         Returns:
             Essay entity if found, None otherwise
         """
-        pass
+        ...
 
-    @abstractmethod
     def get_all(self) -> List[Essay]:
         """
         Get all essays.
@@ -57,9 +54,8 @@ class IEssayRepository(ABC):
         Returns:
             List of Essay entities (may be empty)
         """
-        pass
+        ...
 
-    @abstractmethod
     def delete(self, essay_id: int) -> bool:
         """
         Delete an essay by ID.
@@ -70,9 +66,8 @@ class IEssayRepository(ABC):
         Returns:
             True if deleted, False if not found
         """
-        pass
+        ...
 
-    @abstractmethod
     def update(self, essay_id: int, essay_data: EssayUpdate) -> Optional[Essay]:
         """
         Update an existing essay.
@@ -88,9 +83,8 @@ class IEssayRepository(ABC):
             EssayValidationError: If data validation fails
             TransactionError: If database transaction fails
         """
-        pass
+        ...
 
-    @abstractmethod
     def search_by_embedding(self, embedding: List[float], limit: int) -> List[Essay]:
         """
         Search essays by vector similarity.
@@ -102,9 +96,8 @@ class IEssayRepository(ABC):
         Returns:
             List of Essay entities ordered by cosine similarity
         """
-        pass
+        ...
 
-    @abstractmethod
     def search_by_text(self, query: str, limit: int) -> List[Essay]:
         """
         Search essays by full-text search.
@@ -116,9 +109,8 @@ class IEssayRepository(ABC):
         Returns:
             List of Essay entities ordered by text relevance
         """
-        pass
+        ...
 
-    @abstractmethod
     def search_hybrid(
         self,
         embedding: List[float],
@@ -145,9 +137,8 @@ class IEssayRepository(ABC):
         Returns:
             List of EssaySearchResult ordered by MMR score
         """
-        pass
+        ...
 
-    @abstractmethod
     def update_embedding(self, essay_id: int, embedding: List[float]) -> bool:
         """
         Update the embedding for an essay.
@@ -159,4 +150,4 @@ class IEssayRepository(ABC):
         Returns:
             True if updated, False if essay not found
         """
-        pass
+        ...

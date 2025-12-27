@@ -56,7 +56,7 @@ class TestJobRepositoryInheritance:
         """JobRepository should be a subclass of db-core BaseRepository.
 
         After migration, JobRepository class declaration should be:
-        class JobRepository(IJobRepository, BaseRepository)
+        class JobRepository(BaseRepository, IJobRepository)
         """
         from db_core import BaseRepository
         from jobs_repository.repository import JobRepository

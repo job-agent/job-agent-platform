@@ -1,10 +1,9 @@
 """Repository interface for CV operations."""
 
-from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Protocol
 
 
-class ICVRepository(ABC):
+class ICVRepository(Protocol):
     """
     Interface for CV repository operations.
 
@@ -12,7 +11,6 @@ class ICVRepository(ABC):
     CV repositories manage CV data stored as strings.
     """
 
-    @abstractmethod
     def create(self, cv_data: str) -> str:
         """
         Create or overwrite the CV.
@@ -26,9 +24,8 @@ class ICVRepository(ABC):
         Raises:
             IOError: If CV cannot be written
         """
-        pass
+        ...
 
-    @abstractmethod
     def find(self) -> Optional[str]:
         """
         Find and return the CV data.
@@ -36,9 +33,8 @@ class ICVRepository(ABC):
         Returns:
             CV data as string if exists, None otherwise
         """
-        pass
+        ...
 
-    @abstractmethod
     def update(self, cv_data: str) -> str:
         """
         Update the CV with new data.
@@ -52,4 +48,4 @@ class ICVRepository(ABC):
         Raises:
             IOError: If CV cannot be written
         """
-        pass
+        ...

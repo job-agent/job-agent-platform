@@ -4,7 +4,9 @@ This module provides the public API for running the workflows system.
 """
 
 import os
-from typing import Callable, Optional
+from typing import Callable, Optional, cast
+
+from langchain_core.runnables import RunnableConfig
 
 from job_agent_platform_contracts import IJobRepository
 
@@ -72,7 +74,7 @@ def run_job_processing(
 
         resolved_model_factory = container.model_factory()
 
-    workflow_config = {
+    workflow_config: RunnableConfig = {
         "configurable": {
             "job_repository_factory": job_repository_factory,
             "model_factory": resolved_model_factory,
@@ -87,7 +89,7 @@ def run_job_processing(
         "cv_context": cv_content,
     }
 
-    final_state = workflow.invoke(initial_state)
+    final_state = cast(AgentState, workflow.invoke(initial_state))
 
     print(f"Workflow completed with status: {final_state['status']}")
 
