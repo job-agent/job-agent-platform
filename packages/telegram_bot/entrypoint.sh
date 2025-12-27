@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "Running database migrations..."
+echo "Running jobs-repository migrations..."
 cd /app/packages/jobs-repository
+alembic upgrade head
+
+echo "Running essay-repository migrations..."
+cd /app/packages/essay-repository
 alembic upgrade head
 
 echo "Starting Telegram bot..."

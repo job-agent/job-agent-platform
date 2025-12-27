@@ -1,89 +1,101 @@
 """Tests for remove_pii_node."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from .node import remove_pii_node
+from .node import create_remove_pii_node
+
+
+def _create_mock_factory_with_response(response_content: str) -> MagicMock:
+    """Create a mock model factory that returns a model with the given response."""
+    mock_model = MagicMock()
+    mock_response = MagicMock()
+    mock_response.content = response_content
+    mock_model.invoke.return_value = mock_response
+    mock_factory = MagicMock()
+    mock_factory.get_model.return_value = mock_model
+    return mock_factory
 
 
 class TestRemovePiiNode:
     """Test suite for remove_pii_node function."""
 
-    @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.anonymize_text")
-    def test_remove_pii_node_returns_anonymized_content(self, mock_anonymize_text: MagicMock):
+    def test_remove_pii_node_returns_anonymized_content(self):
         """Test that remove_pii_node returns state with anonymized cv_context."""
-        mock_anonymize_text.return_value = "Anonymized CV content"
-        state = {"cv_context": "Original CV with PII"}
+        mock_factory = _create_mock_factory_with_response("Anonymized CV content")
+        node = create_remove_pii_node(mock_factory)
 
-        result = remove_pii_node(state)
+        state = {"cv_context": "Original CV with PII"}
+        result = node(state)
 
         assert result == {"cv_context": "Anonymized CV content"}
-        mock_anonymize_text.assert_called_once_with("Original CV with PII")
 
-    @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.anonymize_text")
-    def test_remove_pii_node_extracts_job_id_from_state(
-        self, mock_anonymize_text: MagicMock, capsys
-    ):
+    def test_remove_pii_node_extracts_job_id_from_state(self, capsys):
         """Test that remove_pii_node extracts job_id from state for logging."""
-        mock_anonymize_text.return_value = "Cleaned"
+        mock_factory = _create_mock_factory_with_response("Cleaned")
+        node = create_remove_pii_node(mock_factory)
+
         state = {
             "cv_context": "CV content",
             "job": {"job_id": "job-123", "title": "Software Engineer"},
         }
-
-        remove_pii_node(state)
+        node(state)
 
         captured = capsys.readouterr()
         assert "job-123" in captured.out
 
-    @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.anonymize_text")
-    def test_remove_pii_node_handles_missing_job_in_state(
-        self, mock_anonymize_text: MagicMock, capsys
-    ):
+    def test_remove_pii_node_handles_missing_job_in_state(self, capsys):
         """Test that remove_pii_node handles state without job field."""
-        mock_anonymize_text.return_value = "Cleaned"
-        state = {"cv_context": "CV content"}
+        mock_factory = _create_mock_factory_with_response("Cleaned")
+        node = create_remove_pii_node(mock_factory)
 
-        remove_pii_node(state)
+        state = {"cv_context": "CV content"}
+        node(state)
 
         captured = capsys.readouterr()
         assert "N/A" in captured.out
 
-    @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.anonymize_text")
-    def test_remove_pii_node_handles_job_without_job_id(
-        self, mock_anonymize_text: MagicMock, capsys
-    ):
+    def test_remove_pii_node_handles_job_without_job_id(self, capsys):
         """Test that remove_pii_node handles job dict without job_id."""
-        mock_anonymize_text.return_value = "Cleaned"
-        state = {"cv_context": "CV content", "job": {"title": "Developer"}}
+        mock_factory = _create_mock_factory_with_response("Cleaned")
+        node = create_remove_pii_node(mock_factory)
 
-        remove_pii_node(state)
+        state = {"cv_context": "CV content", "job": {"title": "Developer"}}
+        node(state)
 
         captured = capsys.readouterr()
         assert "None" in captured.out
 
     def test_remove_pii_node_raises_value_error_on_empty_cv_context(self):
         """Test that remove_pii_node raises ValueError when cv_context is empty."""
+        mock_factory = MagicMock()
+        node = create_remove_pii_node(mock_factory)
+
         state = {"cv_context": ""}
 
         with pytest.raises(ValueError, match="No CV context available"):
-            remove_pii_node(state)
+            node(state)
 
     def test_remove_pii_node_raises_value_error_on_missing_cv_context(self):
         """Test that remove_pii_node raises ValueError when cv_context is missing."""
+        mock_factory = MagicMock()
+        node = create_remove_pii_node(mock_factory)
+
         state = {}
 
         with pytest.raises(ValueError, match="No CV context available"):
-            remove_pii_node(state)
+            node(state)
 
-    @patch("job_agent_backend.workflows.pii_removal.nodes.remove_pii.node.anonymize_text")
-    def test_remove_pii_node_propagates_anonymize_text_exception(
-        self, mock_anonymize_text: MagicMock
-    ):
+    def test_remove_pii_node_propagates_anonymize_text_exception(self):
         """Test that remove_pii_node propagates exceptions from anonymize_text."""
-        mock_anonymize_text.side_effect = RuntimeError("Anonymization failed")
+        mock_model = MagicMock()
+        mock_model.invoke.side_effect = Exception("Model error")
+        mock_factory = MagicMock()
+        mock_factory.get_model.return_value = mock_model
+        node = create_remove_pii_node(mock_factory)
+
         state = {"cv_context": "CV content"}
 
-        with pytest.raises(RuntimeError, match="Anonymization failed"):
-            remove_pii_node(state)
+        with pytest.raises(RuntimeError, match="Failed to invoke PII anonymization model"):
+            node(state)

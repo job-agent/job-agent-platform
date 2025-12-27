@@ -4,7 +4,7 @@ This module contains the business logic for scraping, filtering, and processing 
 It can be used by any interface (CLI, Telegram, Web, etc.).
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Iterator, Optional, Sequence, cast
 
@@ -22,6 +22,10 @@ from job_agent_backend.filter_service import IFilterService
 from job_agent_backend.messaging import IScrapperClient
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
 from job_agent_backend.workflows.job_processing.state import AgentState
+
+
+# Maximum number of days to look back when auto-calculating posted_after
+MAX_AUTO_DAYS = 5
 
 
 CVRepositoryFactory = Callable[[str | Path], ICVRepository]
@@ -163,11 +167,48 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self.logger(f"CV loaded successfully for user {user_id}")
         return cv_content
 
+    def _calculate_posted_after(self, days: Optional[int]) -> datetime:
+        """Calculate the posted_after datetime based on days parameter.
+
+        If days is provided, returns now - days.
+        If days is None, queries the job repository for the latest job timestamp
+        and returns that, capped at MAX_AUTO_DAYS.
+
+        Args:
+            days: Number of days to look back, or None for auto-calculation
+
+        Returns:
+            UTC-aware datetime for posted_after filter
+        """
+        now = datetime.now(timezone.utc)
+
+        if days is not None:
+            return now - timedelta(days=days)
+
+        # Auto-calculate from repository
+        repository = self.job_repository_factory()
+        latest_updated_at = repository.get_latest_updated_at()
+
+        if latest_updated_at is None:
+            # No jobs in repository, use MAX_AUTO_DAYS as default
+            return now - timedelta(days=MAX_AUTO_DAYS)
+
+        # Normalize timezone-naive datetime to UTC
+        if latest_updated_at.tzinfo is None:
+            latest_updated_at = latest_updated_at.replace(tzinfo=timezone.utc)
+
+        # Cap at MAX_AUTO_DAYS
+        max_lookback = now - timedelta(days=MAX_AUTO_DAYS)
+        if latest_updated_at < max_lookback:
+            return max_lookback
+
+        return latest_updated_at
+
     def scrape_jobs(
         self,
         min_salary: Optional[int] = 4000,
         employment_location: Optional[str] = "remote",
-        posted_after: Optional[datetime] = None,
+        days: Optional[int] = None,
         timeout: int = 30,
     ) -> list[JobDict]:
         """Scrape jobs using the scrapper service.
@@ -177,12 +218,14 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Args:
             min_salary: Minimum salary filter
             employment_location: Employment type or location filter
-            posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
+            days: Number of days to look back. If None, auto-calculates from latest
+                  job in repository (capped at MAX_AUTO_DAYS)
             timeout: Request timeout in seconds
 
         Returns:
             List of job dictionaries
         """
+        posted_after = self._calculate_posted_after(days)
         self.logger("Scraping jobs...")
         all_jobs = []
         for batch_jobs in self.scrapper_manager.scrape_jobs_streaming(
@@ -200,7 +243,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         self,
         min_salary: Optional[int] = 4000,
         employment_location: Optional[str] = "remote",
-        posted_after: Optional[datetime] = None,
+        days: Optional[int] = None,
         timeout: int = 30,
     ) -> Iterator[tuple[list[JobDict], int]]:
         """Scrape jobs using the scrapper service, yielding batches as they arrive.
@@ -211,12 +254,14 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Args:
             min_salary: Minimum salary filter
             employment_location: Employment type or location filter
-            posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
+            days: Number of days to look back. If None, auto-calculates from latest
+                  job in repository (capped at MAX_AUTO_DAYS)
             timeout: Request timeout in seconds
 
         Yields:
             tuple[list[JobDict], int]: (batch_jobs, total_jobs_so_far)
         """
+        posted_after = self._calculate_posted_after(days)
         self.logger("Starting streaming job scrape...")
         total_jobs = 0
 
@@ -308,7 +353,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         user_id: int,
         min_salary: Optional[int] = 4000,
         employment_location: Optional[str] = "remote",
-        posted_after: Optional[datetime] = None,
+        days: Optional[int] = None,
         timeout: int = 30,
     ) -> PipelineSummary:
         """Run the complete job processing pipeline.
@@ -324,7 +369,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             user_id: User identifier to load their CV
             min_salary: Minimum salary filter
             employment_location: Employment type or location filter
-            posted_after: Only return jobs posted after this datetime (default: None, returns all jobs)
+            days: Number of days to look back. If None, auto-calculates from latest
+                  job in repository (capped at MAX_AUTO_DAYS)
             timeout: Request timeout in seconds
 
         Returns:
@@ -341,7 +387,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
             self.logger(f"Warning: Database initialization failed: {e}")
             self.logger("Continuing without database storage...")
 
-        jobs = self.scrape_jobs(min_salary, employment_location, posted_after, timeout)
+        jobs = self.scrape_jobs(min_salary, employment_location, days, timeout)
 
         filtered_jobs = self.filter_jobs_list(jobs)
 

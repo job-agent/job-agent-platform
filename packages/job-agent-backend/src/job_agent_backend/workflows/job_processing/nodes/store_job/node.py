@@ -7,7 +7,7 @@ from job_scrapper_contracts import JobDict
 
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
-from ...state import AgentState
+from ...state import AgentState, AgentStateUpdate
 
 
 def create_store_job_node(
@@ -23,7 +23,7 @@ def create_store_job_node(
         Configured store_job_node function
     """
 
-    def store_job_node(state: AgentState) -> AgentState:
+    def store_job_node(state: AgentState) -> AgentStateUpdate:
         """
         Store a relevant job to the database.
 
@@ -53,11 +53,13 @@ def create_store_job_node(
             # Pass is_relevant from workflow state (defaults to True for backwards compatibility)
             job_create_data["is_relevant"] = state.get("is_relevant", True)
 
-            if extracted_must_have_skills := state.get("extracted_must_have_skills"):
+            if (extracted_must_have_skills := state.get("extracted_must_have_skills")) is not None:
                 job_create_data["must_have_skills"] = extracted_must_have_skills
                 print(f"  Added {len(extracted_must_have_skills)} must-have skills")
 
-            if extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills"):
+            if (
+                extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills")
+            ) is not None:
                 job_create_data["nice_to_have_skills"] = extracted_nice_to_have_skills
                 print(f"  Added {len(extracted_nice_to_have_skills)} nice-to-have skills")
 

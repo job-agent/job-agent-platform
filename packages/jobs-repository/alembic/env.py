@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 
-from jobs_repository.database import Base
+from jobs_repository.models.base import Base
 
 
 config = context.config
@@ -49,6 +49,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table="jobs_alembic_version",
     )
 
     with context.begin_transaction():
@@ -69,7 +70,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            version_table="jobs_alembic_version",
+        )
 
         with context.begin_transaction():
             context.run_migrations()

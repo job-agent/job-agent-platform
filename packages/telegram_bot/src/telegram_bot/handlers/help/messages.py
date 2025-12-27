@@ -35,5 +35,17 @@ Your CV will be stored securely and used to match you with relevant job opportun
 - days: Number of days to look back (default: 1)
 - timeout: Request timeout in seconds (default: 30)
 
+📝 Essay Management:
+
+/add_essay - Add an essay (question/answer pair) to your profile
+
+Examples:
+
+/add_essay Question: Tell me about a time you led a team Answer: I led a team of 5 engineers to deliver a microservices migration on schedule, improving system reliability by 40%.
+
+/add_essay Answer: I have 5 years of experience with Python, TypeScript, and cloud infrastructure including AWS and GCP.
+
+Essays help personalize job matching and application responses.
+
 📝 Note: Job results are processed using your CV and sent back to you automatically.
 """

@@ -6,7 +6,7 @@ from typing import Optional
 
 from pypdf import PdfReader
 
-from .interfaces import ICVLoader
+from job_agent_backend.contracts import ICVLoader
 
 
 class CVLoader(ICVLoader):

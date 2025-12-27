@@ -28,3 +28,17 @@ class AgentState(TypedDict):
     is_relevant: NotRequired[bool]
     extracted_must_have_skills: NotRequired[List[str]]
     extracted_nice_to_have_skills: NotRequired[List[str]]
+
+
+class AgentStateUpdate(TypedDict, total=False):
+    """Partial state update returned by workflow nodes.
+
+    All fields are optional since nodes only update specific fields.
+    """
+
+    job: JobDict
+    status: str
+    cv_context: str
+    is_relevant: bool
+    extracted_must_have_skills: List[str]
+    extracted_nice_to_have_skills: List[str]

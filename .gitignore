@@ -73,3 +73,7 @@ Thumbs.db
 data/
 
 .langgraph_api
+
+.task-reports
+
+*.db

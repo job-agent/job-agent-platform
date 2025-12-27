@@ -2,7 +2,7 @@
 
 from typing import Type, TypeVar
 
-from sqlalchemy import select
+from sqlalchemy import select, ColumnElement
 from sqlalchemy.orm import Session
 
 from jobs_repository.interfaces import IReferenceDataService
@@ -30,7 +30,9 @@ class ReferenceDataService(IReferenceDataService):
         """Get existing industry or create new one."""
         return self._get_or_create(session, Industry, Industry.name == name, {"name": name})
 
-    def _get_or_create(self, session: Session, model: Type[T], condition, data: dict) -> T:
+    def _get_or_create(
+        self, session: Session, model: Type[T], condition: ColumnElement[bool], data: dict
+    ) -> T:
         """
         Generic get-or-create method for reference entities.
 

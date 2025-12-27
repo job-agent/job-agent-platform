@@ -16,6 +16,8 @@ async def cv_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         update: Telegram update object
         context: Callback context
     """
+    if update.message is None or update.effective_user is None:
+        return
     user_id = update.effective_user.id
     dependencies = get_dependencies(context)
     cv_repository = dependencies.cv_repository_factory(user_id)

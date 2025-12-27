@@ -86,7 +86,12 @@ class TestStoreJobNode:
         assert result["status"] == "in_progress"
 
     def test_stores_job_with_empty_skills_lists(self):
-        """Node stores job when extracted skills are empty lists."""
+        """Node stores job when extracted skills are empty lists.
+
+        Empty skill lists explicitly indicate "no skills extracted" which is
+        semantically different from "skill extraction not performed" (None/missing).
+        Empty lists SHOULD be stored to preserve this distinction.
+        """
         mock_repository = MagicMock()
         mock_repository.create.return_value = MagicMock(id=42)
         job_repository_factory = MagicMock(return_value=mock_repository)
@@ -109,9 +114,9 @@ class TestStoreJobNode:
 
         mock_repository.create.assert_called_once()
         created_job = mock_repository.create.call_args[0][0]
-        # Empty lists are falsy, so skills shouldn't be added
-        assert "must_have_skills" not in created_job
-        assert "nice_to_have_skills" not in created_job
+        # Empty lists should be stored (not filtered out by truthy check)
+        assert created_job["must_have_skills"] == []
+        assert created_job["nice_to_have_skills"] == []
         assert result["status"] == "in_progress"
 
     def test_preserves_original_job_data(self):

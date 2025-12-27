@@ -10,6 +10,10 @@ ERROR_PROCESSING_FAILED = """❌ Failed to process CV
 
 There was an error processing your CV file. Please try again or check the file format."""
 
+ERROR_VALIDATION_FAILED = """❌ Invalid CV file
+
+The uploaded file could not be validated. Please ensure it is a valid PDF document."""
+
 INFO_PROCESSING = """⏳ Processing your CV...
 
 This may take a moment."""

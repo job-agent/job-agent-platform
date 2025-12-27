@@ -196,8 +196,13 @@ class TestJobMapper:
         assert "posted_at" not in result
         assert "expires_at" not in result
 
-    def test_empty_skills_arrays_not_mapped(self, mapper):
-        """Test that empty skills arrays are not included in mapping."""
+    def test_empty_skills_arrays_are_mapped(self, mapper):
+        """Test that empty skills arrays ARE included in mapping.
+
+        Empty skill lists explicitly indicate "no skills found" which is
+        semantically different from "skills not extracted" (None/missing).
+        Empty lists SHOULD be mapped to preserve this distinction.
+        """
         job_data = {
             "job_id": 1,
             "title": "Test",
@@ -207,8 +212,8 @@ class TestJobMapper:
 
         result = mapper.map_to_model(job_data)
 
-        assert "must_have_skills" not in result
-        assert "nice_to_have_skills" not in result
+        assert result["must_have_skills"] == []
+        assert result["nice_to_have_skills"] == []
 
     def test_none_values_are_preserved(self, mapper):
         """Test that None values are preserved in mapping."""
