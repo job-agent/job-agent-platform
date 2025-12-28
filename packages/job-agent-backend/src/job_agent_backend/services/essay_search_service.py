@@ -6,7 +6,7 @@ and adds automatic embedding generation for hybrid search functionality.
 
 import logging
 import threading
-from typing import List, Optional, TYPE_CHECKING, Tuple
+from typing import List, Optional, Tuple
 
 from job_agent_platform_contracts.essay_repository import (
     IEssayRepository,

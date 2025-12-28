@@ -77,9 +77,7 @@ def create_check_job_relevance_node(
             is_relevant = bool(similarity >= THRESHOLD)
             relevance_status = "RELEVANT" if is_relevant else "IRRELEVANT"
 
-            logger.info(
-                "Job (ID: %s): %s (Similarity: %.4f)", job_id, relevance_status, similarity
-            )
+            logger.info("Job (ID: %s): %s (Similarity: %.4f)", job_id, relevance_status, similarity)
 
         except Exception as e:
             logger.warning(
