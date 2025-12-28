@@ -25,9 +25,15 @@ Return a 2D list where:
 
 Detect explicit OR patterns in the text:
 - "X or Y" patterns
-- "X/Y" patterns (e.g., "React/Vue")
+- "X/Y" patterns ONLY when skills are truly interchangeable alternatives (e.g., "React/Vue" - both frontend frameworks, "PostgreSQL/MySQL" - both databases)
 - "either X or Y" patterns
 Group alternative skills together in the same inner list.
+
+IMPORTANT: The slash pattern does NOT always mean OR. Treat as separate required skills when:
+- Different categories (language vs framework): "Python/FastAPI" → [["Python"], ["FastAPI"]]
+- Parent/child relationship: "AWS/Lambda" → [["AWS"], ["Lambda"]]
+- Complementary skills: "HTML/CSS" → [["HTML"], ["CSS"]]
+Only group as alternatives when skills serve the same role and are mutually exclusive.
 
 Output must validate against:
   class SkillsExtraction(BaseModel):
@@ -49,9 +55,13 @@ Example 4 (OR alternatives):
 Input excerpt: "Required: JavaScript or Python, React or Vue, and Docker."
 Output: [["JavaScript", "Python"], ["React", "Vue"], ["Docker"]]
 
-Example 5 (slash notation):
+Example 5 (slash notation - interchangeable):
 Input excerpt: "Must have: Python/Ruby, PostgreSQL/MySQL, and AWS."
-Output: [["Python", "Ruby"], ["PostgreSQL", "MySQL"], ["AWS"]]"""
+Output: [["Python", "Ruby"], ["PostgreSQL", "MySQL"], ["AWS"]]
+
+Example 6 (slash notation - NOT interchangeable):
+Input excerpt: "Required: Python/FastAPI, and HTML/CSS experience."
+Output: [["Python"], ["FastAPI"], ["HTML"], ["CSS"]]"""
 
 
 HUMAN_MESSAGE = """<Job Description>
