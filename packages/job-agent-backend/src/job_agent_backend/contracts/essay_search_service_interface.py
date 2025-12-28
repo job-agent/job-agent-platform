@@ -1,6 +1,6 @@
 """Interface for essay search service."""
 
-from typing import List, Optional, Protocol
+from typing import List, Optional, Protocol, Tuple
 
 from job_agent_platform_contracts.essay_repository import (
     Essay,
@@ -32,4 +32,16 @@ class IEssaySearchService(Protocol):
 
     def backfill_embeddings(self) -> int:
         """Generate embeddings for all essays without one."""
+        ...
+
+    def get_paginated(self, page: int, page_size: int) -> Tuple[List[Essay], int]:
+        """Get essays with pagination.
+
+        Args:
+            page: Page number (1-based)
+            page_size: Number of essays per page
+
+        Returns:
+            Tuple of (list of essays for the page, total count of all essays)
+        """
         ...

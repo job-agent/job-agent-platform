@@ -245,7 +245,7 @@ LANGSMITH_API_KEY=ls__...
 - `packages/telegram_bot` — Async Telegram client that guides users through uploading CVs, triggering searches, and reviewing relevant jobs.
 - `packages/db-core` — Shared database infrastructure providing `BaseRepository`, session management, and transaction handling.
 - `packages/jobs-repository` — Job persistence layer built on db-core with Alembic migrations.
-- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`.
+- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`. Essays automatically receive AI-generated keywords on creation.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
 

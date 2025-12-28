@@ -14,6 +14,7 @@ from job_agent_backend.messaging import ScrapperClient, IScrapperClient
 from job_agent_backend.model_providers import IModelFactory
 from job_agent_backend.model_providers.container import get_model_factory
 from job_agent_backend.services import EssaySearchService
+from job_agent_backend.services.keyword_generation import KeywordGenerator
 from job_agent_platform_contracts import IJobAgentOrchestrator
 from jobs_repository import init_db
 from jobs_repository.container import get_job_repository
@@ -43,10 +44,16 @@ class ApplicationContainer(containers.DeclarativeContainer):
 
     # Essay repository and search service
     essay_repository_factory = providers.Factory(get_essay_repository)
+    keyword_generator = providers.Factory(
+        KeywordGenerator,
+        model_factory=model_factory,
+        repository=essay_repository_factory,
+    )
     essay_search_service = providers.Factory(
         EssaySearchService,
         repository=essay_repository_factory,
         model_factory=model_factory,
+        keyword_generator=keyword_generator,
     )
 
     orchestrator = providers.Factory(

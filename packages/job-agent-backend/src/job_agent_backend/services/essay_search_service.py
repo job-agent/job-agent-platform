@@ -5,7 +5,8 @@ and adds automatic embedding generation for hybrid search functionality.
 """
 
 import logging
-from typing import List, Optional, Tuple
+import threading
+from typing import List, Optional, TYPE_CHECKING, Tuple
 
 from job_agent_platform_contracts.essay_repository import (
     IEssayRepository,
@@ -14,13 +15,13 @@ from job_agent_platform_contracts.essay_repository import (
     EssayUpdate,
     EssaySearchResult,
 )
-from job_agent_backend.contracts import IModelFactory
 
+from job_agent_backend.contracts import IModelFactory, IKeywordGenerator, IEssaySearchService
 
 logger = logging.getLogger(__name__)
 
 
-class EssaySearchService:
+class EssaySearchService(IEssaySearchService):
     """Service that provides hybrid search and auto-embedding for essays.
 
     This service wraps the essay repository and automatically generates
@@ -32,15 +33,19 @@ class EssaySearchService:
         self,
         repository: IEssayRepository,
         model_factory: IModelFactory,
+        keyword_generator: IKeywordGenerator,
     ):
         """Initialize the search service.
 
         Args:
             repository: Essay repository for CRUD operations
             model_factory: Factory for retrieving embedding model
+            keyword_generator: Optional keyword generator for automatic
+                keyword extraction on essay creation
         """
         self._repository = repository
         self._model_factory = model_factory
+        self._keyword_generator = keyword_generator
 
     def search(
         self,
@@ -82,6 +87,9 @@ class EssaySearchService:
     def create(self, essay_data: EssayCreate) -> Essay:
         """Create a new essay with auto-generated embedding.
 
+        Also spawns background keyword generation if a keyword generator
+        is configured.
+
         Args:
             essay_data: Essay data including question, answer, keywords
 
@@ -103,6 +111,9 @@ class EssaySearchService:
         except Exception as e:
             logger.warning(f"Failed to generate embedding for essay {essay.id}: {e}")
 
+        # Spawn background keyword generation
+        self._spawn_keyword_generation(essay.id, essay.question, essay.answer)
+
         return essay
 
     def update(
@@ -111,6 +122,8 @@ class EssaySearchService:
         essay_data: EssayUpdate,
     ) -> Optional[Essay]:
         """Update an essay and regenerate its embedding.
+
+        Note: Keywords are NOT regenerated on update - only on creation.
 
         Args:
             essay_id: ID of the essay to update
@@ -175,6 +188,54 @@ class EssaySearchService:
                 logger.warning(f"Failed to backfill embedding for essay {essay.id}: {e}")
 
         return updated_count
+
+    def _spawn_keyword_generation(
+        self,
+        essay_id: int,
+        question: Optional[str],
+        answer: Optional[str],
+    ) -> None:
+        """Spawn a background thread for keyword generation.
+
+        Args:
+            essay_id: ID of the essay
+            question: Essay question
+            answer: Essay answer
+        """
+        if self._keyword_generator is None:
+            return
+
+        thread = threading.Thread(
+            target=self._generate_keywords_background,
+            args=(essay_id, question, answer),
+            daemon=True,
+        )
+        thread.start()
+
+    def _generate_keywords_background(
+        self,
+        essay_id: int,
+        question: Optional[str],
+        answer: Optional[str],
+    ) -> None:
+        """Background method to generate keywords.
+
+        Args:
+            essay_id: ID of the essay
+            question: Essay question
+            answer: Essay answer
+        """
+        if self._keyword_generator is None:
+            return
+
+        try:
+            self._keyword_generator.generate_keywords(
+                essay_id=essay_id,
+                question=question,
+                answer=answer,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to generate keywords for essay {essay_id}: {e}")
 
     def _build_embedding_text(
         self,

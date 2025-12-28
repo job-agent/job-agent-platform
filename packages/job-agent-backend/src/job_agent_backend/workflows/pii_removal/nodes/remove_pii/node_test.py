@@ -1,5 +1,6 @@
 """Tests for remove_pii_node."""
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -31,7 +32,7 @@ class TestRemovePiiNode:
 
         assert result == {"cv_context": "Anonymized CV content"}
 
-    def test_remove_pii_node_extracts_job_id_from_state(self, capsys):
+    def test_remove_pii_node_extracts_job_id_from_state(self, caplog):
         """Test that remove_pii_node extracts job_id from state for logging."""
         mock_factory = _create_mock_factory_with_response("Cleaned")
         node = create_remove_pii_node(mock_factory)
@@ -40,32 +41,32 @@ class TestRemovePiiNode:
             "cv_context": "CV content",
             "job": {"job_id": "job-123", "title": "Software Engineer"},
         }
-        node(state)
+        with caplog.at_level(logging.INFO):
+            node(state)
 
-        captured = capsys.readouterr()
-        assert "job-123" in captured.out
+        assert "job-123" in caplog.text
 
-    def test_remove_pii_node_handles_missing_job_in_state(self, capsys):
+    def test_remove_pii_node_handles_missing_job_in_state(self, caplog):
         """Test that remove_pii_node handles state without job field."""
         mock_factory = _create_mock_factory_with_response("Cleaned")
         node = create_remove_pii_node(mock_factory)
 
         state = {"cv_context": "CV content"}
-        node(state)
+        with caplog.at_level(logging.INFO):
+            node(state)
 
-        captured = capsys.readouterr()
-        assert "N/A" in captured.out
+        assert "N/A" in caplog.text
 
-    def test_remove_pii_node_handles_job_without_job_id(self, capsys):
+    def test_remove_pii_node_handles_job_without_job_id(self, caplog):
         """Test that remove_pii_node handles job dict without job_id."""
         mock_factory = _create_mock_factory_with_response("Cleaned")
         node = create_remove_pii_node(mock_factory)
 
         state = {"cv_context": "CV content", "job": {"title": "Developer"}}
-        node(state)
+        with caplog.at_level(logging.INFO):
+            node(state)
 
-        captured = capsys.readouterr()
-        assert "None" in captured.out
+        assert "None" in caplog.text
 
     def test_remove_pii_node_raises_value_error_on_empty_cv_context(self):
         """Test that remove_pii_node raises ValueError when cv_context is empty."""

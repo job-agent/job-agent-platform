@@ -53,6 +53,8 @@ job-agent-backend/
 │       ├── messaging/
 │       ├── model_providers/
 │       │   └── contracts/       # Service-level interfaces
+│       ├── services/
+│       │   └── keyword_generation/  # LLM-based keyword extraction
 │       └── workflows/
 └── tests/
 ```
@@ -77,7 +79,7 @@ When `days` is omitted (or `None`), the orchestrator auto-calculates the date ra
 
 The dependency injection container exposed at `job_agent_backend.container.container` lets you override components such as the scrapper manager, repositories, or filter service when wiring the backend into other applications or tests.
 
-Pre-configured AI models (e.g., `"skill-extraction"`, `"pii-removal"`, `"embedding"`) are registered in the container and can be accessed via:
+Pre-configured AI models (e.g., `"skill-extraction"`, `"pii-removal"`, `"keyword-extraction"`, `"embedding"`) are registered in the container and can be accessed via:
 
 ```python
 from job_agent_backend.container import get
@@ -95,6 +97,25 @@ from job_agent_backend.workflows import run_job_processing, run_pii_removal
 clean_cv = run_pii_removal(raw_cv_text)
 result = run_job_processing(job_dict, clean_cv)
 ```
+
+### Essay Keyword Generation
+
+When essays are created through `EssaySearchService`, keywords are automatically generated in the background using an LLM. The `KeywordGenerator` service extracts up to 10 keywords spanning hard skills, soft skills, and contextual labels:
+
+```python
+from job_agent_backend.container import get_essay_search_service
+from job_agent_platform_contracts.essay_repository import EssayCreate
+
+search_service = get_essay_search_service()
+
+essay = search_service.create({
+    "question": "Describe your leadership experience",
+    "answer": "I led a team of 5 engineers to deliver a Python microservice..."
+})
+# Essay is returned immediately; keywords are generated asynchronously in a background thread
+```
+
+Keywords are only generated on essay creation, not on updates. The background generation uses the pre-configured `"keyword-extraction"` model (Ollama phi3:mini).
 
 ## Development
 
