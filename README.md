@@ -148,7 +148,12 @@ Reference implementation: [scrappers repository](https://github.com/job-agent/sc
 ### 4. Apply Database Migrations
 
 ```bash
+# Jobs repository
 cd packages/jobs-repository
+alembic upgrade head
+
+# Essay repository (includes pgvector extension setup)
+cd ../essay-repository
 alembic upgrade head
 ```
 
@@ -173,7 +178,7 @@ Create a `.env` file in the repository root with the following variables:
 ### Core Services
 
 - `OPENAI_API_KEY` — Required. API key for OpenAI models used in LangGraph workflows for CV sanitization and job filtering.
-- `TELEGRAM_BOT_TOKEN` — Required. Token issued by @BotFather to connect your bot to Telegram.
+- `JOB_AGENT_BOT_TOKEN` — Required. Token issued by @BotFather to connect your bot to Telegram.
 
 ### Database (PostgreSQL)
 
@@ -192,6 +197,10 @@ Create a `.env` file in the repository root with the following variables:
 - `RABBITMQ_PORT` — Required. RabbitMQ AMQP port (default: 5672).
 - `RABBITMQ_MANAGEMENT_PORT` — Optional. RabbitMQ Management UI port (default: 15672).
 
+### Optional - Access Control
+
+- `TELEGRAM_ALLOWED_USER_IDS` — Optional. Comma-separated list of Telegram user IDs allowed to use the bot. If not set or empty, all users can access the bot. To find your Telegram user ID, message [@userinfobot](https://t.me/userinfobot). Example: `123456789,987654321`
+
 ### Optional - LangSmith Tracing
 
 - `LANGSMITH_API_KEY` — Optional. Enables LangSmith tracing and analytics for LangGraph workflow runs.
@@ -205,7 +214,9 @@ Create a `.env` file in the repository root with the following variables:
 OPENAI_API_KEY=sk-...
 
 # Telegram
-TELEGRAM_BOT_TOKEN=1234567890:ABC...
+JOB_AGENT_BOT_TOKEN=1234567890:ABC...
+# Restrict bot access (optional, omit to allow all users)
+TELEGRAM_ALLOWED_USER_IDS=123456789
 
 # PostgreSQL
 DATABASE_URL=postgresql://jobagent:password123@localhost:5432/job_agent
@@ -232,7 +243,9 @@ LANGSMITH_API_KEY=ls__...
 
 - `packages/job-agent-backend` — Core orchestrator with LangGraph workflows, RabbitMQ integration, CV loader, filter service, and dependency container.
 - `packages/telegram_bot` — Async Telegram client that guides users through uploading CVs, triggering searches, and reviewing relevant jobs.
-- `packages/jobs-repository` — SQLAlchemy and Alembic powered persistence layer for storing job metadata.
+- `packages/db-core` — Shared database infrastructure providing `BaseRepository`, session management, and transaction handling.
+- `packages/jobs-repository` — Job persistence layer built on db-core with Alembic migrations.
+- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
 
@@ -240,9 +253,9 @@ LANGSMITH_API_KEY=ls__...
 
 - **Python 3.9+** for running the platform services
 - **Docker & Docker Compose** for running infrastructure (PostgreSQL, RabbitMQ) and optional containerized deployment
-- **PostgreSQL database** for persisting job metadata and user data
+- **PostgreSQL database with pgvector** for persisting job metadata, essay data, and vector embeddings
 - **RabbitMQ** for asynchronous message queuing between services
-- **OpenAI API key** for LangGraph workflows (CV sanitization, job filtering)
+- **OpenAI API key** for LangGraph workflows (CV sanitization, job filtering) and text embeddings
 - **Telegram bot token** from [@BotFather](https://t.me/botfather)
 - **Scrapper service** (either mock or custom implementation) running and connected to RabbitMQ
 
@@ -253,9 +266,11 @@ job-agent-platform/
 ├── packages/
 │   ├── job-agent-backend/
 │   ├── telegram_bot/
-│   ├── jobs-repository/
+│   ├── db-core/                  # Shared database infrastructure
+│   ├── jobs-repository/          # Depends on db-core
+│   ├── essay-repository/         # Depends on db-core
 │   ├── cvs-repository/
-│   └── contracts/
+│   └── job-agent-platform-contracts/
 ├── docker-compose.yml
 ├── docker-start.sh
 ├── pyproject.toml
@@ -270,12 +285,13 @@ job-agent-platform/
 cd packages/job-agent-backend && pytest
 cd packages/telegram_bot && pytest
 cd packages/jobs-repository && pytest
+cd packages/essay-repository && pytest
 ```
 
 ### Code Formatting and Linting
 
 ```bash
-black packages/*/src
+ruff format packages/*/src
 ruff check packages/*/src
 ```
 
@@ -378,10 +394,11 @@ If Alembic migrations fail:
 
 If the bot doesn't respond to messages:
 
-1. Verify `TELEGRAM_BOT_TOKEN` is correct
+1. Verify `JOB_AGENT_BOT_TOKEN` is correct
 2. Check bot logs: `docker compose logs telegram_bot -f`
 3. Ensure the bot is started: `docker compose ps telegram_bot`
 4. Verify RabbitMQ connection is established
+5. If `TELEGRAM_ALLOWED_USER_IDS` is set, verify your Telegram user ID is in the list (unauthorized users are silently ignored)
 
 ## Contributing
 

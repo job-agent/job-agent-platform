@@ -19,7 +19,7 @@ class ScrapperProducer:
     """
 
     REQUEST_QUEUE = "job.scrape.request"
-    RESPONSE_TIMEOUT = 300  # 5 minutes timeout for scraping operations
+    RESPONSE_TIMEOUT = 600  # 10 minutes timeout for scraping operations
 
     def __init__(self, rabbitmq_url: Optional[str] = None):
         """Initialize the producer.
@@ -108,6 +108,7 @@ class ScrapperProducer:
         )
 
         connection = self.rabbitmq_connection.connection
+        assert connection is not None, "Connection must be established before processing events"
         timeout_counter = 0
         last_yielded_index = 0
 

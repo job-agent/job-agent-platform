@@ -4,6 +4,7 @@ import os
 from typing import Any, Optional
 
 from .base import BaseModelProvider
+from ..contracts.provider_interface import ModelInstance
 
 
 class OllamaProvider(BaseModelProvider):
@@ -11,7 +12,7 @@ class OllamaProvider(BaseModelProvider):
 
     def __init__(
         self,
-        model_name: str = "phi3:mini",
+        model_name: str,
         temperature: float = 0.0,
         base_url: Optional[str] = None,
         **kwargs: Any,
@@ -27,13 +28,13 @@ class OllamaProvider(BaseModelProvider):
         super().__init__(model_name, temperature, **kwargs)
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
-    def get_model(self) -> Any:
+    def get_model(self) -> ModelInstance:
         """Get ChatOllama model instance."""
         try:
             from langchain_ollama import ChatOllama
         except ImportError:
             raise ImportError(
-                "langchain-ollama not installed. " "Install it with: pip install langchain-ollama"
+                "langchain-ollama not installed. Install it with: pip install langchain-ollama"
             )
 
         return ChatOllama(

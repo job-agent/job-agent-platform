@@ -7,8 +7,8 @@ from typing import Callable, Iterator, Optional
 from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import IJobRepository
 
-from .interfaces import IScrapperClient
 from .producer import ScrapperProducer
+from ..contracts import IScrapperClient
 
 
 class ScrapperClient(IScrapperClient):

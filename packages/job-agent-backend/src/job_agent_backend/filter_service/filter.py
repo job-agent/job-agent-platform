@@ -10,7 +10,7 @@ from job_scrapper_contracts import JobDict
 from job_agent_platform_contracts import IJobRepository
 
 from .filter_config import FilterConfig
-from .interfaces import IFilterService
+from ..contracts import IFilterService
 
 
 class FilterService(IFilterService):
@@ -34,7 +34,7 @@ class FilterService(IFilterService):
         self._job_repository_factory = job_repository_factory
 
     def configure(self, config: Optional[FilterConfig]) -> None:
-        self.config = config or {}
+        self.config = config if config else {}
 
     def filter(self, jobs: List[JobDict]) -> List[JobDict]:
         """
@@ -155,4 +155,4 @@ class FilterService(IFilterService):
         location = job.get("location", {})
         can_apply = location.get("can_apply", False)
 
-        return can_apply
+        return bool(can_apply)

@@ -17,7 +17,9 @@ echo "=================================="
 PACKAGES=(
     "job-agent-platform-contracts"
     "cvs-repository"
+    "db-core"
     "jobs-repository"
+    "essay-repository"
     "job-agent-backend"
     "telegram_bot"
 )

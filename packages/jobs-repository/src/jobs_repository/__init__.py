@@ -1,7 +1,6 @@
 """Jobs Repository Package - PostgreSQL database operations for job listings."""
 
-from jobs_repository.database import (
-    Base,
+from db_core import (
     DatabaseConfig,
     get_database_config,
     get_engine,
@@ -13,13 +12,14 @@ from jobs_repository.database import (
     drop_all_tables,
 )
 
+from jobs_repository.models.base import Base
 from jobs_repository.models import Job, Company, Location, Category, Industry
 
 from jobs_repository.repository import JobRepository
 
 from jobs_repository.mapper import JobMapper
 
-from jobs_repository.container import get_job_repository
+from jobs_repository.container import get, get_job_repository
 
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
@@ -43,6 +43,7 @@ __all__ = [
     "Industry",
     "JobRepository",
     "JobMapper",
-    "get_job_repository",
+    "get",
+    "get_job_repository",  # Deprecated: use get(IJobRepository)
     "JobCreate",
 ]

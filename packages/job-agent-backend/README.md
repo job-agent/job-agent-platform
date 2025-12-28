@@ -46,10 +46,13 @@ job-agent-backend/
 │   │   └── cvs/
 │   └── job_agent_backend/
 │       ├── container.py
-│       ├── contracts/
+│       ├── contracts/           # Package-level interfaces
 │       ├── core/
 │       ├── cv_loader/
 │       ├── filter_service/
+│       ├── messaging/
+│       ├── model_providers/
+│       │   └── contracts/       # Service-level interfaces
 │       └── workflows/
 └── tests/
 ```
@@ -63,13 +66,26 @@ orchestrator = JobAgentOrchestrator()
 orchestrator.upload_cv(user_id=42, file_path="resume.pdf")
 summary = orchestrator.run_complete_pipeline(
     user_id=42,
-    salary=5000,
-    employment="remote",
+    min_salary=5000,
+    employment_location="remote",
+    days=7,  # Optional: search jobs from last N days
 )
 print(summary)
 ```
 
+When `days` is omitted (or `None`), the orchestrator auto-calculates the date range based on the most recent job in the repository, capped at 5 days.
+
 The dependency injection container exposed at `job_agent_backend.container.container` lets you override components such as the scrapper manager, repositories, or filter service when wiring the backend into other applications or tests.
+
+Pre-configured AI models (e.g., `"skill-extraction"`, `"pii-removal"`, `"embedding"`) are registered in the container and can be accessed via:
+
+```python
+from job_agent_backend.container import get
+from job_agent_backend.contracts import IModelFactory
+
+factory = get(IModelFactory)
+model = factory.get_model(model_id="skill-extraction")
+```
 
 For lower-level access, the workflows can also be invoked directly:
 
@@ -83,5 +99,5 @@ result = run_job_processing(job_dict, clean_cv)
 ## Development
 
 - `pytest` to run the test suite
-- `black src/` for formatting
+- `ruff format src/` for formatting
 - `ruff check src/` for linting

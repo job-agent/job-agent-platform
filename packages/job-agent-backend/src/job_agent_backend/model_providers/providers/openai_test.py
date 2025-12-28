@@ -4,6 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import SecretStr
 
 from job_agent_backend.model_providers.providers.openai import OpenAIProvider
 
@@ -71,7 +72,9 @@ class TestOpenAIProviderGetModel:
             provider = OpenAIProvider(model_name="gpt-4", api_key="test-key", temperature=0.5)
             result = provider.get_model()
 
-        mock_chat_openai.assert_called_once_with(model="gpt-4", temperature=0.5, api_key="test-key")
+        mock_chat_openai.assert_called_once_with(
+            model="gpt-4", temperature=0.5, api_key=SecretStr("test-key")
+        )
         assert result == mock_chat_openai.return_value
 
     def test_passes_kwargs_to_chat_openai(self) -> None:
@@ -86,7 +89,7 @@ class TestOpenAIProviderGetModel:
         mock_chat_openai.assert_called_once_with(
             model="gpt-4",
             temperature=0.0,
-            api_key="test-key",
+            api_key=SecretStr("test-key"),
             max_tokens=100,
             top_p=0.9,
         )

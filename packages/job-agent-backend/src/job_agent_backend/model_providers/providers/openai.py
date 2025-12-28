@@ -3,11 +3,16 @@
 import os
 from typing import Any, Optional
 
+from pydantic import SecretStr
+
 from .base import BaseModelProvider
+from ..contracts.provider_interface import ModelInstance
 
 
 class OpenAIProvider(BaseModelProvider):
     """OpenAI chat model provider using LangChain's ChatOpenAI."""
+
+    _api_key: SecretStr
 
     def __init__(
         self,
@@ -25,23 +30,32 @@ class OpenAIProvider(BaseModelProvider):
             **kwargs: Additional ChatOpenAI parameters
         """
         super().__init__(model_name, temperature, **kwargs)
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        resolved_key = api_key or os.getenv("OPENAI_API_KEY")
 
-        if not self.api_key:
+        if not resolved_key:
             raise ValueError(
                 "OpenAI API key not provided. Set OPENAI_API_KEY environment "
                 "variable or pass api_key parameter."
             )
+        self._api_key = SecretStr(resolved_key)
 
-    def get_model(self) -> Any:
+    @property
+    def api_key(self) -> str:
+        """Return the API key value for backward compatibility."""
+        return self._api_key.get_secret_value()
+
+    def get_model(self) -> ModelInstance:
         """Get ChatOpenAI model instance."""
         try:
             from langchain_openai import ChatOpenAI
         except ImportError:
             raise ImportError(
-                "langchain-openai not installed. " "Install it with: pip install langchain-openai"
+                "langchain-openai not installed. Install it with: pip install langchain-openai"
             )
 
         return ChatOpenAI(
-            model=self.model_name, temperature=self.temperature, api_key=self.api_key, **self.kwargs
+            model=self.model_name,
+            temperature=self.temperature,
+            api_key=self._api_key,
+            **self.kwargs,
         )

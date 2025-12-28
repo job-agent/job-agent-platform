@@ -1,6 +1,7 @@
 """Mapper service for transforming JobDict contract data to Job model format."""
 
 from typing import TYPE_CHECKING
+
 from dateutil import parser as date_parser
 
 from job_scrapper_contracts import JobDict
@@ -9,6 +10,15 @@ from jobs_repository.types import JobModelDict, JobSerializedDict
 
 if TYPE_CHECKING:
     from jobs_repository.models import Job
+
+
+class ProcessedJobDict(JobDict, total=False):
+    """JobDict extended with fields added during pipeline processing."""
+
+    must_have_skills: list[str]
+    nice_to_have_skills: list[str]
+    is_relevant: bool
+    is_filtered: bool
 
 
 class JobMapper(IJobMapper):
@@ -52,21 +62,27 @@ class JobMapper(IJobMapper):
 
     def _map_simple_fields(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Map simple scalar fields from JobDict to Job model."""
-        mapped_data["title"] = job_data.get("title")
+        if "title" in job_data:
+            mapped_data["title"] = job_data["title"]
+        if "job_id" in job_data:
+            mapped_data["external_id"] = str(job_data["job_id"])
+
         mapped_data["description"] = job_data.get("description")
-        mapped_data["external_id"] = str(job_data.get("job_id"))
         mapped_data["source_url"] = job_data.get("url")
         mapped_data["source"] = job_data.get("source")
         mapped_data["job_type"] = job_data.get("employment_type")
-        mapped_data["experience_months"] = job_data.get("experience_months")
+        experience = job_data.get("experience_months")
+        mapped_data["experience_months"] = int(experience) if experience is not None else None
 
-        if must_have_skills := job_data.get("must_have_skills"):
+        # These fields are added during pipeline processing (see ProcessedJobDict)
+        processed_data: ProcessedJobDict = job_data  # type: ignore[assignment]
+        if (must_have_skills := processed_data.get("must_have_skills")) is not None:
             mapped_data["must_have_skills"] = must_have_skills
-        if nice_to_have_skills := job_data.get("nice_to_have_skills"):
+        if (nice_to_have_skills := processed_data.get("nice_to_have_skills")) is not None:
             mapped_data["nice_to_have_skills"] = nice_to_have_skills
 
-        mapped_data["is_relevant"] = job_data.get("is_relevant", True)
-        mapped_data["is_filtered"] = job_data.get("is_filtered", False)
+        mapped_data["is_relevant"] = processed_data.get("is_relevant", True)
+        mapped_data["is_filtered"] = processed_data.get("is_filtered", False)
 
     def _map_company(self, job_data: JobDict, mapped_data: JobModelDict) -> None:
         """Extract company name from nested object."""
@@ -115,7 +131,7 @@ class JobMapper(IJobMapper):
         Returns:
             Type-safe dictionary with all job fields serialized
         """
-        return {
+        result: JobSerializedDict = {
             "id": job.id,
             "title": job.title,
             "company_id": job.company_id,
@@ -145,3 +161,4 @@ class JobMapper(IJobMapper):
             "created_at": job.created_at.isoformat() if job.created_at else None,
             "updated_at": job.updated_at.isoformat() if job.updated_at else None,
         }
+        return result

@@ -16,12 +16,21 @@ def _prepare_config(config: RunnableConfig | None) -> RunnableConfig:
     configurable: dict[str, Any] = {}
     if isinstance(configurable_source, Mapping):
         configurable.update(configurable_source)
-    factory = configurable.get("job_repository_factory")
-    if not callable(factory):
-        factory = container.job_repository_factory()
-        if not callable(factory):
+
+    # Resolve job_repository_factory from container if not provided
+    job_repo_factory = configurable.get("job_repository_factory")
+    if not callable(job_repo_factory):
+        job_repo_factory = container.job_repository_factory()
+        if not callable(job_repo_factory):
             raise ValueError("job_repository_factory provider returned a non-callable value")
-        configurable["job_repository_factory"] = factory
+        configurable["job_repository_factory"] = job_repo_factory
+
+    # Resolve model_factory from container if not provided
+    model_factory = configurable.get("model_factory")
+    if model_factory is None:
+        model_factory = container.model_factory()
+        configurable["model_factory"] = model_factory
+
     prepared["configurable"] = configurable
     return cast(RunnableConfig, prepared)
 

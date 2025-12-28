@@ -1,0 +1,41 @@
+"""Essay model."""
+
+from datetime import datetime, UTC
+from typing import Optional
+
+from sqlalchemy import Column, Integer, Text, DateTime, Float
+from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR, TSVECTOR
+
+from essay_repository.models.base import Base
+
+
+class Essay(Base):
+    """Essay entity model."""
+
+    __tablename__ = "essays"
+    __table_args__ = {"schema": "essays"}
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    question = Column(Text, nullable=True)
+    answer = Column(Text, nullable=False)
+    keywords: Column[Optional[list[str]]] = Column(ARRAY(VARCHAR), nullable=True)
+    embedding: Column[Optional[list[float]]] = Column(ARRAY(Float), nullable=True)
+    search_vector = Column(TSVECTOR, nullable=True)
+
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        """String representation of Essay."""
+        question_preview = (
+            self.question[:30] + "..."
+            if self.question and len(self.question) > 30
+            else self.question
+        )
+        return f"<Essay(id={self.id}, question='{question_preview}')>"

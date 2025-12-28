@@ -4,12 +4,15 @@ This module provides the public API for running the workflows system.
 """
 
 import os
-from typing import Callable
+from typing import Callable, Optional, cast
+
+from langchain_core.runnables import RunnableConfig
 
 from job_agent_platform_contracts import IJobRepository
 
 from job_scrapper_contracts import JobDict
 
+from job_agent_backend.model_providers import IModelFactory
 from .job_processing import create_workflow
 from .state import AgentState
 
@@ -18,6 +21,7 @@ def run_job_processing(
     job: JobDict,
     cv_content: str,
     job_repository_factory: Callable[[], IJobRepository],
+    model_factory: Optional[IModelFactory] = None,
 ) -> AgentState:
     """
     Run the workflows system on a single job.
@@ -29,6 +33,8 @@ def run_job_processing(
         job: A single job dictionary to process
         cv_content: The CV content to match against the job
         job_repository_factory: Factory for producing job repository instances
+        model_factory: Factory for creating AI model instances. If not provided,
+                       will be resolved from the DI container.
 
     Returns:
         Final agent state containing job processing results including:
@@ -52,7 +58,7 @@ def run_job_processing(
     project_name = os.getenv("LANGSMITH_PROJECT", "default")
 
     if tracing_enabled:
-        print(f"🔍 LangSmith tracing enabled - Project: {project_name}")
+        print(f"LangSmith tracing enabled - Project: {project_name}")
         print("   View traces at: https://smith.langchain.com/\n")
 
     if not cv_content:
@@ -61,9 +67,17 @@ def run_job_processing(
     if not callable(job_repository_factory):
         raise ValueError("job_repository_factory must be callable")
 
-    workflow_config = {
+    # Resolve model_factory from container if not provided
+    resolved_model_factory = model_factory
+    if resolved_model_factory is None:
+        from job_agent_backend.container import container
+
+        resolved_model_factory = container.model_factory()
+
+    workflow_config: RunnableConfig = {
         "configurable": {
             "job_repository_factory": job_repository_factory,
+            "model_factory": resolved_model_factory,
         }
     }
 
@@ -75,7 +89,7 @@ def run_job_processing(
         "cv_context": cv_content,
     }
 
-    final_state = workflow.invoke(initial_state)
+    final_state = cast(AgentState, workflow.invoke(initial_state))
 
     print(f"Workflow completed with status: {final_state['status']}")
 

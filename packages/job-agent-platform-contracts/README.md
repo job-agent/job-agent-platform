@@ -18,6 +18,17 @@ Interface for job persistence operations. Implementations must provide:
 - `delete(id)` - Remove a job
 - `get_latest_updated_at()` - Get the most recent `updated_at` timestamp from all stored jobs (returns `None` if no jobs exist)
 
+### IEssayRepository
+
+Interface for essay persistence operations. Implementations must provide:
+
+**CRUD Operations:**
+- `create(essay_data)` - Create a new essay
+- `get_by_id(id)` - Retrieve essay by ID
+- `get_all()` - Retrieve all essays
+- `update(id, essay_data)` - Update an existing essay
+- `delete(id)` - Remove an essay
+
 ## Installation
 
 ```bash

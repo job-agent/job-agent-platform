@@ -1,48 +1,21 @@
 """Tests for JobAgentOrchestrator."""
 
 from unittest.mock import patch, MagicMock
-from datetime import datetime, UTC
 import sys
 
 import pytest
-from dependency_injector import providers
 
 
 sys.modules["scrapper_service"] = MagicMock()
-
-
-from job_agent_backend.container import ApplicationContainer  # noqa: E402
-from job_agent_backend.filter_service.filter import FilterService  # noqa: E402
 
 
 class TestJobAgentOrchestrator:
     """Test suite for JobAgentOrchestrator class."""
 
     @pytest.fixture
-    def app_container(self):
-        """Provide a fresh dependency container per test."""
-        container = ApplicationContainer()
-
-        class StubRepository:
-            def get_by_external_id(self, external_id, source=None):
-                return None
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                return False
-
-            def save_filtered_jobs(self, jobs):
-                return len(jobs)
-
-        container.job_repository_factory.override(providers.Object(lambda: StubRepository()))
-
-        container.filter_service.override(
-            providers.Singleton(
-                FilterService,
-                job_repository_factory=container.job_repository_factory,
-            )
-        )
-
-        return container
+    def app_container(self, app_container_with_stub_repository):
+        """Use the shared app container fixture."""
+        return app_container_with_stub_repository
 
     @pytest.fixture
     def orchestrator(self, app_container):
@@ -233,27 +206,32 @@ class TestJobAgentOrchestrator:
 
         result = orchestrator.scrape_jobs(min_salary=5000, employment_location="remote", timeout=30)
 
-        mock_scrapper_manager.scrape_jobs_streaming.assert_called_once_with(
-            min_salary=5000,
-            employment_location="remote",
-            posted_after=None,
-            timeout=30,
-        )
+        mock_scrapper_manager.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper_manager.scrape_jobs_streaming.call_args[1]
+        assert call_kwargs["min_salary"] == 5000
+        assert call_kwargs["employment_location"] == "remote"
+        assert call_kwargs["timeout"] == 30
+        # posted_after is now auto-calculated (defaults to 5 days ago when no jobs exist)
+        assert call_kwargs["posted_after"] is not None
         assert len(result) == 1
         assert result[0]["title"] == "Python Developer"
 
-    def test_scrape_jobs_with_posted_after(self, orchestrator, mock_scrapper_manager):
-        """Test scrape_jobs with posted_after date."""
+    def test_scrape_jobs_with_explicit_days(self, orchestrator, mock_scrapper_manager):
+        """Test scrape_jobs with explicit days parameter."""
+        from datetime import datetime, timedelta, timezone
+
         orchestrator.scrapper_manager = mock_scrapper_manager
-        posted_after = datetime(2024, 1, 1, tzinfo=UTC)
 
         mock_scrapper_manager.scrape_jobs_streaming.return_value = iter([])
 
-        orchestrator.scrape_jobs(min_salary=4000, posted_after=posted_after)
+        orchestrator.scrape_jobs(min_salary=4000, days=7)
 
         mock_scrapper_manager.scrape_jobs_streaming.assert_called_once()
         call_kwargs = mock_scrapper_manager.scrape_jobs_streaming.call_args[1]
-        assert call_kwargs["posted_after"] == posted_after
+        # Verify posted_after is approximately 7 days ago
+        expected = datetime.now(timezone.utc) - timedelta(days=7)
+        time_diff = abs((call_kwargs["posted_after"] - expected).total_seconds())
+        assert time_diff < 60, "posted_after should be ~7 days ago"
 
     def test_filter_jobs_list(self, orchestrator, sample_jobs_list):
         """Test filter_jobs_list filters jobs correctly."""
@@ -466,7 +444,7 @@ class TestJobAgentOrchestrator:
 
 
 class TestOrchestratorFilterJobsListWithRejected:
-    """Tests for filter_jobs_list integration with filtered jobs storage.
+    """filter_jobs_list integration with filtered jobs storage.
 
     These tests verify the NEW behavior where filter_jobs_list:
     1. Uses filter_with_rejected to get both passed and rejected jobs
@@ -475,43 +453,12 @@ class TestOrchestratorFilterJobsListWithRejected:
     """
 
     @pytest.fixture
-    def app_container(self):
-        """Provide a fresh dependency container per test."""
-        container = ApplicationContainer()
-
-        class StubRepository:
-            def __init__(self):
-                self.saved_filtered_jobs = []
-
-            def get_by_external_id(self, external_id, source=None):
-                return None
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                return False
-
-            def save_filtered_jobs(self, jobs):
-                self.saved_filtered_jobs.extend(jobs)
-                return len(jobs)
-
-        self.stub_repository = StubRepository()
-        container.job_repository_factory.override(providers.Object(lambda: self.stub_repository))
-
-        container.filter_service.override(
-            providers.Singleton(
-                FilterService,
-                job_repository_factory=container.job_repository_factory,
-            )
-        )
-
-        return container
-
-    @pytest.fixture
-    def stub_repository(self, app_container):
-        """Access the stub repository for verification."""
-        return self.stub_repository
+    def app_container(self, app_container_with_stub_repository):
+        """Use the shared app container fixture."""
+        return app_container_with_stub_repository
 
     def test_filter_jobs_list_calls_save_filtered_jobs_with_rejected(
-        self, app_container, stub_repository, sample_jobs_list
+        self, app_container, stub_job_repository, sample_jobs_list
     ):
         """Test that filter_jobs_list calls save_filtered_jobs with rejected jobs.
 
@@ -524,10 +471,10 @@ class TestOrchestratorFilterJobsListWithRejected:
         orchestrator.filter_jobs_list(sample_jobs_list)
 
         # Verify save_filtered_jobs was called with rejected jobs
-        assert len(stub_repository.saved_filtered_jobs) == 2
+        assert len(stub_job_repository.saved_filtered_jobs) == 2
 
         # Verify the rejected jobs are the ones with high experience
-        saved_ids = [job["job_id"] for job in stub_repository.saved_filtered_jobs]
+        saved_ids = [job["job_id"] for job in stub_job_repository.saved_filtered_jobs]
         assert 3 in saved_ids  # 60 months experience
         assert 4 in saved_ids  # 96 months experience
 
@@ -549,7 +496,7 @@ class TestOrchestratorFilterJobsListWithRejected:
         assert 4 not in result_ids  # 96 months - filtered
 
     def test_filter_jobs_list_does_not_save_when_no_rejections(
-        self, app_container, stub_repository
+        self, app_container, stub_job_repository
     ):
         """Test that save_filtered_jobs is not called when all jobs pass."""
         jobs = [
@@ -566,11 +513,11 @@ class TestOrchestratorFilterJobsListWithRejected:
         result = orchestrator.filter_jobs_list(jobs)
 
         # No jobs should be saved as filtered
-        assert len(stub_repository.saved_filtered_jobs) == 0
+        assert len(stub_job_repository.saved_filtered_jobs) == 0
         assert len(result) == 1
 
     def test_filter_jobs_list_saves_all_rejected_when_all_fail(
-        self, app_container, stub_repository
+        self, app_container, stub_job_repository
     ):
         """Test that all jobs are saved as filtered when all are rejected."""
         jobs = [
@@ -593,7 +540,7 @@ class TestOrchestratorFilterJobsListWithRejected:
         result = orchestrator.filter_jobs_list(jobs)
 
         # All jobs should be saved as filtered
-        assert len(stub_repository.saved_filtered_jobs) == 2
+        assert len(stub_job_repository.saved_filtered_jobs) == 2
         # No jobs should be returned for processing
         assert len(result) == 0
 
@@ -623,39 +570,13 @@ class TestOrchestratorPipelineWithFilteredJobsStorage:
     """
 
     @pytest.fixture
-    def app_container(self):
-        """Provide a fresh dependency container per test."""
-        container = ApplicationContainer()
-
-        class StubRepository:
-            def __init__(self):
-                self.saved_filtered_jobs = []
-
-            def get_by_external_id(self, external_id, source=None):
-                return None
-
-            def has_active_job_with_title_and_company(self, title, company_name):
-                return False
-
-            def save_filtered_jobs(self, jobs):
-                self.saved_filtered_jobs.extend(jobs)
-                return len(jobs)
-
-        self.stub_repository = StubRepository()
-        container.job_repository_factory.override(providers.Object(lambda: self.stub_repository))
-
-        container.filter_service.override(
-            providers.Singleton(
-                FilterService,
-                job_repository_factory=container.job_repository_factory,
-            )
-        )
-
-        return container
+    def app_container(self, app_container_with_stub_repository):
+        """Use the shared app container fixture."""
+        return app_container_with_stub_repository
 
     @patch("job_agent_backend.core.orchestrator.run_job_processing")
     def test_pipeline_stores_filtered_jobs_before_processing(
-        self, mock_run_job_processing, app_container, sample_cv_content
+        self, mock_run_job_processing, app_container, stub_job_repository, sample_cv_content
     ):
         """Test that filtered jobs are stored before workflow processing begins."""
         user_id = 5000
@@ -701,9 +622,8 @@ class TestOrchestratorPipelineWithFilteredJobsStorage:
         result = orchestrator.run_complete_pipeline(user_id=user_id)
 
         # The filtered job should have been stored
-        stub_repo = self.stub_repository
-        assert len(stub_repo.saved_filtered_jobs) == 1
-        assert stub_repo.saved_filtered_jobs[0]["job_id"] == 2
+        assert len(stub_job_repository.saved_filtered_jobs) == 1
+        assert stub_job_repository.saved_filtered_jobs[0]["job_id"] == 2
 
         # Only the passing job should have been processed
         assert mock_run_job_processing.call_count == 1
@@ -712,3 +632,310 @@ class TestOrchestratorPipelineWithFilteredJobsStorage:
         assert result["total_scraped"] == 2
         assert result["total_filtered"] == 1  # Only 1 passed the filter
         assert result["total_processed"] == 1
+
+
+class TestOrchestratorDateCalculation:
+    """Tests for orchestrator date calculation logic.
+
+    These tests verify the NEW behavior where the orchestrator accepts a `days`
+    parameter and auto-calculates `posted_after` from the job repository when
+    `days=None`.
+    """
+
+    @pytest.fixture
+    def app_container(self, app_container_with_stub_repository):
+        """Use the shared app container fixture."""
+        return app_container_with_stub_repository
+
+    def test_scrape_jobs_with_explicit_days_converts_to_posted_after(
+        self, app_container, stub_job_repository
+    ):
+        """Orchestrator should convert explicit days=7 to posted_after = now - 7 days.
+
+        When days is explicitly provided, calculate posted_after from it.
+        """
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[{"title": "Test Job"}]])
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call with explicit days=7
+        orchestrator.scrape_jobs(days=7)
+
+        # Verify scrapper was called with posted_after approximately 7 days ago
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None, "posted_after should be set when days is provided"
+
+        # Verify the date is approximately 7 days ago
+        from datetime import datetime, timedelta, timezone
+
+        expected = datetime.now(timezone.utc) - timedelta(days=7)
+        time_diff = abs((posted_after - expected).total_seconds())
+        assert time_diff < 60, f"posted_after should be ~7 days ago, diff={time_diff}s"
+
+    def test_scrape_jobs_with_none_days_auto_calculates_from_repository(
+        self, app_container, stub_job_repository
+    ):
+        """Orchestrator should auto-calculate posted_after from repository when days=None.
+
+        When days is None, query job_repository.get_latest_updated_at().
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        # Set up latest job updated 2 days ago
+        latest_time = datetime.now(timezone.utc) - timedelta(days=2)
+        stub_job_repository.latest_updated_at = latest_time
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call with days=None
+        orchestrator.scrape_jobs(days=None)
+
+        # Verify scrapper was called with posted_after approximately 2 days ago
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None, "posted_after should be auto-calculated"
+
+        # The posted_after should be close to the latest job time
+        time_diff = abs((posted_after - latest_time).total_seconds())
+        assert time_diff < 60, f"posted_after should match latest job time, diff={time_diff}s"
+
+    def test_scrape_jobs_caps_auto_calculated_at_max_auto_days(
+        self, app_container, stub_job_repository
+    ):
+        """Orchestrator should cap auto-calculated date at MAX_AUTO_DAYS (5 days).
+
+        If latest job is older than MAX_AUTO_DAYS, cap at MAX_AUTO_DAYS.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        # Set up latest job updated 10 days ago (older than 5-day cap)
+        old_time = datetime.now(timezone.utc) - timedelta(days=10)
+        stub_job_repository.latest_updated_at = old_time
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call with days=None
+        orchestrator.scrape_jobs(days=None)
+
+        # Verify scrapper was called with posted_after capped at 5 days
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None, "posted_after should be set"
+
+        # The posted_after should be approximately 5 days ago (capped)
+        expected_cap = datetime.now(timezone.utc) - timedelta(days=5)
+        time_diff = abs((posted_after - expected_cap).total_seconds())
+        assert time_diff < 60, f"posted_after should be capped at 5 days, diff={time_diff}s"
+
+    def test_scrape_jobs_defaults_to_max_auto_days_when_no_jobs_exist(
+        self, app_container, stub_job_repository
+    ):
+        """Orchestrator should default to MAX_AUTO_DAYS when no jobs exist.
+
+        When get_latest_updated_at returns None, use now - MAX_AUTO_DAYS.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        # No jobs in repository
+        stub_job_repository.latest_updated_at = None
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call with days=None
+        orchestrator.scrape_jobs(days=None)
+
+        # Verify scrapper was called with posted_after = 5 days ago
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None, "posted_after should default to 5 days"
+
+        expected_default = datetime.now(timezone.utc) - timedelta(days=5)
+        time_diff = abs((posted_after - expected_default).total_seconds())
+        assert time_diff < 60, f"posted_after should be 5 days ago, diff={time_diff}s"
+
+    def test_scrape_jobs_streaming_with_explicit_days_converts_to_posted_after(
+        self, app_container, stub_job_repository
+    ):
+        """scrape_jobs_streaming should convert explicit days to posted_after.
+
+        Streaming variant should also support days parameter.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[{"title": "Test"}]])
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call streaming with explicit days=3
+        list(orchestrator.scrape_jobs_streaming(days=3))
+
+        # Verify the conversion
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None
+        expected = datetime.now(timezone.utc) - timedelta(days=3)
+        time_diff = abs((posted_after - expected).total_seconds())
+        assert time_diff < 60, f"posted_after should be ~3 days ago, diff={time_diff}s"
+
+    def test_scrape_jobs_streaming_with_none_days_auto_calculates(
+        self, app_container, stub_job_repository
+    ):
+        """scrape_jobs_streaming should auto-calculate when days=None.
+
+        Streaming variant should also support auto-calculation.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        # Set up latest job updated 1 day ago
+        latest_time = datetime.now(timezone.utc) - timedelta(days=1)
+        stub_job_repository.latest_updated_at = latest_time
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call streaming with days=None
+        list(orchestrator.scrape_jobs_streaming(days=None))
+
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None
+        time_diff = abs((posted_after - latest_time).total_seconds())
+        assert time_diff < 60, "posted_after should match latest job time"
+
+    def test_run_complete_pipeline_accepts_days_parameter(
+        self, app_container, stub_job_repository, sample_cv_content
+    ):
+        """run_complete_pipeline should accept days parameter.
+
+        All orchestrator methods should accept days instead of posted_after.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        mock_repo_instance = MagicMock()
+        mock_repo_instance.find.return_value = sample_cv_content
+        mock_cv_repo_class = MagicMock(return_value=mock_repo_instance)
+
+        orchestrator = app_container.orchestrator(
+            cv_repository_class=mock_cv_repo_class,
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call with explicit days=5
+        orchestrator.run_complete_pipeline(user_id=1, days=5)
+
+        # Verify scrapper was called with posted_after approximately 5 days ago
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None
+        expected = datetime.now(timezone.utc) - timedelta(days=5)
+        time_diff = abs((posted_after - expected).total_seconds())
+        assert time_diff < 60, "posted_after should be ~5 days ago"
+
+    def test_scrape_jobs_handles_timezone_naive_repository_timestamp(
+        self, app_container, stub_job_repository
+    ):
+        """Orchestrator should handle timezone-naive timestamps from repository.
+
+        The repository may return timezone-naive datetimes; orchestrator should
+        normalize them to UTC.
+        """
+        from datetime import datetime, timedelta
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        # Set up latest job with timezone-naive datetime (2 days ago)
+        naive_time = datetime.now() - timedelta(days=2)  # No timezone info
+        stub_job_repository.latest_updated_at = naive_time
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        # Call with days=None
+        orchestrator.scrape_jobs(days=None)
+
+        # Verify the posted_after is timezone-aware
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None
+        assert posted_after.tzinfo is not None, "posted_after should be timezone-aware"
+
+    def test_scrape_jobs_uses_utc_for_explicit_days_calculation(
+        self, app_container, stub_job_repository
+    ):
+        """Orchestrator should use UTC for explicit days calculation.
+
+        All date calculations must use UTC to ensure consistency.
+        """
+        from datetime import timezone
+
+        mock_scrapper = MagicMock()
+        mock_scrapper.scrape_jobs_streaming.return_value = iter([[]])
+
+        orchestrator = app_container.orchestrator(
+            scrapper_manager=mock_scrapper,
+            database_initializer=lambda: None,
+        )
+
+        orchestrator.scrape_jobs(days=1)
+
+        mock_scrapper.scrape_jobs_streaming.assert_called_once()
+        call_kwargs = mock_scrapper.scrape_jobs_streaming.call_args[1]
+        posted_after = call_kwargs["posted_after"]
+
+        assert posted_after is not None
+        assert posted_after.tzinfo == timezone.utc, "posted_after should be in UTC"

@@ -3,6 +3,6 @@
 This node extracts nice-to-have skills from a single job description using OpenAI.
 """
 
-from .node import extract_nice_to_have_skills_node
+from .node import create_extract_nice_to_have_skills_node
 
-__all__ = ["extract_nice_to_have_skills_node"]
+__all__ = ["create_extract_nice_to_have_skills_node"]

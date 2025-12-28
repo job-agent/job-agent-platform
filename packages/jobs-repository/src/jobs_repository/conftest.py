@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.types import TypeDecorator, String
 
-from jobs_repository.database.base import Base
+from jobs_repository.models.base import Base
 from jobs_repository.models import Job, Company, Location, Category, Industry
 from jobs_repository.services import ReferenceDataService
 from jobs_repository.mapper import JobMapper

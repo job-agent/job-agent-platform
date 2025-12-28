@@ -5,28 +5,27 @@ category, industry) exist before a job is written, and exposes a small API for c
 jobs and looking them up by external identifier.
 """
 
-from contextlib import contextmanager
 from datetime import datetime, timedelta, UTC
-from typing import Callable, Generator, List, Optional
+from typing import Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import select, or_, func
 
+from db_core import BaseRepository, TransactionError
 from job_agent_platform_contracts import IJobRepository
 from job_scrapper_contracts import JobDict
 from jobs_repository.models import Job, Company
-from jobs_repository.database.session import get_session_factory
 from jobs_repository.interfaces import IReferenceDataService, IJobMapper
+from jobs_repository.types import JobModelDict
 from job_agent_platform_contracts.job_repository.schemas import JobCreate
 from job_agent_platform_contracts.job_repository.exceptions import (
     JobAlreadyExistsError,
-    TransactionError,
     ValidationError,
 )
 
 
-class JobRepository(IJobRepository):
+class JobRepository(BaseRepository, IJobRepository):
     """Repository that persists jobs and manages related reference data.
 
     The repository currently supports creating job records and fetching them by
@@ -39,7 +38,7 @@ class JobRepository(IJobRepository):
         reference_data_service: IReferenceDataService,
         mapper: IJobMapper,
         session: Optional[Session] = None,
-        session_factory: Optional[Callable[[], Session]] = None,
+        session_factory=None,
     ):
         """
         Initialize the repository with a managed or external session.
@@ -50,80 +49,30 @@ class JobRepository(IJobRepository):
             session: Existing SQLAlchemy session to reuse
             session_factory: Callable returning SQLAlchemy session instances
         """
-        if session is not None and session_factory is not None:
-            raise ValueError("Provide either session or session_factory, not both")
-
+        super().__init__(session=session, session_factory=session_factory)
         self.mapper = mapper
         self._reference_data_service = reference_data_service
 
-        if session is not None:
-            self._session_factory: Callable[[], Session] = lambda: session
-            self._close_session = False
-        else:
-            factory_candidate = session_factory or get_session_factory()
-
-            if not callable(factory_candidate):
-                raise TypeError("session_factory must be callable")
-
-            self._session_factory = lambda: factory_candidate()
-            self._close_session = True
-
-    @contextmanager
-    def _session_scope(self, *, commit: bool) -> Generator[Session, None, None]:
-        session = self._session_factory()
-        close_session = self._close_session
-
-        try:
-            yield session
-            if commit:
-                session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            if close_session:
-                session.close()
-
-    def _load_relationships(self, job: Job) -> None:
-        if job.company_rel:
-            _ = job.company_rel.name
-        if job.location_rel:
-            _ = job.location_rel.region
-        if job.category_rel:
-            _ = job.category_rel.name
-        if job.industry_rel:
-            _ = job.industry_rel.name
-
-    def _get_job_by_external_id(
-        self, session: Session, external_id: str, source: Optional[str]
-    ) -> Optional[Job]:
-        stmt = select(Job).where(Job.external_id == external_id)
-        if source:
-            stmt = stmt.where(Job.source == source)
-        return session.scalar(stmt)
-
-    def _get_job_by_source_url(
-        self, session: Session, source_url: str, source: Optional[str]
-    ) -> Optional[Job]:
-        """Find job by source URL and optional source.
+    def _apply_relationship_loading(self, stmt):
+        """Apply eager loading options to a Job query statement.
 
         Args:
-            session: SQLAlchemy session
-            source_url: The URL where the job was originally scraped from
-            source: Optional job source (e.g., 'djinni', 'linkedin')
+            stmt: SQLAlchemy select statement for Job
 
         Returns:
-            Job instance if found, None otherwise
+            Statement with joinedload options applied for all relationships
         """
-        stmt = select(Job).where(Job.source_url == source_url)
-        if source:
-            stmt = stmt.where(Job.source == source)
-        return session.scalar(stmt)
+        return stmt.options(
+            joinedload(Job.company_rel),
+            joinedload(Job.location_rel),
+            joinedload(Job.category_rel),
+            joinedload(Job.industry_rel),
+        )
 
     def _find_existing_job(
         self, session: Session, external_id: str, source: Optional[str], source_url: Optional[str]
     ) -> Optional[Job]:
-        """Check for existing job by external_id or source_url.
+        """Check for existing job by external_id or source_url using a single query.
 
         Args:
             session: SQLAlchemy session
@@ -134,14 +83,22 @@ class JobRepository(IJobRepository):
         Returns:
             Job instance if found by either external_id or source_url, None otherwise
         """
-        existing_job = self._get_job_by_external_id(session, external_id, source)
+        external_id_condition = Job.external_id == external_id
+        if source:
+            external_id_condition = external_id_condition & (Job.source == source)
 
-        if not existing_job and source_url:
-            existing_job = self._get_job_by_source_url(session, source_url, source)
+        if source_url:
+            source_url_condition = Job.source_url == source_url
+            if source:
+                source_url_condition = source_url_condition & (Job.source == source)
+            combined_condition = or_(external_id_condition, source_url_condition)
+        else:
+            combined_condition = external_id_condition
 
-        return existing_job
+        stmt = select(Job).where(combined_condition)
+        return session.scalar(stmt)
 
-    def _resolve_reference_data(self, session: Session, mapped_data: dict) -> None:
+    def _resolve_reference_data(self, session: Session, mapped_data: JobModelDict) -> None:
         """Resolve reference data entities and update mapped_data with foreign keys.
 
         Pops company_name, location_region, category_name, and industry_name from
@@ -209,8 +166,12 @@ class JobRepository(IJobRepository):
                 job = Job(**mapped_data)
                 session.add(job)
                 session.flush()
-                session.refresh(job)
-                self._load_relationships(job)
+
+                # Re-query with eager loading to load all relationships in one query
+                stmt = select(Job).where(Job.id == job.id)
+                stmt = self._apply_relationship_loading(stmt)
+                job = session.scalar(stmt)
+
                 if self._close_session:
                     session.expunge(job)
                 return job
@@ -237,11 +198,10 @@ class JobRepository(IJobRepository):
             stmt = select(Job).where(Job.external_id == external_id)
             if source:
                 stmt = stmt.where(Job.source == source)
+            stmt = self._apply_relationship_loading(stmt)
             job = session.scalar(stmt)
-            if job:
-                self._load_relationships(job)
-                if self._close_session:
-                    session.expunge(job)
+            if job and self._close_session:
+                session.expunge(job)
             return job
 
     def has_active_job_with_title_and_company(self, title: str, company_name: str) -> bool:
@@ -290,12 +250,90 @@ class JobRepository(IJobRepository):
             results = session.execute(stmt).scalars().all()
             return list(results)
 
-    def save_filtered_jobs(self, jobs: List[JobDict]) -> int:
+    def _bulk_find_existing_jobs(
+        self, session: Session, jobs_data: list[JobModelDict]
+    ) -> tuple[set[str], set[str]]:
+        """Pre-fetch existing jobs by external_id and source_url in bulk.
+
+        Args:
+            session: SQLAlchemy session
+            jobs_data: List of mapped job dictionaries
+
+        Returns:
+            Tuple of (existing_external_ids, existing_source_urls)
+        """
+        external_ids = [d["external_id"] for d in jobs_data if d.get("external_id")]
+        source_urls = [d["source_url"] for d in jobs_data if d.get("source_url")]
+
+        existing_external_ids: set[str] = set()
+        existing_source_urls: set[str] = set()
+
+        if external_ids:
+            stmt = select(Job.external_id).where(Job.external_id.in_(external_ids))
+            existing_external_ids = {
+                eid for eid in session.execute(stmt).scalars().all() if eid is not None
+            }
+
+        if source_urls:
+            stmt = select(Job.source_url).where(Job.source_url.in_(source_urls))
+            existing_source_urls = {
+                url for url in session.execute(stmt).scalars().all() if url is not None
+            }
+
+        return existing_external_ids, existing_source_urls
+
+    def _resolve_reference_data_with_cache(
+        self, session: Session, mapped_data: JobModelDict, cache: dict
+    ) -> None:
+        """Resolve reference data entities using a cache for batch operations.
+
+        Args:
+            session: SQLAlchemy session
+            mapped_data: Mutable dictionary that will be modified in place
+            cache: Dictionary cache for reference data entities
+        """
+        if company_name := mapped_data.pop("company_name", None):
+            cache_key = ("company", company_name)
+            if cache_key not in cache:
+                cache[cache_key] = self._reference_data_service.get_or_create_company(
+                    session, company_name
+                )
+            mapped_data["company_id"] = cache[cache_key].id
+
+        if location_region := mapped_data.pop("location_region", None):
+            cache_key = ("location", location_region)
+            if cache_key not in cache:
+                cache[cache_key] = self._reference_data_service.get_or_create_location(
+                    session, location_region
+                )
+            mapped_data["location_id"] = cache[cache_key].id
+
+        if category_name := mapped_data.pop("category_name", None):
+            cache_key = ("category", category_name)
+            if cache_key not in cache:
+                cache[cache_key] = self._reference_data_service.get_or_create_category(
+                    session, category_name
+                )
+            mapped_data["category_id"] = cache[cache_key].id
+
+        if industry_name := mapped_data.pop("industry_name", None):
+            cache_key = ("industry", industry_name)
+            if cache_key not in cache:
+                cache[cache_key] = self._reference_data_service.get_or_create_industry(
+                    session, industry_name
+                )
+            mapped_data["industry_id"] = cache[cache_key].id
+
+    def save_filtered_jobs(self, jobs: list[JobDict]) -> int:
         """
         Save multiple filtered jobs in a batch operation.
 
         Filtered jobs are stored with is_filtered=True and is_relevant=False
         so they can be included in existing_urls for future scrapes.
+
+        This method is optimized to minimize database queries by:
+        - Pre-fetching all existing jobs in bulk using IN clauses
+        - Caching reference data (company, location, category, industry) within the batch
 
         Args:
             jobs: List of job dictionaries that were rejected by pre-LLM filtering
@@ -308,25 +346,33 @@ class JobRepository(IJobRepository):
 
         saved_count = 0
         with self._session_scope(commit=True) as session:
+            # Pre-map all jobs to get external_ids and source_urls
+            mapped_jobs = []
             for job_data in jobs:
-                # Map job data to model format
                 mapped_data = self.mapper.map_to_model(job_data)
-
-                # Force filtered job flags
                 mapped_data["is_filtered"] = True
                 mapped_data["is_relevant"] = False
+                mapped_jobs.append(mapped_data)
 
-                existing_job = self._find_existing_job(
-                    session,
-                    mapped_data["external_id"],
-                    mapped_data.get("source"),
-                    mapped_data.get("source_url"),
-                )
+            # Bulk fetch existing jobs
+            existing_external_ids, existing_source_urls = self._bulk_find_existing_jobs(
+                session, mapped_jobs
+            )
 
-                if existing_job:
-                    continue  # Skip duplicates
+            # Cache for reference data within this batch
+            reference_cache: dict = {}
 
-                self._resolve_reference_data(session, mapped_data)
+            for mapped_data in mapped_jobs:
+                external_id = mapped_data.get("external_id")
+                source_url = mapped_data.get("source_url")
+
+                # Skip if job already exists
+                if external_id in existing_external_ids:
+                    continue
+                if source_url and source_url in existing_source_urls:
+                    continue
+
+                self._resolve_reference_data_with_cache(session, mapped_data, reference_cache)
 
                 job = Job(**mapped_data)
                 session.add(job)
