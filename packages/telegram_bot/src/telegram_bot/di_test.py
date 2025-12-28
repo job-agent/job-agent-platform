@@ -20,10 +20,12 @@ class TestBotDependencies:
         """BotDependencies should be immutable (frozen)."""
         orchestrator_factory = MagicMock()
         cv_repository_factory = MagicMock()
+        essay_service_factory = MagicMock()
 
         deps = BotDependencies(
             orchestrator_factory=orchestrator_factory,
             cv_repository_factory=cv_repository_factory,
+            essay_service_factory=essay_service_factory,
         )
 
         with pytest.raises(AttributeError):
@@ -119,6 +121,7 @@ class TestGetDependencies:
         mock_deps = BotDependencies(
             orchestrator_factory=MagicMock(),
             cv_repository_factory=MagicMock(),
+            essay_service_factory=MagicMock(),
         )
         mock_context = MagicMock()
         mock_context.application.bot_data = {"dependencies": mock_deps}
