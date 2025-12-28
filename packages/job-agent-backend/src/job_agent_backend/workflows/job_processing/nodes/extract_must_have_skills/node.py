@@ -51,7 +51,10 @@ def create_extract_must_have_skills_node(
             prompt = EXTRACT_MUST_HAVE_SKILLS_PROMPT
 
             messages = prompt.invoke({"job_description": description})
-            raw_result = structured_model.invoke(messages)
+            raw_result = structured_model.invoke(
+                messages,
+                config={"run_name": "Extract Must-Have Skills"},
+            )
             result = raw_result if isinstance(raw_result, SkillsExtraction) else None
 
             skills = (result.skills or []) if result is not None else []
