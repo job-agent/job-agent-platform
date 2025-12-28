@@ -37,6 +37,7 @@ Your CV will be stored securely and used to match you with relevant job opportun
 
 📝 Essay Management:
 
+/essays - View all your essays with pagination
 /add_essay - Add an essay (question/answer pair) to your profile
 
 Examples:

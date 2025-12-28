@@ -8,17 +8,19 @@ import os
 from typing import Optional
 
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from telegram_bot.handlers import (
     add_essay_handler,
-    start_handler,
+    cancel_handler,
+    cv_handler,
+    essays_callback_handler,
+    essays_handler,
     help_handler,
     search_jobs_handler,
+    start_handler,
     status_handler,
-    cancel_handler,
     upload_cv_handler,
-    cv_handler,
 )
 from telegram_bot.di import build_dependencies
 from telegram_bot.access_control import (
@@ -67,6 +69,11 @@ class JobAgentBot:
         self.application.add_handler(CommandHandler("cancel", require_access(cancel_handler)))
         self.application.add_handler(CommandHandler("cv", require_access(cv_handler)))
         self.application.add_handler(CommandHandler("add_essay", require_access(add_essay_handler)))
+        self.application.add_handler(CommandHandler("essays", require_access(essays_handler)))
+
+        self.application.add_handler(
+            CallbackQueryHandler(require_access(essays_callback_handler), pattern="^essays_")
+        )
 
         self.application.add_handler(
             MessageHandler(filters.Document.PDF, require_access(upload_cv_handler))
@@ -84,6 +91,7 @@ class JobAgentBot:
                 ("cancel", "Cancel current job search"),
                 ("cv", "View your current CV content"),
                 ("add_essay", "Add an essay to the database"),
+                ("essays", "List all essays with pagination"),
             ]
         )
 
