@@ -36,5 +36,5 @@ __all__ = [
     "EssayRepository",
     # Container
     "get",
-    "get_essay_repository",  # Deprecated: use get(IEssayRepository)
+    "get_essay_repository",
 ]

@@ -15,16 +15,13 @@ from job_agent_platform_contracts.essay_repository import (
     EssayUpdate,
     EssaySearchResult,
 )
-from job_agent_backend.contracts import IModelFactory
 
-if TYPE_CHECKING:
-    from job_agent_backend.services.keyword_generation import KeywordGenerator
-
+from job_agent_backend.contracts import IModelFactory, IKeywordGenerator, IEssaySearchService
 
 logger = logging.getLogger(__name__)
 
 
-class EssaySearchService:
+class EssaySearchService(IEssaySearchService):
     """Service that provides hybrid search and auto-embedding for essays.
 
     This service wraps the essay repository and automatically generates
@@ -36,7 +33,7 @@ class EssaySearchService:
         self,
         repository: IEssayRepository,
         model_factory: IModelFactory,
-        keyword_generator: Optional["KeywordGenerator"] = None,
+        keyword_generator: IKeywordGenerator,
     ):
         """Initialize the search service.
 

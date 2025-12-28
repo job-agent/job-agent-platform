@@ -1,10 +1,13 @@
 """Remove PII node implementation."""
 
+import logging
 from typing import Callable, Dict, Any
 
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 from .helpers import create_anonymize_text
 from .result import RemovePIIResult
+
+logger = logging.getLogger(__name__)
 
 
 def create_remove_pii_node(
@@ -43,9 +46,7 @@ def create_remove_pii_node(
         job = state.get("job")
         job_id = job.get("job_id") if job else "N/A"
 
-        print("\n" + "=" * 60)
-        print(f"Anonymizing PII from CV (job ID: {job_id})...")
-        print("=" * 60 + "\n")
+        logger.info("Anonymizing PII from CV (job ID: %s)", job_id)
 
         if not cv_context:
             raise ValueError("No CV context available for PII anonymization")
@@ -53,12 +54,13 @@ def create_remove_pii_node(
         # Anonymize the CV content - let exceptions propagate
         anonymized_content = anonymize_text(cv_context)
 
-        print(f"  Original CV length: {len(cv_context)} characters")
-        print(f"  Anonymized CV length: {len(anonymized_content)} characters\n")
+        logger.info(
+            "Original CV length: %d characters, Anonymized CV length: %d characters",
+            len(cv_context),
+            len(anonymized_content),
+        )
 
-        print("=" * 60)
-        print(f"Finished anonymizing PII for job ID {job_id}")
-        print("=" * 60 + "\n")
+        logger.info("Finished anonymizing PII for job ID %s", job_id)
 
         return {
             "cv_context": anonymized_content,

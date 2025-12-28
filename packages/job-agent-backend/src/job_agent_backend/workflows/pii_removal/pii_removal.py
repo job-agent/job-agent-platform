@@ -7,7 +7,7 @@ This graph should be run once before processing multiple jobs.
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 from .node_names import PIIRemovalNode
 from .nodes import create_remove_pii_node
 from .state import PIIRemovalState, as_node

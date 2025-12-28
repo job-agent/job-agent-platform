@@ -136,24 +136,6 @@ class TestEssaySearchServiceCreateTriggersKeywordGeneration:
             assert result is not None
             assert result.keywords is None
 
-    def test_create_continues_if_keyword_generator_not_provided(self):
-        """Service create() works even if keyword_generator is not provided."""
-        mock_repository = _create_mock_repository()
-        mock_factory = _create_mock_model_factory()
-
-        # No keyword_generator provided
-        service = EssaySearchService(
-            repository=mock_repository,
-            model_factory=mock_factory,
-        )
-
-        essay_data = {"answer": "Test answer"}
-
-        # Should not raise
-        result = service.create(essay_data)
-
-        assert result is not None
-
     def test_create_spawns_daemon_thread(self):
         """Service create() spawns a daemon thread so it doesn't block shutdown."""
         mock_repository = _create_mock_repository()
@@ -258,20 +240,6 @@ class TestEssaySearchServiceKeywordGeneratorInjection:
 
         assert service is not None
 
-    def test_keyword_generator_is_optional(self):
-        """Service works without keyword_generator (backward compatible)."""
-        mock_repository = _create_mock_repository()
-        mock_factory = _create_mock_model_factory()
-
-        # Should not raise
-        service = EssaySearchService(
-            repository=mock_repository,
-            model_factory=mock_factory,
-        )
-
-        assert service is not None
-
-
 class TestEssaySearchServiceBackgroundKeywordGenerationBehavior:
     """Tests for the background keyword generation behavior."""
 
@@ -320,20 +288,3 @@ class TestEssaySearchServiceBackgroundKeywordGenerationBehavior:
             answer="Answer",
         )
 
-    def test_background_method_does_nothing_when_no_generator(self):
-        """Background method does nothing when keyword_generator is None."""
-        mock_repository = _create_mock_repository()
-        mock_factory = _create_mock_model_factory()
-
-        service = EssaySearchService(
-            repository=mock_repository,
-            model_factory=mock_factory,
-            # No keyword_generator
-        )
-
-        # Should not raise
-        service._generate_keywords_background(
-            essay_id=1,
-            question="Question",
-            answer="Answer",
-        )

@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional
 
-from job_agent_backend.contracts import IModelFactory
+from job_agent_backend.contracts import IKeywordGenerator, IModelFactory
 from job_agent_platform_contracts.essay_repository import IEssayRepository
 
 from job_agent_backend.services.keyword_generation.schemas import KeywordsExtraction
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 MAX_KEYWORDS = 10
 
 
-class KeywordGenerator:
+class KeywordGenerator(IKeywordGenerator):
     """Service for extracting keywords from essay content using an LLM.
 
     This service analyzes essay question and answer fields to extract
