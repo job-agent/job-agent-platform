@@ -579,3 +579,122 @@ class TestEssayRepositoryUpdateKeywords:
         with patch.object(db_session, "commit", side_effect=SQLAlchemyError("Database error")):
             with pytest.raises(TransactionError):
                 repository.update_keywords(repo_sample_essay.id, ["keyword"])
+
+
+class TestEssayRepositoryGetPaginated:
+    """Tests for EssayRepository.get_paginated method."""
+
+    @pytest.fixture
+    def repository(self, db_session):
+        """Create an EssayRepository instance."""
+        return EssayRepository(session=db_session)
+
+    def test_returns_correct_page_size(self, repository, db_session):
+        """When more essays exist than page_size, return only page_size essays."""
+        # Create 7 essays
+        for i in range(7):
+            repository.create({"answer": f"Answer {i}"})
+
+        essays, total_count = repository.get_paginated(page=1, page_size=5)
+
+        assert len(essays) == 5
+        assert total_count == 7
+
+    def test_returns_total_count_accurately(self, repository, db_session):
+        """Total count should reflect all essays, not just current page."""
+        # Create 12 essays
+        for i in range(12):
+            repository.create({"answer": f"Answer {i}"})
+
+        essays, total_count = repository.get_paginated(page=1, page_size=5)
+
+        assert total_count == 12
+
+    def test_sorts_by_created_at_descending(self, repository, db_session):
+        """Essays should be sorted by created_at descending (newest first)."""
+        import time
+
+        # Create essays with slight delays to ensure different timestamps
+        repository.create({"answer": "First created"})
+        time.sleep(0.01)
+        repository.create({"answer": "Second created"})
+        time.sleep(0.01)
+        repository.create({"answer": "Third created"})
+
+        essays, _ = repository.get_paginated(page=1, page_size=10)
+
+        # Newest should be first
+        assert essays[0].answer == "Third created"
+        assert essays[1].answer == "Second created"
+        assert essays[2].answer == "First created"
+
+    def test_returns_empty_list_for_page_beyond_total(self, repository, db_session):
+        """When page exceeds available pages, return empty list."""
+        # Create 3 essays
+        for i in range(3):
+            repository.create({"answer": f"Answer {i}"})
+
+        essays, total_count = repository.get_paginated(page=10, page_size=5)
+
+        assert essays == []
+        assert total_count == 3
+
+    def test_returns_empty_list_and_zero_count_for_empty_database(self, repository):
+        """When no essays exist, return empty list and 0 count."""
+        essays, total_count = repository.get_paginated(page=1, page_size=5)
+
+        assert essays == []
+        assert total_count == 0
+
+    def test_correct_offset_for_page_2(self, repository, db_session):
+        """Page 2 should skip the first page_size essays."""
+        import time
+
+        # Create 7 essays with clear ordering
+        for i in range(7):
+            repository.create({"answer": f"Answer {i}"})
+            time.sleep(0.01)
+
+        page1_essays, _ = repository.get_paginated(page=1, page_size=5)
+        page2_essays, _ = repository.get_paginated(page=2, page_size=5)
+
+        # Page 2 should have remaining 2 essays (oldest ones)
+        assert len(page2_essays) == 2
+        # Ensure no overlap between pages
+        page1_ids = {e.id for e in page1_essays}
+        page2_ids = {e.id for e in page2_essays}
+        assert page1_ids.isdisjoint(page2_ids)
+
+    def test_treats_page_zero_as_page_one(self, repository, db_session):
+        """When page is 0 or negative, treat as page 1."""
+        for i in range(3):
+            repository.create({"answer": f"Answer {i}"})
+
+        essays_page0, count0 = repository.get_paginated(page=0, page_size=5)
+        essays_page1, count1 = repository.get_paginated(page=1, page_size=5)
+
+        assert len(essays_page0) == len(essays_page1)
+        assert count0 == count1
+        assert {e.id for e in essays_page0} == {e.id for e in essays_page1}
+
+    def test_treats_negative_page_as_page_one(self, repository, db_session):
+        """When page is negative, treat as page 1."""
+        for i in range(3):
+            repository.create({"answer": f"Answer {i}"})
+
+        essays_negative, count_neg = repository.get_paginated(page=-5, page_size=5)
+        essays_page1, count1 = repository.get_paginated(page=1, page_size=5)
+
+        assert len(essays_negative) == len(essays_page1)
+        assert count_neg == count1
+
+    def test_returns_partial_page_for_last_page(self, repository, db_session):
+        """Last page may have fewer essays than page_size."""
+        # Create 7 essays, page 2 with page_size=5 should have 2 essays
+        for i in range(7):
+            repository.create({"answer": f"Answer {i}"})
+
+        essays, total_count = repository.get_paginated(page=2, page_size=5)
+
+        assert len(essays) == 2
+        assert total_count == 7

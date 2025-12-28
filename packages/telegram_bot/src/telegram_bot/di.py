@@ -26,7 +26,7 @@ class EssayServiceFactory(Protocol):
 class BotDependencies:
     orchestrator_factory: OrchestratorFactory
     cv_repository_factory: CVRepositoryFactory
-    essay_service_factory: Optional[EssayServiceFactory] = None
+    essay_service_factory: EssayServiceFactory
 
 
 def _create_cv_repository(user_id: int) -> ICVRepository:

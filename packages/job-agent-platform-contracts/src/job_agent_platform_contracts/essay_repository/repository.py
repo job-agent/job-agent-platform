@@ -1,6 +1,6 @@
 """Repository interface for essay operations."""
 
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import List, Optional, Protocol, Tuple, runtime_checkable
 
 from job_agent_platform_contracts.essay_repository.schemas import (
     EssayCreate,
@@ -53,6 +53,19 @@ class IEssayRepository(Protocol):
 
         Returns:
             List of Essay entities (may be empty)
+        """
+        ...
+
+    def get_paginated(self, page: int, page_size: int) -> Tuple[List[Essay], int]:
+        """
+        Get paginated essays sorted by creation date descending (newest first).
+
+        Args:
+            page: Page number (1-indexed). Values <= 0 are treated as page 1.
+            page_size: Number of essays per page.
+
+        Returns:
+            Tuple of (essays list for the requested page, total count of all essays)
         """
         ...
 

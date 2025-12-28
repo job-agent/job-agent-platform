@@ -4,11 +4,11 @@ This module provides the EssayRepository class that implements
 the IEssayRepository interface for CRUD operations on essays.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func, desc
 
 from db_core import BaseRepository, TransactionError
 from job_agent_platform_contracts.essay_repository import IEssayRepository
@@ -145,6 +145,33 @@ class EssayRepository(BaseRepository, IEssayRepository):
                     session.expunge(essay)
 
             return [self._model_to_schema(essay) for essay in essays]
+
+    def get_paginated(self, page: int, page_size: int) -> Tuple[List[EssaySchema], int]:
+        """
+        Get paginated essays sorted by creation date descending (newest first).
+
+        Args:
+            page: Page number (1-indexed). Values <= 0 are treated as page 1.
+            page_size: Number of essays per page.
+
+        Returns:
+            Tuple of (essays list for the requested page, total count of all essays)
+        """
+        if page <= 0:
+            page = 1
+
+        with self._session_scope(commit=False) as session:
+            total_count = session.scalar(select(func.count(Essay.id)))
+
+            offset = (page - 1) * page_size
+            stmt = select(Essay).order_by(desc(Essay.created_at)).offset(offset).limit(page_size)
+            essays = session.scalars(stmt).all()
+
+            if self._close_session:
+                for essay in essays:
+                    session.expunge(essay)
+
+            return [self._model_to_schema(essay) for essay in essays], total_count or 0
 
     def delete(self, essay_id: int) -> bool:
         """
