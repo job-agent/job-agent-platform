@@ -36,7 +36,10 @@ def create_anonymize_text(model_factory: IModelFactory) -> Callable[[str], str]:
         messages = REMOVE_PII_PROMPT.format_messages(cv_content=text)
 
         try:
-            response = model.invoke(messages)
+            response = model.invoke(
+                messages,
+                config={"run_name": "Remove PII from CV"},
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to invoke PII anonymization model: {e}") from e
 

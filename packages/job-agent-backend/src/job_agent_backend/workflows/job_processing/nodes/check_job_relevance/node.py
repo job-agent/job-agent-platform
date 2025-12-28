@@ -2,6 +2,8 @@
 
 import logging
 from typing import Callable
+import langsmith
+import numpy as np
 
 from job_agent_backend.contracts import IModelFactory
 from job_agent_backend.utils import cosine_similarity
@@ -62,19 +64,25 @@ def create_check_job_relevance_node(
             # We combine title and description for the job representation
             job_text = f"{job_title}\n\n{job_description}"
 
-            # Embed both texts
-            cv_embedding = model.embed_query(cv_context)
-            job_embedding = model.embed_query(job_text)
+            # Embed both texts with LangSmith tracing
+            with langsmith.trace(name="Embed CV Context", run_type="embedding"):
+                cv_embedding = model.embed_query(cv_context)
+            with langsmith.trace(name="Embed Job Description", run_type="embedding"):
+                job_embedding = model.embed_query(job_text)
 
-            # Calculate cosine similarity
-            similarity = cosine_similarity(cv_embedding, job_embedding)
+            def cosine_similarity(a, b):
+                return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-            # Threshold for relevance
-            # 0.4 is a reasonable starting point for multilingual-cased-v2
-            # It allows for some semantic overlap without requiring exact matches
-            THRESHOLD = 0.4
+            with langsmith.trace(name="Calculate Similarity", run_type="chain") as run:
+                similarity = cosine_similarity(cv_embedding, job_embedding)
 
-            is_relevant = bool(similarity >= THRESHOLD)
+                # Threshold for relevance
+                # 0.4 is a reasonable starting point for multilingual-cased-v2
+                # It allows for some semantic overlap without requiring exact matches
+                THRESHOLD = 0.4
+
+                is_relevant = bool(similarity >= THRESHOLD)
+                run.end(outputs={"similarity": similarity, "is_relevant": is_relevant})
             relevance_status = "RELEVANT" if is_relevant else "IRRELEVANT"
 
             logger.info("Job (ID: %s): %s (Similarity: %.4f)", job_id, relevance_status, similarity)
