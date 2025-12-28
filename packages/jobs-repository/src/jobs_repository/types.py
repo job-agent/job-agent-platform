@@ -8,12 +8,16 @@ class JobModelDict(TypedDict, total=False):
     """Type-safe dictionary for Job model creation.
 
     This represents the data structure used to create Job model instances.
+
+    The skill fields use a 2D list format where:
+    - The outer list represents AND relationships (all groups are required/preferred)
+    - Inner lists represent OR relationships (alternatives within a group)
     """
 
     title: str
     description: Optional[str]
-    must_have_skills: Optional[list[str]]
-    nice_to_have_skills: Optional[list[str]]
+    must_have_skills: Optional[list[list[str]]]
+    nice_to_have_skills: Optional[list[list[str]]]
 
     company_id: Optional[int]
     company_name: Optional[str]
@@ -49,13 +53,17 @@ class JobSerializedDict(TypedDict, total=False):
     """Type-safe dictionary for serialized Job data.
 
     This represents the structure returned when serializing a Job model to dict.
+
+    The skill fields use a 2D list format where:
+    - The outer list represents AND relationships (all groups are required/preferred)
+    - Inner lists represent OR relationships (alternatives within a group)
     """
 
     id: int
     title: str
     description: Optional[str]
-    must_have_skills: Optional[list[str]]
-    nice_to_have_skills: Optional[list[str]]
+    must_have_skills: Optional[list[list[str]]]
+    nice_to_have_skills: Optional[list[list[str]]]
 
     company_id: Optional[int]
     company_name: Optional[str]

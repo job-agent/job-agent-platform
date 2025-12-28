@@ -56,9 +56,17 @@ def create_extract_nice_to_have_skills_node(
 
             skills = (result.skills or []) if result is not None else []
 
-            print(f"  Job (ID: {job_id}): Extracted {len(skills)} nice-to-have skills")
+            # Count total individual skills across all groups for logging
+            total_skills = sum(len(group) for group in skills)
+            print(
+                f"  Job (ID: {job_id}): Extracted {total_skills} nice-to-have skills in {len(skills)} groups"
+            )
             if skills:
-                print(f"    Skills: {', '.join(skills)}\n")
+                # Format 2D skills: show OR groups with " or " and AND groups with ", "
+                formatted = ", ".join(
+                    " or ".join(group) if len(group) > 1 else group[0] for group in skills if group
+                )
+                print(f"    Skills: {formatted}\n")
 
         except Exception as e:
             print(f"  Job (ID: {job_id}): Error extracting nice-to-have skills - {e}")

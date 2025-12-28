@@ -250,3 +250,126 @@ class TestJobModelIsFiltered:
 
         assert job.is_filtered is True
         assert job.is_relevant is False
+
+
+class TestJobModelWith2DSkillStructure:
+    """Tests for Job model with 2D skill structure.
+
+    These tests verify that skills are stored as 2D lists (JSONB):
+    - Outer list: AND relationships (all groups required)
+    - Inner lists: OR relationships (alternatives within a group)
+    """
+
+    def test_stores_2d_must_have_skills(self, db_session):
+        """Test that 2D must-have skills are stored correctly."""
+        skills_2d = [["Python"], ["Django"], ["PostgreSQL"]]
+        job = Job(title="Test Job", external_id="2d-skills-1", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == [["Python"], ["Django"], ["PostgreSQL"]]
+
+    def test_stores_2d_nice_to_have_skills(self, db_session):
+        """Test that 2D nice-to-have skills are stored correctly."""
+        skills_2d = [["Docker"], ["Kubernetes"], ["AWS"]]
+        job = Job(title="Test Job", external_id="2d-skills-2", nice_to_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.nice_to_have_skills == [["Docker"], ["Kubernetes"], ["AWS"]]
+
+    def test_stores_or_groups_in_skills(self, db_session):
+        """Test that OR groups (inner lists with multiple skills) are stored."""
+        skills_2d = [["JavaScript", "Python"], ["React"]]
+        job = Job(title="Test Job", external_id="2d-skills-3", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == [["JavaScript", "Python"], ["React"]]
+
+    def test_stores_mixed_solo_and_or_groups(self, db_session):
+        """Test that mixed solo skills and OR groups are stored."""
+        skills_2d = [["JavaScript", "TypeScript"], ["React"], ["PostgreSQL", "MySQL"]]
+        job = Job(title="Test Job", external_id="2d-skills-4", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == [
+            ["JavaScript", "TypeScript"],
+            ["React"],
+            ["PostgreSQL", "MySQL"],
+        ]
+
+    def test_stores_empty_2d_skill_list(self, db_session):
+        """Test that empty 2D skill list is stored correctly."""
+        job = Job(title="Test Job", external_id="2d-skills-5", must_have_skills=[])
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == []
+
+    def test_retrieves_2d_skills_after_session_clear(self, db_session):
+        """Test that 2D skills are retrieved correctly after session clear."""
+        skills_2d = [["A", "B"], ["C"], ["D", "E", "F"]]
+        job = Job(title="Test Job", external_id="2d-skills-6", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+
+        # Clear session cache to force reload from database
+        db_session.expire_all()
+
+        retrieved_job = db_session.query(Job).filter_by(external_id="2d-skills-6").first()
+        assert retrieved_job is not None
+        assert retrieved_job.must_have_skills == [["A", "B"], ["C"], ["D", "E", "F"]]
+
+    def test_stores_skills_with_special_characters(self, db_session):
+        """Test that skills with special characters are preserved in 2D format."""
+        skills_2d = [["C++", "C#"], ["Node.js"], ["AWS/GCP"]]
+        job = Job(title="Test Job", external_id="2d-skills-7", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == [["C++", "C#"], ["Node.js"], ["AWS/GCP"]]
+
+    def test_preserves_skill_group_order(self, db_session):
+        """Test that order of skill groups is preserved."""
+        skills_2d = [["Z"], ["Y"], ["X"]]
+        job = Job(title="Test Job", external_id="2d-skills-8", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == [["Z"], ["Y"], ["X"]]
+
+    def test_preserves_alternatives_order_within_groups(self, db_session):
+        """Test that order of alternatives within groups is preserved."""
+        skills_2d = [["C", "B", "A"]]
+        job = Job(title="Test Job", external_id="2d-skills-9", must_have_skills=skills_2d)
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills[0] == ["C", "B", "A"]
+
+    def test_both_skill_fields_use_2d_structure(self, db_session):
+        """Test that both must-have and nice-to-have skills use 2D structure."""
+        must_have = [["Python", "Java"], ["Django"]]
+        nice_to_have = [["Docker", "Kubernetes"], ["AWS"]]
+        job = Job(
+            title="Test Job",
+            external_id="2d-skills-10",
+            must_have_skills=must_have,
+            nice_to_have_skills=nice_to_have,
+        )
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+        assert job.must_have_skills == [["Python", "Java"], ["Django"]]
+        assert job.nice_to_have_skills == [["Docker", "Kubernetes"], ["AWS"]]

@@ -16,21 +16,42 @@ Your job:
 - Deduplicate; preserve meaningful specificity (e.g., "AWS", "EC2", "S3" may all appear if each is preferred).
 - Prefer English canonical names when obvious; otherwise keep the job's name (e.g., "1C", "Бітрікс24").
 - If no nice-to-have technical skills are present, return an empty list.
-- Output must validate against:
+
+OUTPUT FORMAT:
+Return a 2D list where:
+- The outer list represents AND relationships (all groups are preferred)
+- Inner lists represent OR relationships (alternatives within a group)
+- Solo skills should be wrapped in single-item inner lists
+
+Detect explicit OR patterns in the text:
+- "X or Y" patterns
+- "X/Y" patterns (e.g., "React/Vue")
+- "either X or Y" patterns
+Group alternative skills together in the same inner list.
+
+Output must validate against:
   class SkillsExtraction(BaseModel):
-      skills: List[str]
+      skills: List[List[str]]
 
 Example 1:
 Input excerpt: "Must have: Python, Django, PostgreSQL. Nice to have: Redis, AWS."
-Output: ["Redis", "AWS"]
+Output: [["Redis"], ["AWS"]]
 
 Example 2:
 Input excerpt (UA): "Обов'язково: React, TypeScript, Next.js; буде плюсом: GraphQL."
-Output: ["GraphQL"]
+Output: [["GraphQL"]]
 
 Example 3:
 Input excerpt: "We expect strong experience with CI/CD (GitHub Actions) and Docker; familiarity with Kubernetes is a plus."
-Output: ["Kubernetes"]"""
+Output: [["Kubernetes"]]
+
+Example 4 (OR alternatives):
+Input excerpt: "Would be nice to have: Redis or Memcached, and GraphQL or REST experience."
+Output: [["Redis", "Memcached"], ["GraphQL", "REST"]]
+
+Example 5 (slash notation):
+Input excerpt: "Bonus: Experience with MongoDB/PostgreSQL and Terraform/Ansible."
+Output: [["MongoDB", "PostgreSQL"], ["Terraform", "Ansible"]]"""
 
 
 HUMAN_MESSAGE = """<Job Description>

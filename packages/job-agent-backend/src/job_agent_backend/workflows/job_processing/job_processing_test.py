@@ -269,7 +269,8 @@ class TestJobProcessingWorkflow:
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
         embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_result = SkillsExtraction(skills=["Python"])
+        # Skills use 2D format: outer list = AND groups, inner lists = OR alternatives
+        mock_result = SkillsExtraction(skills=[["Python"]])
 
         mock_factory = MagicMock()
 
@@ -312,7 +313,8 @@ class TestJobProcessingWorkflow:
         # Mock embedding model for relevance check (similarity >= 0.4 = relevant)
         embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_result = SkillsExtraction(skills=["Python"])
+        # Skills use 2D format: outer list = AND groups, inner lists = OR alternatives
+        mock_result = SkillsExtraction(skills=[["Python"]])
 
         mock_factory = MagicMock()
 
@@ -384,7 +386,8 @@ class TestJobProcessingWorkflow:
 
         # Both skill extraction nodes use the same model_id and run in parallel,
         # so we use the same mock result for both to avoid race conditions
-        mock_skill_result = SkillsExtraction(skills=["Python", "Django"])
+        # Skills use 2D format: outer list = AND groups, inner lists = OR alternatives
+        mock_skill_result = SkillsExtraction(skills=[["Python"], ["Django"]])
 
         mock_factory = MagicMock()
 
@@ -411,8 +414,9 @@ class TestJobProcessingWorkflow:
         mock_repository.create.assert_called_once()
         created_job = mock_repository.create.call_args[0][0]
         # Both skill extraction nodes use same model_id, so they extract same skills
-        assert created_job["must_have_skills"] == ["Python", "Django"]
-        assert created_job["nice_to_have_skills"] == ["Python", "Django"]
+        # Skills use 2D format: outer list = AND groups, inner lists = OR alternatives
+        assert created_job["must_have_skills"] == [["Python"], ["Django"]]
+        assert created_job["nice_to_have_skills"] == [["Python"], ["Django"]]
         assert result["status"] == "completed"
 
     def test_workflow_continues_after_store_job_error(
@@ -424,7 +428,8 @@ class TestJobProcessingWorkflow:
         """Test that workflow completes even when repository raises exception."""
         embedding_model = mock_embedding_model_factory(similarity_score=0.8)
 
-        mock_result = SkillsExtraction(skills=["Python"])
+        # Skills use 2D format: outer list = AND groups, inner lists = OR alternatives
+        mock_result = SkillsExtraction(skills=[["Python"]])
 
         mock_factory = MagicMock()
 
