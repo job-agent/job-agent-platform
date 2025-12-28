@@ -5,7 +5,7 @@ and adds automatic embedding generation for hybrid search functionality.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from job_agent_platform_contracts.essay_repository import (
     IEssayRepository,
@@ -138,6 +138,18 @@ class EssaySearchService:
             logger.warning(f"Failed to regenerate embedding for essay {essay.id}: {e}")
 
         return essay
+
+    def get_paginated(self, page: int, page_size: int) -> Tuple[List[Essay], int]:
+        """Get essays with pagination.
+
+        Args:
+            page: Page number (1-based)
+            page_size: Number of essays per page
+
+        Returns:
+            Tuple of (list of essays for the page, total count of all essays)
+        """
+        return self._repository.get_paginated(page=page, page_size=page_size)
 
     def backfill_embeddings(self) -> int:
         """Generate embeddings for all essays without one.

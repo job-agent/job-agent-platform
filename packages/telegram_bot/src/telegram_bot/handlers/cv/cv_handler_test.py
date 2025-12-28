@@ -23,10 +23,12 @@ def mock_dependencies_with_cv(mock_cv_repository):
     """Create mock dependencies with CV repository."""
     orchestrator_factory = MagicMock()
     cv_repository_factory = MagicMock(return_value=mock_cv_repository)
+    essay_service_factory = MagicMock()
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        essay_service_factory=essay_service_factory,
     )
 
 
@@ -37,10 +39,12 @@ def mock_dependencies_without_cv():
     cv_repo = MagicMock()
     cv_repo.find.return_value = None
     cv_repository_factory = MagicMock(return_value=cv_repo)
+    essay_service_factory = MagicMock()
 
     return BotDependencies(
         orchestrator_factory=orchestrator_factory,
         cv_repository_factory=cv_repository_factory,
+        essay_service_factory=essay_service_factory,
     )
 
 
