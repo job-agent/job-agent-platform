@@ -4,7 +4,8 @@ Telegram entry point for the Job Agent platform. The bot guides candidates throu
 
 ## Capabilities
 
-- `/upload` via PDF document upload to sanitize CVs through the PII removal workflow.
+- PDF document upload to sanitize CVs through the PII removal workflow.
+- `/cv` command to retrieve your stored CV as a text file.
 - `/search` command that orchestrates scraping, filtering, and processing jobs while reporting progress.
 - `/essays` command to view all stored essays with pagination (5 per page, newest first).
 - `/add_essay` command to store question-answer pairs in the essay database for hybrid search retrieval.
@@ -68,8 +69,8 @@ After the bot starts:
 
 1. Send your CV as a PDF document to store a sanitized copy for later searches.
 2. Run `/search` to trigger the end-to-end pipeline. All parameters are optional:
-   - `salary=5000` - Minimum salary filter (default: 4000)
-   - `employment=remote` - Employment type (default: remote)
+   - `min_salary=5000` - Minimum salary filter (default: 4000)
+   - `employment_location=remote` - Employment type (default: remote)
    - `days=7` - Search jobs from last N days
    - `timeout=30` - Request timeout in seconds (default: 30)
 3. Use `/status` to check progress or `/cancel` to stop the current search.
@@ -187,15 +188,19 @@ telegram_bot/
             ├── start/
             ├── help/
             ├── search/
+            │   ├── handler.py   # Search command handler
+            │   ├── params.py    # Search parameter parsing
+            │   └── formatter.py # Result formatting
             ├── status/
             ├── cancel/
-            ├── upload_cv/
-            ├── add_essay/      # Essay Q&A storage
-            └── essays/         # Paginated essay listing
+            ├── cv/              # Retrieve stored CV
+            ├── upload_cv/       # Upload and sanitize CV
+            ├── add_essay/       # Essay Q&A storage
+            └── essays/          # Paginated essay listing
 ```
 
 ## Development
 
-- `pytest` once tests are added (project scaffold is ready for it).
+- `pytest` to run the test suite.
 - `ruff format src/` for formatting.
 - `ruff check src/` for linting.

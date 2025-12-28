@@ -41,30 +41,36 @@ pip install -e "packages/job-agent-backend[dev]"
 job-agent-backend/
 ├── pyproject.toml
 ├── README.md
-├── src/
-│   ├── data/
-│   │   └── cvs/
-│   └── job_agent_backend/
-│       ├── container.py
-│       ├── contracts/           # Package-level interfaces
-│       ├── core/
-│       ├── cv_loader/
-│       ├── filter_service/
-│       ├── messaging/
-│       ├── model_providers/
-│       │   └── contracts/       # Service-level interfaces
-│       ├── services/
-│       │   └── keyword_generation/  # LLM-based keyword extraction
-│       └── workflows/
-└── tests/
+└── src/
+    ├── data/
+    │   └── cvs/                 # Sanitized CV storage
+    └── job_agent_backend/
+        ├── container.py
+        ├── contracts/           # Package-level interfaces
+        ├── core/
+        │   ├── orchestrator.py  # JobAgentOrchestrator - pipeline coordination
+        │   └── cv_manager.py    # CVManager - CV storage and processing
+        ├── cv_loader/
+        ├── filter_service/
+        ├── messaging/           # RabbitMQ client for scrapper communication
+        ├── model_providers/
+        │   └── contracts/       # Service-level interfaces
+        ├── services/
+        │   └── keyword_generation/  # LLM-based keyword extraction
+        ├── utils/
+        └── workflows/           # LangGraph workflows (PII removal, job processing)
 ```
+
+Tests are colocated alongside their corresponding modules (`*_test.py` naming convention).
 
 ## Usage
 
-```python
-from job_agent_backend.core.orchestrator import JobAgentOrchestrator
+Use the container's getter function to obtain a configured orchestrator instance:
 
-orchestrator = JobAgentOrchestrator()
+```python
+from job_agent_backend.container import get_orchestrator
+
+orchestrator = get_orchestrator()
 orchestrator.upload_cv(user_id=42, file_path="resume.pdf")
 summary = orchestrator.run_complete_pipeline(
     user_id=42,
@@ -77,7 +83,7 @@ print(summary)
 
 When `days` is omitted (or `None`), the orchestrator auto-calculates the date range based on the most recent job in the repository, capped at 5 days.
 
-The dependency injection container exposed at `job_agent_backend.container.container` lets you override components such as the scrapper manager, repositories, or filter service when wiring the backend into other applications or tests.
+The dependency injection container exposed at `job_agent_backend.container.container` provides pre-configured instances. The container can also be used for testing by overriding providers.
 
 Pre-configured AI models (e.g., `"skill-extraction"`, `"pii-removal"`, `"keyword-extraction"`, `"embedding"`) are registered in the container and can be accessed via:
 
