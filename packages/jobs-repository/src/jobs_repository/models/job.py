@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from jobs_repository.models.base import Base
@@ -26,8 +26,8 @@ class Job(Base):
 
     title: Mapped[str] = mapped_column(String(500), index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    must_have_skills: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String), nullable=True)
-    nice_to_have_skills: Mapped[Optional[list[str]]] = mapped_column(ARRAY(String), nullable=True)
+    must_have_skills: Mapped[Optional[list[list[str]]]] = mapped_column(JSONB, nullable=True)
+    nice_to_have_skills: Mapped[Optional[list[list[str]]]] = mapped_column(JSONB, nullable=True)
 
     company_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("jobs.companies.id"), index=True, nullable=True

@@ -13,10 +13,15 @@ if TYPE_CHECKING:
 
 
 class ProcessedJobDict(JobDict, total=False):
-    """JobDict extended with fields added during pipeline processing."""
+    """JobDict extended with fields added during pipeline processing.
 
-    must_have_skills: list[str]
-    nice_to_have_skills: list[str]
+    The skill fields use a 2D list format where:
+    - The outer list represents AND relationships (all groups are required/preferred)
+    - Inner lists represent OR relationships (alternatives within a group)
+    """
+
+    must_have_skills: list[list[str]]
+    nice_to_have_skills: list[list[str]]
     is_relevant: bool
     is_filtered: bool
 

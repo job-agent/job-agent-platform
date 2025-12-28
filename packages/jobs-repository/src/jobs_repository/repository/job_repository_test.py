@@ -80,13 +80,16 @@ class TestJobRepository:
     def test_create_stores_skills_from_jobcreate(
         self, repository, sample_job_create_dict, db_session
     ):
-        """Test creating a job from JobCreate contract data with skills."""
+        """Test creating a job from JobCreate contract data with skills.
+
+        Skills use 2D format: outer list = AND groups, inner lists = OR alternatives.
+        """
         job = repository.create(sample_job_create_dict)
 
         assert job.id is not None
         assert job.title == "DevOps Engineer"
-        assert job.must_have_skills == ["AWS", "Terraform", "Docker", "Kubernetes"]
-        assert job.nice_to_have_skills == ["Ansible", "Jenkins", "Python"]
+        assert job.must_have_skills == [["AWS"], ["Terraform"], ["Docker"], ["Kubernetes"]]
+        assert job.nice_to_have_skills == [["Ansible"], ["Jenkins"], ["Python"]]
 
     def test_create_job_reuses_existing_company(self, repository, sample_job_dict, db_session):
         """Test that creating multiple jobs with same company reuses existing company."""

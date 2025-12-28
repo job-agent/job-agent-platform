@@ -47,7 +47,9 @@ def in_memory_engine():
     for table in Base.metadata.tables.values():
         table.schema = None
         for column in table.columns:
-            if hasattr(column.type, "__class__") and column.type.__class__.__name__ == "ARRAY":
+            type_name = column.type.__class__.__name__
+            # Convert PostgreSQL-specific types to SQLite-compatible JSONArray
+            if hasattr(column.type, "__class__") and type_name in ("ARRAY", "JSONB"):
                 column.type = JSONArray()
 
     Base.metadata.create_all(engine)
@@ -123,12 +125,15 @@ def sample_industry(db_session) -> Industry:
 def sample_job(
     db_session, sample_company, sample_location, sample_category, sample_industry
 ) -> Job:
-    """Create a sample job for testing."""
+    """Create a sample job for testing.
+
+    Skills use 2D format: outer list = AND groups, inner lists = OR alternatives.
+    """
     job = Job(
         title="Software Engineer",
         description="We are looking for a talented software engineer.",
-        must_have_skills=["Python", "SQL"],
-        nice_to_have_skills=["Docker", "Kubernetes"],
+        must_have_skills=[["Python"], ["SQL"]],
+        nice_to_have_skills=[["Docker"], ["Kubernetes"]],
         company_id=sample_company.id,
         location_id=sample_location.id,
         category_id=sample_category.id,
@@ -173,7 +178,10 @@ def sample_job_dict():
 
 @pytest.fixture
 def sample_job_create_dict():
-    """Sample JobCreate data with additional skills fields."""
+    """Sample JobCreate data with additional skills fields.
+
+    Skills use 2D format: outer list = AND groups, inner lists = OR alternatives.
+    """
     return {
         "job_id": 54321,
         "title": "DevOps Engineer",
@@ -187,6 +195,6 @@ def sample_job_create_dict():
         "experience_months": 48.0,
         "location": {"region": "Remote", "is_remote": True},
         "industry": "Cloud Computing",
-        "must_have_skills": ["AWS", "Terraform", "Docker", "Kubernetes"],
-        "nice_to_have_skills": ["Ansible", "Jenkins", "Python"],
+        "must_have_skills": [["AWS"], ["Terraform"], ["Docker"], ["Kubernetes"]],
+        "nice_to_have_skills": [["Ansible"], ["Jenkins"], ["Python"]],
     }

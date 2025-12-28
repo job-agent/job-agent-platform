@@ -19,16 +19,18 @@ class AgentState(TypedDict):
         status: Current status of the workflow
         cv_context: CV/resume content for context
         is_relevant: Whether the job is relevant to the candidate's CV (optional)
-        extracted_must_have_skills: List of extracted must-have skills (optional)
-        extracted_nice_to_have_skills: List of extracted nice-to-have skills (optional)
+        extracted_must_have_skills: 2D list of extracted must-have skills (optional).
+            Outer list = AND groups, inner lists = OR alternatives.
+        extracted_nice_to_have_skills: 2D list of extracted nice-to-have skills (optional).
+            Outer list = AND groups, inner lists = OR alternatives.
     """
 
     job: JobDict
     status: str
     cv_context: str
     is_relevant: NotRequired[bool]
-    extracted_must_have_skills: NotRequired[List[str]]
-    extracted_nice_to_have_skills: NotRequired[List[str]]
+    extracted_must_have_skills: NotRequired[List[List[str]]]
+    extracted_nice_to_have_skills: NotRequired[List[List[str]]]
 
 
 # Type alias for LangGraph node functions

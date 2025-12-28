@@ -13,6 +13,13 @@ class JobCreate(TypedDict, total=False):
     Required fields provide the core job record, optional fields extend the
     original job dictionary, and skill fields capture enrichment results from
     processing workflows.
+
+    The skill fields use a 2D list format where:
+    - The outer list represents AND relationships (all groups are required/preferred)
+    - Inner lists represent OR relationships (alternatives within a group)
+
+    Example: [["JavaScript", "Python"], ["React"]] means
+    "(JavaScript OR Python) AND React"
     """
 
     job_id: int
@@ -30,8 +37,8 @@ class JobCreate(TypedDict, total=False):
     location: LocationPayload
     industry: str
 
-    must_have_skills: List[str]
-    nice_to_have_skills: List[str]
+    must_have_skills: List[List[str]]
+    nice_to_have_skills: List[List[str]]
 
     is_relevant: bool
     is_filtered: bool

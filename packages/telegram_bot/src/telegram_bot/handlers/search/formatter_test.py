@@ -26,7 +26,7 @@ class TestFormatJobMessage:
 
     @pytest.fixture
     def full_job_result(self):
-        """Create a complete job result with all fields."""
+        """Create a complete job result with all fields using 2D skill format."""
         return {
             "is_relevant": True,
             "job": {
@@ -44,8 +44,8 @@ class TestFormatJobMessage:
                 "employment_type": "Full-time",
                 "url": "https://example.com/job/456",
             },
-            "extracted_must_have_skills": ["Python", "Django", "PostgreSQL"],
-            "extracted_nice_to_have_skills": ["React", "Docker"],
+            "extracted_must_have_skills": [["Python"], ["Django"], ["PostgreSQL"]],
+            "extracted_nice_to_have_skills": [["React"], ["Docker"]],
         }
 
     def test_includes_job_number(self, basic_job_result):
@@ -103,21 +103,6 @@ class TestFormatJobMessage:
         assert "React" in message
         assert "Docker" in message
 
-    def test_truncates_long_skill_lists(self):
-        """Message should truncate skill lists longer than 10 items."""
-        job_result = {
-            "is_relevant": True,
-            "job": {
-                "title": "Developer",
-                "company": {"name": "Corp"},
-                "url": "https://example.com",
-            },
-            "extracted_must_have_skills": [f"Skill{i}" for i in range(15)],
-            "extracted_nice_to_have_skills": [],
-        }
-        message = format_job_message(job_result, 1, 1)
-        assert "5 more" in message
-
     def test_handles_missing_company_name(self):
         """Message should handle missing company name gracefully."""
         job_result = {
@@ -150,6 +135,208 @@ class TestFormatJobMessage:
         message = format_job_message(job_result, 1, 1)
         assert "EUR" in message
         assert "50000" in message
+
+
+class TestFormatJobMessageWith2DSkillStructure:
+    """Tests for format_job_message with 2D skill structure.
+
+    These tests verify the new display format where:
+    - Single-skill groups display without "or" notation
+    - Multi-skill groups (OR alternatives) display with "or" between skills
+    - Groups are separated by commas
+    """
+
+    def test_displays_single_skill_group_without_or(self):
+        """Single-skill groups display the skill name without 'or'."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [["React"]],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should contain "React" but not "React or"
+        assert "React" in message
+        assert "React or" not in message
+
+    def test_displays_or_alternatives_with_or_notation(self):
+        """Multi-skill groups display with 'or' between alternatives."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [["JavaScript", "Python"]],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should display "JavaScript or Python"
+        assert "JavaScript or Python" in message
+
+    def test_displays_multiple_alternatives_with_or_notation(self):
+        """Groups with more than two alternatives use 'or' between all."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [["React", "Vue", "Angular"]],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should display "React or Vue or Angular"
+        assert "React or Vue or Angular" in message
+
+    def test_displays_multiple_groups_separated_by_comma(self):
+        """Multiple skill groups are separated by commas."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [
+                ["JavaScript", "Python"],
+                ["React"],
+                ["Docker", "Kubernetes"],
+            ],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should display groups separated by comma
+        assert "JavaScript or Python" in message
+        assert "React" in message
+        assert "Docker or Kubernetes" in message
+        # Verify comma separation (groups joined with ", ")
+        assert ", React," in message or ", React\n" in message or "React," in message
+
+    def test_displays_mixed_solo_and_or_groups(self):
+        """Mixed solo skills and OR groups display correctly."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [
+                ["Python"],
+                ["Django", "Flask"],
+                ["PostgreSQL"],
+            ],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        assert "Python" in message
+        assert "Django or Flask" in message
+        assert "PostgreSQL" in message
+
+    def test_displays_empty_skills_list_without_section(self):
+        """Empty skills list should not show skills section."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should not contain skills section header
+        assert "Must-have" not in message
+        assert "Nice-to-have" not in message
+
+    def test_truncates_skill_display_at_10_total_skills(self):
+        """Display truncates at 10 total skills across all groups."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            # 15 total skills across groups
+            "extracted_must_have_skills": [[f"Skill{i}"] for i in range(15)],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should truncate and show "X more"
+        assert "5 more" in message
+
+    def test_truncates_counting_individual_skills_not_groups(self):
+        """Truncation counts individual skills, not groups."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            # 12 total skills: 4 groups with 3 skills each
+            "extracted_must_have_skills": [
+                ["A1", "A2", "A3"],
+                ["B1", "B2", "B3"],
+                ["C1", "C2", "C3"],
+                ["D1", "D2", "D3"],
+            ],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        # Should truncate after 10 skills (2 more not shown)
+        assert "2 more" in message
+
+    def test_nice_to_have_skills_also_use_or_notation(self):
+        """Nice-to-have skills also display with 'or' notation."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [],
+            "extracted_nice_to_have_skills": [["AWS", "GCP"], ["Docker"]],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        assert "AWS or GCP" in message
+        assert "Docker" in message
+
+    def test_handles_skills_with_special_characters(self):
+        """Skills with special characters display correctly."""
+        job_result = {
+            "is_relevant": True,
+            "job": {
+                "title": "Developer",
+                "company": {"name": "Corp"},
+                "url": "https://example.com",
+            },
+            "extracted_must_have_skills": [["C++", "C#"], ["Node.js"]],
+            "extracted_nice_to_have_skills": [],
+        }
+        message = format_job_message(job_result, 1, 1)
+
+        assert "C++ or C#" in message
+        assert "Node.js" in message
 
 
 class TestFormatSearchSummary:

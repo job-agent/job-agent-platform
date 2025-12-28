@@ -16,21 +16,52 @@ Your job:
 - Deduplicate; preserve meaningful specificity (e.g., "AWS", "EC2", "S3" may all appear if each is required).
 - Prefer English canonical names when obvious; otherwise keep the job's name (e.g., "1C", "Бітрікс24").
 - If no required technical skills are present, return an empty list.
-- Output must validate against:
+
+OUTPUT FORMAT:
+Return a 2D list where:
+- The outer list represents AND relationships (all groups are required)
+- Inner lists represent OR relationships (alternatives within a group)
+- Solo skills should be wrapped in single-item inner lists
+
+Detect explicit OR patterns in the text:
+- "X or Y" patterns
+- "X/Y" patterns ONLY when skills are truly interchangeable alternatives (e.g., "React/Vue" - both frontend frameworks, "PostgreSQL/MySQL" - both databases)
+- "either X or Y" patterns
+Group alternative skills together in the same inner list.
+
+IMPORTANT: The slash pattern does NOT always mean OR. Treat as separate required skills when:
+- Different categories (language vs framework): "Python/FastAPI" → [["Python"], ["FastAPI"]]
+- Parent/child relationship: "AWS/Lambda" → [["AWS"], ["Lambda"]]
+- Complementary skills: "HTML/CSS" → [["HTML"], ["CSS"]]
+Only group as alternatives when skills serve the same role and are mutually exclusive.
+
+Output must validate against:
   class SkillsExtraction(BaseModel):
-      skills: List[str]
+      skills: List[List[str]]
 
 Example 1:
 Input excerpt: "Must have: Python, Django, PostgreSQL. Nice to have: Redis, AWS."
-Output: ["Python", "Django", "PostgreSQL"]
+Output: [["Python"], ["Django"], ["PostgreSQL"]]
 
 Example 2:
 Input excerpt (UA): "Обов'язково: React, TypeScript, Next.js; буде плюсом: GraphQL."
-Output: ["React", "TypeScript", "Next.js"]
+Output: [["React"], ["TypeScript"], ["Next.js"]]
 
 Example 3:
 Input excerpt: "We expect strong experience with CI/CD (GitHub Actions) and Docker; familiarity with Kubernetes is a plus."
-Output: ["CI/CD", "GitHub Actions", "Docker"]"""
+Output: [["CI/CD"], ["GitHub Actions"], ["Docker"]]
+
+Example 4 (OR alternatives):
+Input excerpt: "Required: JavaScript or Python, React or Vue, and Docker."
+Output: [["JavaScript", "Python"], ["React", "Vue"], ["Docker"]]
+
+Example 5 (slash notation - interchangeable):
+Input excerpt: "Must have: Python/Ruby, PostgreSQL/MySQL, and AWS."
+Output: [["Python", "Ruby"], ["PostgreSQL", "MySQL"], ["AWS"]]
+
+Example 6 (slash notation - NOT interchangeable):
+Input excerpt: "Required: Python/FastAPI, and HTML/CSS experience."
+Output: [["Python"], ["FastAPI"], ["HTML"], ["CSS"]]"""
 
 
 HUMAN_MESSAGE = """<Job Description>

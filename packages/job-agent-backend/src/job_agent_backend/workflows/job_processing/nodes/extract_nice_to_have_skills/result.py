@@ -5,6 +5,11 @@ from typing_extensions import TypedDict
 
 
 class ExtractNiceToHaveSkillsResult(TypedDict):
-    """Result from extract_nice_to_have_skills node."""
+    """Result from extract_nice_to_have_skills node.
 
-    extracted_nice_to_have_skills: List[str]
+    The extracted skills use a 2D list format where:
+    - The outer list represents AND relationships (all groups are preferred)
+    - Inner lists represent OR relationships (alternatives within a group)
+    """
+
+    extracted_nice_to_have_skills: List[List[str]]

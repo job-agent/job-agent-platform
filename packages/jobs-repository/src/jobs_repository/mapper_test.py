@@ -430,3 +430,171 @@ class TestJobMapperFromModelIsFiltered:
 
         assert result["is_filtered"] is True
         assert result["is_relevant"] is False
+
+
+class TestJobMapperWith2DSkillStructure:
+    """Tests for JobMapper with 2D skill structure.
+
+    These tests verify the new behavior where skills are stored as 2D lists:
+    - Outer list: AND relationships (all groups required)
+    - Inner lists: OR relationships (alternatives within a group)
+    """
+
+    @pytest.fixture
+    def mapper(self):
+        """Create a JobMapper instance."""
+        return JobMapper()
+
+    def test_map_to_model_accepts_2d_skill_lists(self, mapper):
+        """Test that map_to_model accepts 2D skill lists."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [["Python"], ["Django"], ["PostgreSQL"]],
+            "nice_to_have_skills": [["Docker"], ["AWS"]],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == [["Python"], ["Django"], ["PostgreSQL"]]
+        assert result["nice_to_have_skills"] == [["Docker"], ["AWS"]]
+
+    def test_map_to_model_accepts_or_groups(self, mapper):
+        """Test that map_to_model accepts OR groups in inner lists."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [["JavaScript", "Python"], ["React"]],
+            "nice_to_have_skills": [["AWS", "GCP"], ["Docker"]],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == [["JavaScript", "Python"], ["React"]]
+        assert result["nice_to_have_skills"] == [["AWS", "GCP"], ["Docker"]]
+
+    def test_map_to_model_accepts_mixed_solo_and_or_groups(self, mapper):
+        """Test that map_to_model accepts mix of solo skills and OR groups."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [
+                ["JavaScript", "TypeScript"],
+                ["React"],
+                ["PostgreSQL", "MySQL"],
+            ],
+            "nice_to_have_skills": [],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == [
+            ["JavaScript", "TypeScript"],
+            ["React"],
+            ["PostgreSQL", "MySQL"],
+        ]
+
+    def test_map_to_model_accepts_empty_2d_skill_list(self, mapper):
+        """Test that map_to_model accepts empty 2D skill list."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [],
+            "nice_to_have_skills": [],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == []
+        assert result["nice_to_have_skills"] == []
+
+    def test_map_to_model_preserves_skill_order(self, mapper):
+        """Test that map_to_model preserves order of skill groups."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [["A"], ["B", "C"], ["D"]],
+            "nice_to_have_skills": [],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == [["A"], ["B", "C"], ["D"]]
+
+    def test_map_to_model_preserves_alternatives_order(self, mapper):
+        """Test that map_to_model preserves order of alternatives within groups."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [["JavaScript", "TypeScript", "Python"]],
+            "nice_to_have_skills": [],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"][0] == ["JavaScript", "TypeScript", "Python"]
+
+    def test_map_from_model_returns_2d_skill_lists(self, mapper, sample_job):
+        """Test that map_from_model returns 2D skill lists."""
+        sample_job.must_have_skills = [["Python"], ["Django"]]
+        sample_job.nice_to_have_skills = [["Docker", "Kubernetes"]]
+
+        result = mapper.map_from_model(sample_job)
+
+        assert result["must_have_skills"] == [["Python"], ["Django"]]
+        assert result["nice_to_have_skills"] == [["Docker", "Kubernetes"]]
+
+    def test_map_from_model_returns_empty_2d_list(self, mapper, sample_job):
+        """Test that map_from_model returns empty 2D list when no skills."""
+        sample_job.must_have_skills = []
+        sample_job.nice_to_have_skills = []
+
+        result = mapper.map_from_model(sample_job)
+
+        assert result["must_have_skills"] == []
+        assert result["nice_to_have_skills"] == []
+
+    def test_map_to_model_skills_with_special_characters(self, mapper):
+        """Test that skills with special characters are preserved."""
+        job_data = {
+            "job_id": 1,
+            "title": "Test",
+            "must_have_skills": [["C++", "C#"], ["Node.js"], ["AWS/GCP"]],
+            "nice_to_have_skills": [],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == [["C++", "C#"], ["Node.js"], ["AWS/GCP"]]
+
+    def test_complete_job_dict_with_2d_skills(self, mapper):
+        """Test mapping complete job data with 2D skill structure."""
+        job_data = {
+            "job_id": 12345,
+            "title": "Senior Software Engineer",
+            "description": "We are looking for an experienced engineer.",
+            "url": "https://example.com/jobs/12345",
+            "source": "LinkedIn",
+            "employment_type": "FULL_TIME",
+            "experience_months": 36,
+            "company": {"name": "Tech Corp", "website": "https://techcorp.com"},
+            "location": {"region": "San Francisco, CA", "is_remote": True},
+            "category": "Software Development",
+            "industry": "Technology",
+            "salary": {"currency": "USD", "min_value": 120000.0, "max_value": 160000.0},
+            "date_posted": "2024-01-15T10:00:00Z",
+            "valid_through": "2024-02-15T10:00:00Z",
+            "must_have_skills": [["Python", "Java"], ["Django"], ["PostgreSQL", "MySQL"]],
+            "nice_to_have_skills": [["Docker", "Kubernetes"], ["AWS"]],
+        }
+
+        result = mapper.map_to_model(job_data)
+
+        assert result["must_have_skills"] == [
+            ["Python", "Java"],
+            ["Django"],
+            ["PostgreSQL", "MySQL"],
+        ]
+        assert result["nice_to_have_skills"] == [["Docker", "Kubernetes"], ["AWS"]]
+        assert result["title"] == "Senior Software Engineer"
+        assert result["external_id"] == "12345"

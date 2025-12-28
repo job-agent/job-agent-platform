@@ -240,6 +240,7 @@ class TestEssaySearchServiceKeywordGeneratorInjection:
 
         assert service is not None
 
+
 class TestEssaySearchServiceBackgroundKeywordGenerationBehavior:
     """Tests for the background keyword generation behavior."""
 
@@ -287,4 +288,3 @@ class TestEssaySearchServiceBackgroundKeywordGenerationBehavior:
             question="Question",
             answer="Answer",
         )
-
