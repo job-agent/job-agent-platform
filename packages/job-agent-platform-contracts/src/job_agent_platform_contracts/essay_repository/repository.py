@@ -164,3 +164,16 @@ class IEssayRepository(Protocol):
             True if updated, False if essay not found
         """
         ...
+
+    def update_keywords(self, essay_id: int, keywords: List[str]) -> bool:
+        """
+        Update the keywords for an essay.
+
+        Args:
+            essay_id: The essay's primary key identifier
+            keywords: List of keywords to set
+
+        Returns:
+            True if updated, False if essay not found
+        """
+        ...

@@ -1,7 +1,11 @@
 """Print jobs node implementation."""
 
+import logging
+
 from ...state import AgentState
 from .result import ProcessJobsResult
+
+logger = logging.getLogger(__name__)
 
 
 def print_jobs_node(state: AgentState) -> ProcessJobsResult:
@@ -20,16 +24,11 @@ def print_jobs_node(state: AgentState) -> ProcessJobsResult:
     """
     job = state["job"]
 
-    print(f"\n{'=' * 60}")
-    print("Processing job:")
-    print(f"{'=' * 60}\n")
+    logger.info("Processing job")
 
     for key, value in job.items():
-        print(f"  {key}: {value}")
-    print()
+        logger.debug("  %s: %s", key, value)
 
-    print(f"{'=' * 60}")
-    print("Finished processing job")
-    print(f"{'=' * 60}\n")
+    logger.info("Finished processing job")
 
     return {"status": "completed"}

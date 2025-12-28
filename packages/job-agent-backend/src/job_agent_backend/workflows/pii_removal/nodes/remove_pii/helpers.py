@@ -2,7 +2,7 @@
 
 from typing import Callable
 
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 
 from .prompts import REMOVE_PII_PROMPT
 

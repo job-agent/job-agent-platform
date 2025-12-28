@@ -454,3 +454,32 @@ class EssayRepository(BaseRepository, IEssayRepository):
 
         except SQLAlchemyError as e:
             raise TransactionError(f"Failed to update embedding: {e}") from e
+
+    def update_keywords(self, essay_id: int, keywords: List[str]) -> bool:
+        """
+        Update the keywords for an essay.
+
+        Args:
+            essay_id: The essay's primary key identifier
+            keywords: List of keywords to set
+
+        Returns:
+            True if updated, False if essay not found
+        """
+        if essay_id <= 0:
+            return False
+
+        try:
+            with self._session_scope(commit=True) as session:
+                stmt = select(Essay).where(Essay.id == essay_id)
+                essay = session.scalar(stmt)
+
+                if essay is None:
+                    return False
+
+                essay.keywords = keywords
+                session.flush()
+                return True
+
+        except SQLAlchemyError as e:
+            raise TransactionError(f"Failed to update keywords: {e}") from e

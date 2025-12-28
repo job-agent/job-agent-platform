@@ -1,12 +1,15 @@
 """Extract must-have skills node implementation."""
 
+import logging
 from typing import Callable
 
-from .....model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 from ...state import AgentState
 from .schemas import SkillsExtraction
 from .prompts import EXTRACT_MUST_HAVE_SKILLS_PROMPT
 from .result import ExtractMustHaveSkillsResult
+
+logger = logging.getLogger(__name__)
 
 
 def create_extract_must_have_skills_node(
@@ -36,13 +39,10 @@ def create_extract_must_have_skills_node(
         job_id = job.get("job_id")
         description = job.get("description", "")
 
-        print("\n" + "=" * 60)
-        print(f"Extracting must-have skills for job ID {job_id} using OpenAI...")
-        print("=" * 60 + "\n")
+        logger.info("Extracting must-have skills for job ID %s using OpenAI", job_id)
 
         if not description:
-            print(f"  Job (ID: {job_id}): No description available, skipping...")
-            print("=" * 60 + "\n")
+            logger.info("Job (ID: %s): No description available, skipping", job_id)
             return {"extracted_must_have_skills": []}
 
         try:
@@ -56,17 +56,15 @@ def create_extract_must_have_skills_node(
 
             skills = (result.skills or []) if result is not None else []
 
-            print(f"  Job (ID: {job_id}): Extracted {len(skills)} skills")
+            logger.info("Job (ID: %s): Extracted %d skills", job_id, len(skills))
             if skills:
-                print(f"    Skills: {', '.join(skills)}\n")
+                logger.debug("Skills: %s", ", ".join(skills))
 
         except Exception as e:
-            print(f"  Job (ID: {job_id}): Error extracting skills - {e}")
+            logger.warning("Job (ID: %s): Error extracting skills - %s", job_id, e)
             skills = []
 
-        print("=" * 60)
-        print(f"Finished extracting skills for job ID {job_id}")
-        print("=" * 60 + "\n")
+        logger.info("Finished extracting skills for job ID %s", job_id)
 
         return {"extracted_must_have_skills": skills}
 

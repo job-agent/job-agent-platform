@@ -1,5 +1,6 @@
 """Utility class for the workflows system."""
 
+import logging
 import re
 from pathlib import Path
 from typing import Optional
@@ -7,6 +8,8 @@ from typing import Optional
 from pypdf import PdfReader
 
 from job_agent_backend.contracts import ICVLoader
+
+logger = logging.getLogger(__name__)
 
 
 class CVLoader(ICVLoader):
@@ -89,15 +92,15 @@ class CVLoader(ICVLoader):
         """
         cv_path_obj = Path(cv_path)
         if not cv_path_obj.exists():
-            print(f"CV file not found at: {cv_path}")
+            logger.warning("CV file not found at: %s", cv_path)
             return None
 
         try:
             cv_content = cv_path_obj.read_text(encoding="utf-8")
-            print(f"✓ Loaded CV from {cv_path} ({len(cv_content)} characters)")
+            logger.info("Loaded CV from %s (%d characters)", cv_path, len(cv_content))
             return cv_content
         except Exception as error:
-            print(f"Error reading CV text at {cv_path}: {error}")
+            logger.error("Error reading CV text at %s: %s", cv_path, error)
             return None
 
     def load_from_pdf(self, cv_path: Optional[str] = None) -> Optional[str]:
@@ -120,7 +123,7 @@ class CVLoader(ICVLoader):
         """
         target_path = self._resolve_pdf_path(cv_path)
         if not target_path.exists():
-            print(f"CV file not found at: {target_path}")
+            logger.warning("CV file not found at: %s", target_path)
             return None
 
         try:
@@ -134,13 +137,16 @@ class CVLoader(ICVLoader):
 
             raw_content = "\n\n".join(text_parts)
             cv_content = self._clean_pdf_text(raw_content)
-            print(
-                f"✓ Loaded CV from {target_path} ({len(reader.pages)} pages, {len(cv_content)} characters)"
+            logger.info(
+                "Loaded CV from %s (%d pages, %d characters)",
+                target_path,
+                len(reader.pages),
+                len(cv_content),
             )
             return cv_content
 
         except Exception as error:
-            print(f"Error reading CV PDF at {target_path}: {error}")
+            logger.error("Error reading CV PDF at %s: %s", target_path, error)
             return None
 
     def _resolve_pdf_path(self, cv_path: Optional[str]) -> Path:

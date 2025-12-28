@@ -498,6 +498,88 @@ class TestEssayRepositoryInterfaceCompliance:
         assert hasattr(repo, "update")
         assert callable(repo.update)
 
+    def test_repository_has_update_keywords_method(self, db_session):
+        """Test that repository has update_keywords method."""
+        repo = EssayRepository(session=db_session)
+        assert hasattr(repo, "update_keywords")
+        assert callable(repo.update_keywords)
+
+
+class TestEssayRepositoryUpdateKeywords:
+    """Tests for EssayRepository.update_keywords method."""
+
+    @pytest.fixture
+    def repository(self, db_session):
+        """Create an EssayRepository instance."""
+        return EssayRepository(session=db_session)
+
+    def test_update_keywords_returns_true_for_existing_essay(self, repository, repo_sample_essay):
+        """Test that updating keywords for existing essay returns True."""
+        new_keywords = ["updated", "keywords", "list"]
+
+        result = repository.update_keywords(repo_sample_essay.id, new_keywords)
+
+        assert result is True
+
+    def test_update_keywords_persists_keywords(self, repository, repo_sample_essay, db_session):
+        """Test that updated keywords are persisted to database."""
+        new_keywords = ["new_keyword1", "new_keyword2"]
+
+        repository.update_keywords(repo_sample_essay.id, new_keywords)
+
+        # Retrieve essay and verify keywords are updated
+        updated_essay = repository.get_by_id(repo_sample_essay.id)
+        assert updated_essay is not None
+        assert updated_essay.keywords == new_keywords
+
+    def test_update_keywords_returns_false_for_nonexistent_essay(self, repository):
+        """Test that updating keywords for non-existent essay returns False."""
+        result = repository.update_keywords(99999, ["keyword1", "keyword2"])
+
+        assert result is False
+
+    def test_update_keywords_with_zero_id_returns_false(self, repository):
+        """Test that update_keywords with zero ID returns False."""
+        result = repository.update_keywords(0, ["keyword"])
+
+        assert result is False
+
+    def test_update_keywords_with_negative_id_returns_false(self, repository):
+        """Test that update_keywords with negative ID returns False."""
+        result = repository.update_keywords(-1, ["keyword"])
+
+        assert result is False
+
+    def test_update_keywords_with_empty_list(self, repository, repo_sample_essay):
+        """Test that keywords can be set to empty list."""
+        # repo_sample_essay has keywords initially
+        assert repo_sample_essay.keywords is not None and len(repo_sample_essay.keywords) > 0
+
+        result = repository.update_keywords(repo_sample_essay.id, [])
+
+        assert result is True
+        updated_essay = repository.get_by_id(repo_sample_essay.id)
+        assert updated_essay.keywords == []
+
+    def test_update_keywords_does_not_affect_other_fields(self, repository, repo_sample_essay):
+        """Test that update_keywords only updates keywords field."""
+        original_question = repo_sample_essay.question
+        original_answer = repo_sample_essay.answer
+
+        repository.update_keywords(repo_sample_essay.id, ["new", "keywords"])
+
+        updated_essay = repository.get_by_id(repo_sample_essay.id)
+        assert updated_essay.question == original_question
+        assert updated_essay.answer == original_answer
+
+    def test_update_keywords_handles_sqlalchemy_error(
+        self, repository, repo_sample_essay, db_session
+    ):
+        """Test that SQLAlchemyError is converted to TransactionError."""
+        with patch.object(db_session, "commit", side_effect=SQLAlchemyError("Database error")):
+            with pytest.raises(TransactionError):
+                repository.update_keywords(repo_sample_essay.id, ["keyword"])
+
 
 class TestEssayRepositoryGetPaginated:
     """Tests for EssayRepository.get_paginated method."""
