@@ -36,6 +36,10 @@ class ModelProvidersContainer(containers.DeclarativeContainer):
                 OllamaProvider(model_name="phi3:mini", temperature=0.0),
             ),
             (
+                "keyword-extraction",
+                OllamaProvider(model_name="phi3:mini", temperature=0.0),
+            ),
+            (
                 "embedding",
                 TransformersProvider(
                     model_name="sentence-transformers/distiluse-base-multilingual-cased-v2",
