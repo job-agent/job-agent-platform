@@ -8,6 +8,7 @@ Or from the package directory:
 """
 
 import argparse
+import atexit
 import logging
 
 from dotenv import load_dotenv
@@ -36,6 +37,18 @@ def main() -> None:
     )
 
     logger = logging.getLogger(__name__)
+
+    # Initialize OpenTelemetry for distributed tracing and metrics
+    try:
+        from telemetry import init_telemetry, shutdown_telemetry
+
+        init_telemetry(service_name="telegram-bot")
+        atexit.register(shutdown_telemetry)
+        logger.info("OpenTelemetry telemetry initialized")
+    except ImportError:
+        logger.warning("OpenTelemetry not available, telemetry disabled")
+    except Exception as e:
+        logger.warning("Failed to initialize telemetry: %s", e)
 
     logger.info("Initializing Telegram bot...")
     bot = create_bot()

@@ -9,6 +9,7 @@ import pika
 from job_scrapper_contracts import ScrapeJobsFilter, ScrapeJobsRequest, ScrapeJobsResponse
 
 from job_agent_backend.messaging.connection import RabbitMQConnection
+from telemetry import inject_trace_context
 
 
 class ScrapperProducer:
@@ -96,6 +97,9 @@ class ScrapperProducer:
             f"Sending scrape request with correlation_id={self.correlation_id} filters={filter_payload}"
         )
 
+        # Inject trace context into message headers for distributed tracing
+        headers = inject_trace_context({})
+
         channel.basic_publish(
             exchange="",
             routing_key=self.REQUEST_QUEUE,
@@ -104,6 +108,7 @@ class ScrapperProducer:
                 correlation_id=self.correlation_id,
                 content_type="application/json",
                 delivery_mode=2,
+                headers=headers,
             ),
             body=json.dumps(request).encode("utf-8"),
         )
