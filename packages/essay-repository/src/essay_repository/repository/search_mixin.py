@@ -4,7 +4,7 @@ This module provides the SearchMixin class that encapsulates
 all search-related functionality (vector, text, hybrid) for essays.
 """
 
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import select, text
 
@@ -14,6 +14,12 @@ from job_agent_platform_contracts.essay_repository.schemas import (
 )
 
 from essay_repository.models import Essay
+
+if TYPE_CHECKING:
+    from contextlib import contextmanager
+    from typing import Generator
+
+    from sqlalchemy.orm import Session
 
 
 class EssaySearchMixin:
@@ -27,6 +33,15 @@ class EssaySearchMixin:
     - _close_session property
     - _model_to_schema(essay: Essay) -> EssaySchema method
     """
+
+    if TYPE_CHECKING:
+        # Type stubs for methods provided by BaseRepository
+        _close_session: bool
+
+        @contextmanager
+        def _session_scope(self, *, commit: bool) -> "Generator[Session, None, None]": ...
+
+        def _model_to_schema(self, essay: Essay) -> EssaySchema: ...
 
     def search_by_embedding(self, embedding: List[float], limit: int) -> List[EssaySchema]:
         """

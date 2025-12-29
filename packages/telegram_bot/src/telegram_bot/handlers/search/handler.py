@@ -47,8 +47,9 @@ async def search_jobs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     args = context.args or []
     params, error = parse_search_params(args)
 
-    if error is not None:
-        await message.reply_text(f"Error: {error.message}")
+    if error is not None or params is None:
+        error_msg = error.message if error else "Failed to parse parameters"
+        await message.reply_text(f"Error: {error_msg}")
         return
 
     if not orchestrator.has_cv(user_id):

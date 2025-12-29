@@ -91,12 +91,13 @@ class EssayRepository(EssaySearchMixin, BaseRepository, IEssayRepository):
 
                 # Re-query to ensure all fields are loaded
                 stmt = select(Essay).where(Essay.id == essay.id)
-                essay = session.scalar(stmt)
+                refreshed_essay = session.scalar(stmt)
+                assert refreshed_essay is not None, "Essay should exist after creation"
 
                 if self._close_session:
-                    session.expunge(essay)
+                    session.expunge(refreshed_essay)
 
-                return self._model_to_schema(essay)
+                return self._model_to_schema(refreshed_essay)
 
         except EssayValidationError:
             raise

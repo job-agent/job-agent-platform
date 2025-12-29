@@ -9,7 +9,14 @@ import pika
 from job_scrapper_contracts import ScrapeJobsFilter, ScrapeJobsRequest, ScrapeJobsResponse
 
 from job_agent_backend.messaging.connection import RabbitMQConnection
-from telemetry import inject_trace_context
+
+try:
+    from telemetry import inject_trace_context
+except ImportError:
+
+    def inject_trace_context(headers: dict) -> dict:
+        """No-op fallback when telemetry is not available."""
+        return headers
 
 
 class ScrapperProducer:
