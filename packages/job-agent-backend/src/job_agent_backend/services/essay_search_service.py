@@ -87,29 +87,26 @@ class EssaySearchService(IEssaySearchService):
     def create(self, essay_data: EssayCreate) -> Essay:
         """Create a new essay with auto-generated embedding.
 
-        Also spawns background keyword generation if a keyword generator
-        is configured.
+        The embedding is generated asynchronously in a background thread,
+        allowing the method to return immediately. Also spawns background
+        keyword generation if a keyword generator is configured.
 
         Args:
             essay_data: Essay data including question, answer, keywords
 
         Returns:
-            Created Essay with embedding stored
+            Created Essay (embedding will be generated asynchronously)
         """
         # Create the essay first
         essay = self._repository.create(essay_data)
 
-        # Generate and store embedding
-        try:
-            text = self._build_embedding_text(
-                question=essay_data.get("question"),
-                answer=essay_data.get("answer"),
-                keywords=essay_data.get("keywords"),
-            )
-            embedding = self._get_embedding(text)
-            self._repository.update_embedding(essay.id, embedding)
-        except Exception as e:
-            logger.warning(f"Failed to generate embedding for essay {essay.id}: {e}")
+        # Spawn background embedding generation
+        self._spawn_embedding_generation(
+            essay_id=essay.id,
+            question=essay_data.get("question"),
+            answer=essay_data.get("answer"),
+            keywords=essay_data.get("keywords"),
+        )
 
         # Spawn background keyword generation
         self._spawn_keyword_generation(essay.id, essay.question, essay.answer)
@@ -123,7 +120,9 @@ class EssaySearchService(IEssaySearchService):
     ) -> Optional[Essay]:
         """Update an essay and regenerate its embedding.
 
-        Note: Keywords are NOT regenerated on update - only on creation.
+        The embedding is regenerated asynchronously in a background thread,
+        allowing the method to return immediately. Keywords are NOT
+        regenerated on update - only on creation.
 
         Args:
             essay_id: ID of the essay to update
@@ -138,17 +137,13 @@ class EssaySearchService(IEssaySearchService):
         if essay is None:
             return None
 
-        # Regenerate embedding
-        try:
-            text = self._build_embedding_text(
-                question=essay.question,
-                answer=essay.answer,
-                keywords=essay.keywords,
-            )
-            embedding = self._get_embedding(text)
-            self._repository.update_embedding(essay.id, embedding)
-        except Exception as e:
-            logger.warning(f"Failed to regenerate embedding for essay {essay.id}: {e}")
+        # Spawn background embedding regeneration
+        self._spawn_embedding_generation(
+            essay_id=essay.id,
+            question=essay.question,
+            answer=essay.answer,
+            keywords=essay.keywords,
+        )
 
         return essay
 
@@ -236,6 +231,54 @@ class EssaySearchService(IEssaySearchService):
             )
         except Exception as e:
             logger.warning(f"Failed to generate keywords for essay {essay_id}: {e}")
+
+    def _spawn_embedding_generation(
+        self,
+        essay_id: int,
+        question: Optional[str],
+        answer: Optional[str],
+        keywords: Optional[List[str]],
+    ) -> None:
+        """Spawn a background thread for embedding generation.
+
+        Args:
+            essay_id: ID of the essay
+            question: Essay question
+            answer: Essay answer
+            keywords: Essay keywords
+        """
+        thread = threading.Thread(
+            target=self._generate_embedding_background,
+            args=(essay_id, question, answer, keywords),
+            daemon=True,
+        )
+        thread.start()
+
+    def _generate_embedding_background(
+        self,
+        essay_id: int,
+        question: Optional[str],
+        answer: Optional[str],
+        keywords: Optional[List[str]],
+    ) -> None:
+        """Background method to generate and persist embedding.
+
+        Args:
+            essay_id: ID of the essay
+            question: Essay question
+            answer: Essay answer
+            keywords: Essay keywords
+        """
+        try:
+            text = self._build_embedding_text(
+                question=question,
+                answer=answer,
+                keywords=keywords,
+            )
+            embedding = self._get_embedding(text)
+            self._repository.update_embedding(essay_id, embedding)
+        except Exception as e:
+            logger.warning(f"Failed to generate embedding for essay {essay_id}: {e}")
 
     def _build_embedding_text(
         self,
