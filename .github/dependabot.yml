@@ -1,0 +1,121 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/packages/telegram_bot"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Root Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # db-core package
+  - package-ecosystem: "pip"
+    directory: "/packages/db-core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # job-agent-platform-contracts package
+  - package-ecosystem: "pip"
+    directory: "/packages/job-agent-platform-contracts"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # cvs-repository package
+  - package-ecosystem: "pip"
+    directory: "/packages/cvs-repository"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # jobs-repository package
+  - package-ecosystem: "pip"
+    directory: "/packages/jobs-repository"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # essay-repository package
+  - package-ecosystem: "pip"
+    directory: "/packages/essay-repository"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # job-agent-backend package
+  - package-ecosystem: "pip"
+    directory: "/packages/job-agent-backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # telegram_bot package
+  - package-ecosystem: "pip"
+    directory: "/packages/telegram_bot"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
