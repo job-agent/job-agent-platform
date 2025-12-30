@@ -61,9 +61,9 @@ class TestJobRepositoryInheritance:
         from db_core import BaseRepository
         from jobs_repository.repository import JobRepository
 
-        assert issubclass(JobRepository, BaseRepository), (
-            "JobRepository must inherit from db_core.BaseRepository after migration"
-        )
+        assert issubclass(
+            JobRepository, BaseRepository
+        ), "JobRepository must inherit from db_core.BaseRepository after migration"
 
     def test_job_repository_instance_is_base_repository(
         self, reference_data_service, job_mapper, db_session
@@ -77,9 +77,9 @@ class TestJobRepositoryInheritance:
 
         repo = JobRepository(reference_data_service, job_mapper, session=db_session)
 
-        assert isinstance(repo, BaseRepository), (
-            "JobRepository instance must be an instance of BaseRepository"
-        )
+        assert isinstance(
+            repo, BaseRepository
+        ), "JobRepository instance must be an instance of BaseRepository"
 
     def test_job_repository_inherits_session_scope_from_base_repository(
         self, reference_data_service, job_mapper, db_session
@@ -99,9 +99,9 @@ class TestJobRepositoryInheritance:
 
         # Verify it's using the BaseRepository implementation
         # by checking the method is from BaseRepository, not defined locally
-        assert JobRepository._session_scope is BaseRepository._session_scope, (
-            "JobRepository should use BaseRepository._session_scope, not define its own"
-        )
+        assert (
+            JobRepository._session_scope is BaseRepository._session_scope
+        ), "JobRepository should use BaseRepository._session_scope, not define its own"
 
     def test_job_repository_init_calls_super_init(self, reference_data_service, job_mapper):
         """JobRepository __init__ should call super().__init__ with session params.
@@ -311,6 +311,6 @@ class TestAlembicBaseImportUpdate:
         )
 
         # Should NOT import from database anymore
-        assert "from jobs_repository.database import Base" not in content, (
-            "alembic/env.py should NOT import from jobs_repository.database after migration"
-        )
+        assert (
+            "from jobs_repository.database import Base" not in content
+        ), "alembic/env.py should NOT import from jobs_repository.database after migration"

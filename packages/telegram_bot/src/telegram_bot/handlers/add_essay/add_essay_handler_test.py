@@ -25,9 +25,9 @@ class TestAddEssayHandlerInstructions:
 
         await add_essay_handler(setup.update, setup.context)
 
-        assert any("Answer:" in text for text in setup.message._reply_texts), (
-            f"Expected instructions mentioning 'Answer:' format, got: {setup.message._reply_texts}"
-        )
+        assert any(
+            "Answer:" in text for text in setup.message._reply_texts
+        ), f"Expected instructions mentioning 'Answer:' format, got: {setup.message._reply_texts}"
 
 
 class TestAddEssayHandlerParsing:
