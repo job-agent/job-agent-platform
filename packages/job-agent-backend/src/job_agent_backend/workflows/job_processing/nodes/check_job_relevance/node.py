@@ -1,10 +1,14 @@
 """Check job relevance node implementation."""
 
+import logging
 from typing import Callable
 
-from .....model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
+from job_agent_backend.utils import cosine_similarity
 from ...state import AgentState
 from .result import CheckRelevanceResult
+
+logger = logging.getLogger(__name__)
 
 
 def create_check_job_relevance_node(
@@ -38,21 +42,17 @@ def create_check_job_relevance_node(
         job_id = job.get("job_id")
         cv_context = state.get("cv_context", "")
 
-        print("\n" + "=" * 60)
-        print(f"Checking relevance for job ID {job_id}...")
-        print("=" * 60 + "\n")
+        logger.info("Checking relevance for job ID %s", job_id)
 
         if not cv_context:
-            print(f"  Job (ID: {job_id}): No CV context available, assuming relevant")
-            print("=" * 60 + "\n")
+            logger.info("Job (ID: %s): No CV context available, assuming relevant", job_id)
             return {"is_relevant": True}
 
         job_title = job.get("title", "Unknown")
         job_description = job.get("description", "")
 
         if not job_description:
-            print(f"  Job (ID: {job_id}): No description available, assuming relevant")
-            print("=" * 60 + "\n")
+            logger.info("Job (ID: %s): No description available, assuming relevant", job_id)
             return {"is_relevant": True}
 
         try:
@@ -67,11 +67,6 @@ def create_check_job_relevance_node(
             job_embedding = model.embed_query(job_text)
 
             # Calculate cosine similarity
-            import numpy as np
-
-            def cosine_similarity(a, b):
-                return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
             similarity = cosine_similarity(cv_embedding, job_embedding)
 
             # Threshold for relevance
@@ -82,16 +77,17 @@ def create_check_job_relevance_node(
             is_relevant = bool(similarity >= THRESHOLD)
             relevance_status = "RELEVANT" if is_relevant else "IRRELEVANT"
 
-            print(f"  Job (ID: {job_id}): {relevance_status} (Similarity: {similarity:.4f})")
+            logger.info("Job (ID: %s): %s (Similarity: %.4f)", job_id, relevance_status, similarity)
 
         except Exception as e:
-            print(f"  Job (ID: {job_id}): Error checking relevance - {e}")
-            print("    Assuming relevant by default\n")
+            logger.warning(
+                "Job (ID: %s): Error checking relevance - %s. Assuming relevant by default",
+                job_id,
+                e,
+            )
             is_relevant = True
 
-        print("=" * 60)
-        print(f"Finished checking relevance for job ID {job_id}")
-        print("=" * 60 + "\n")
+        logger.info("Finished checking relevance for job ID %s", job_id)
 
         return {"is_relevant": is_relevant}
 

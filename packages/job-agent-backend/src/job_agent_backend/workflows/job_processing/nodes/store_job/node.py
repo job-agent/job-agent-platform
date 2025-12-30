@@ -1,5 +1,6 @@
 """Store job node implementation."""
 
+import logging
 from typing import Callable
 
 from job_agent_platform_contracts import IJobRepository
@@ -9,6 +10,8 @@ from job_agent_platform_contracts.job_repository.schemas import JobCreate
 
 from ...state import AgentState
 from .result import StoreJobResult
+
+logger = logging.getLogger(__name__)
 
 
 def create_store_job_node(
@@ -42,9 +45,7 @@ def create_store_job_node(
         job_id = job.get("job_id")
         status = state.get("status", "in_progress")
 
-        print(f"\n{'=' * 60}")
-        print(f"Storing job to database (ID: {job_id})...")
-        print(f"{'=' * 60}\n")
+        logger.info("Storing job to database (ID: %s)", job_id)
 
         try:
             job_repo = job_repository_factory()
@@ -56,25 +57,22 @@ def create_store_job_node(
 
             if (extracted_must_have_skills := state.get("extracted_must_have_skills")) is not None:
                 job_create_data["must_have_skills"] = extracted_must_have_skills
-                print(f"  Added {len(extracted_must_have_skills)} must-have skills")
+                logger.debug("Added %d must-have skills", len(extracted_must_have_skills))
 
             if (
                 extracted_nice_to_have_skills := state.get("extracted_nice_to_have_skills")
             ) is not None:
                 job_create_data["nice_to_have_skills"] = extracted_nice_to_have_skills
-                print(f"  Added {len(extracted_nice_to_have_skills)} nice-to-have skills")
+                logger.debug("Added %d nice-to-have skills", len(extracted_nice_to_have_skills))
 
             stored_job = job_repo.create(job_create_data)
-            print(f"  Job created successfully (DB ID: {stored_job.id})")
+            logger.info("Job created successfully (DB ID: %s)", stored_job.id)
 
         except Exception as e:
-            print(f"  ERROR storing job: {e}")
-            print(f"{'=' * 60}\n")
+            logger.error("Error storing job: %s", e)
             return {"status": "error"}
 
-        print(f"{'=' * 60}")
-        print(f"Finished storing job (ID: {job_id})")
-        print(f"{'=' * 60}\n")
+        logger.info("Finished storing job (ID: %s)", job_id)
 
         return {"status": status}
 

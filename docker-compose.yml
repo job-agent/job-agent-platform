@@ -1,49 +1,4 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: job-agent-db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - job-agent-network
-    restart: unless-stopped
-
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: job-agent-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
-    ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - job-agent-network
-    restart: unless-stopped
-
   telegram_bot:
     build:
       context: .
@@ -60,34 +15,22 @@ services:
       LANGSMITH_TRACING_V2: ${LANGSMITH_TRACING_V2}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      ollama:
-        condition: service_started
-    networks:
-      - job-agent-network
-    restart: unless-stopped
-
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: job-agent-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
+      # OpenTelemetry configuration
+      OTEL_SERVICE_NAME: telegram-bot
+      OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:-0.1.0}
+      OTEL_DEPLOYMENT_ENVIRONMENT: ${OTEL_DEPLOYMENT_ENVIRONMENT:-development}
+      OTEL_ENABLED: ${OTEL_ENABLED:-true}
+      OTEL_EXPORTER_CONSOLE_ENABLED: ${OTEL_EXPORTER_CONSOLE_ENABLED:-true}
+      OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-1.0}
+      OTEL_METRICS_EXPORT_INTERVAL: ${OTEL_METRICS_EXPORT_INTERVAL:-60000}
     networks:
       - job-agent-network
     restart: unless-stopped
 
   ollama-puller:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.4
     container_name: job-agent-ollama-puller
-    depends_on:
-      - ollama
     entrypoint: /bin/sh
     command: "-c 'sleep 5; ollama pull phi3:mini'"
     environment:
@@ -96,15 +39,7 @@ services:
       - job-agent-network
     restart: "no"
 
-volumes:
-  postgres_data:
-    driver: local
-  rabbitmq_data:
-    driver: local
-  ollama_data:
-    driver: local
-
 networks:
   job-agent-network:
+    external: true
     name: job-agent-network
-    driver: bridge

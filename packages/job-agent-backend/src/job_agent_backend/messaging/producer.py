@@ -10,6 +10,14 @@ from job_scrapper_contracts import ScrapeJobsFilter, ScrapeJobsRequest, ScrapeJo
 
 from job_agent_backend.messaging.connection import RabbitMQConnection
 
+try:
+    from telemetry import inject_trace_context
+except ImportError:
+
+    def inject_trace_context(headers: dict) -> dict:
+        """No-op fallback when telemetry is not available."""
+        return headers
+
 
 class ScrapperProducer:
     """RabbitMQ producer that sends scrape job requests using RPC pattern.
@@ -19,7 +27,8 @@ class ScrapperProducer:
     """
 
     REQUEST_QUEUE = "job.scrape.request"
-    RESPONSE_TIMEOUT = 600  # 10 minutes timeout for scraping operations
+    RESPONSE_TIMEOUT = 1200  # 20 minutes timeout for scraping operations
+    POLL_INTERVAL = 0.1  # 100ms poll interval for responsive streaming
 
     def __init__(self, rabbitmq_url: Optional[str] = None):
         """Initialize the producer.
@@ -95,6 +104,9 @@ class ScrapperProducer:
             f"Sending scrape request with correlation_id={self.correlation_id} filters={filter_payload}"
         )
 
+        # Inject trace context into message headers for distributed tracing
+        headers = inject_trace_context({})
+
         channel.basic_publish(
             exchange="",
             routing_key=self.REQUEST_QUEUE,
@@ -103,18 +115,19 @@ class ScrapperProducer:
                 correlation_id=self.correlation_id,
                 content_type="application/json",
                 delivery_mode=2,
+                headers=headers,
             ),
             body=json.dumps(request).encode("utf-8"),
         )
 
         connection = self.rabbitmq_connection.connection
         assert connection is not None, "Connection must be established before processing events"
-        timeout_counter = 0
+        elapsed_time = 0.0
         last_yielded_index = 0
 
-        while not self.is_complete and timeout_counter < self.RESPONSE_TIMEOUT:
-            connection.process_data_events(time_limit=1)
-            timeout_counter += 1
+        while not self.is_complete and elapsed_time < self.RESPONSE_TIMEOUT:
+            connection.process_data_events(time_limit=self.POLL_INTERVAL)
+            elapsed_time += self.POLL_INTERVAL
 
             while last_yielded_index < len(self.responses):
                 response = self.responses[last_yielded_index]

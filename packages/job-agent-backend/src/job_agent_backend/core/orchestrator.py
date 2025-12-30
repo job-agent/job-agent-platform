@@ -2,6 +2,7 @@
 
 This module contains the business logic for scraping, filtering, and processing jobs.
 It can be used by any interface (CLI, Telegram, Web, etc.).
+CV management is delegated to CVManager.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,7 @@ from job_agent_backend.filter_service import IFilterService
 from job_agent_backend.messaging import IScrapperClient
 from job_agent_backend.workflows import run_job_processing, run_pii_removal
 from job_agent_backend.workflows.job_processing.state import AgentState
+from job_agent_backend.core.cv_manager import CVManager
 
 
 # Maximum number of days to look back when auto-calculating posted_after
@@ -35,7 +37,8 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
     """Orchestrates the complete job processing pipeline.
 
     This class provides a clean interface for running the job agent workflow
-    from any entry point (CLI, Telegram bot, API, etc.).
+    from any entry point (CLI, Telegram bot, API, etc.). CV operations are
+    delegated to CVManager for separation of concerns.
     """
 
     def __init__(
@@ -66,14 +69,20 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         """
         self.logger: Callable[[str], None] = logger or print
         repository_factory = CVRepository if cv_repository_class is None else cv_repository_class
-        self.cv_repository_class: CVRepositoryFactory = repository_factory
-        self.cv_loader: ICVLoader = cv_loader
         if job_repository_factory is None:
             raise ValueError("job_repository_factory must be provided")
         self.job_repository_factory: Callable[[], IJobRepository] = job_repository_factory
         self.scrapper_manager: IScrapperClient = scrapper_manager
         self.filter_service: IFilterService = filter_service
         self.database_initializer: Callable[[], None] = database_initializer
+
+        # Delegate CV operations to CVManager
+        self._cv_manager = CVManager(
+            cv_repository_class=repository_factory,
+            cv_loader=cv_loader,
+            pii_removal_func=run_pii_removal,
+            logger=self.logger,
+        )
 
     def get_cv_path(self, user_id: int) -> Path:
         """Get the storage path for a user's CV.
@@ -84,10 +93,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Returns:
             Path object for the user's CV file
         """
-        package_root = Path(__file__).parent.parent.parent
-        cv_dir = package_root / "data" / "cvs"
-        cv_dir.mkdir(parents=True, exist_ok=True)
-        return cv_dir / f"cv_{user_id}.txt"
+        return self._cv_manager.get_cv_path(user_id)
 
     def upload_cv(self, user_id: int, file_path: str) -> None:
         """Upload and process a CV file for a user.
@@ -102,29 +108,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Raises:
             ValueError: If file format is unsupported or processing fails
         """
-        file_path_lower = file_path.lower()
-
-        if file_path_lower.endswith(".pdf"):
-            self.logger(f"Processing PDF CV for user {user_id}")
-            cv_content = self.cv_loader.load_from_pdf(file_path)
-        elif file_path_lower.endswith(".txt"):
-            self.logger(f"Processing text CV for user {user_id}")
-            cv_content = self.cv_loader.load_from_text(file_path)
-        else:
-            extension = Path(file_path).suffix
-            raise ValueError(f"Unsupported file format: {extension}. Supported formats: .pdf, .txt")
-
-        if not cv_content:
-            raise ValueError("Failed to extract content from CV file")
-
-        self.logger(f"Removing PII from CV for user {user_id}")
-        cleaned_cv_content = run_pii_removal(cv_content)
-        self.logger(f"PII removed from CV for user {user_id}")
-
-        cv_path = self.get_cv_path(user_id)
-        cv_repository = self.cv_repository_class(cv_path)
-        cv_repository.create(cleaned_cv_content)
-        self.logger(f"CV saved for user {user_id}")
+        self._cv_manager.upload_cv(user_id, file_path)
 
     def has_cv(self, user_id: int) -> bool:
         """Check if a user has uploaded a CV.
@@ -135,12 +119,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Returns:
             True if user has a CV, False otherwise
         """
-        try:
-            cv_path = self.get_cv_path(user_id)
-            cv_repository = self.cv_repository_class(cv_path)
-            return cv_repository.find() is not None
-        except Exception:
-            return False
+        return self._cv_manager.has_cv(user_id)
 
     def load_cv(self, user_id: int) -> str:
         """Load CV content for a user from repository.
@@ -156,16 +135,7 @@ class JobAgentOrchestrator(IJobAgentOrchestrator):
         Raises:
             ValueError: If CV is not found or cannot be loaded
         """
-        self.logger(f"Loading CV from repository for user {user_id}")
-        cv_path = self.get_cv_path(user_id)
-        cv_repository = self.cv_repository_class(cv_path)
-        cv_content = cv_repository.find()
-
-        if not cv_content:
-            raise ValueError(f"CV not found for user {user_id}. Please upload a CV first.")
-
-        self.logger(f"CV loaded successfully for user {user_id}")
-        return cv_content
+        return self._cv_manager.load_cv(user_id)
 
     def _calculate_posted_after(self, days: Optional[int]) -> datetime:
         """Calculate the posted_after datetime based on days parameter.

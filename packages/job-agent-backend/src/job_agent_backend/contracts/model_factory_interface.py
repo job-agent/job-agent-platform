@@ -32,7 +32,7 @@ class IModelFactory(Protocol):
     @overload
     def get_model(
         self,
-        model_id: Literal["pii-removal", "skill-extraction"],
+        model_id: Literal["pii-removal", "skill-extraction", "keyword-extraction"],
         provider: None = None,
         model_name: None = None,
         temperature: None = None,

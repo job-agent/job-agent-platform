@@ -11,7 +11,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
 
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 from job_agent_backend.workflows.job_processing.node_names import JobProcessingNode
 from job_agent_backend.workflows.job_processing.nodes import (
     create_check_job_relevance_node,

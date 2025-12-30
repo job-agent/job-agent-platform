@@ -51,14 +51,23 @@ def create_extract_must_have_skills_node(
             prompt = EXTRACT_MUST_HAVE_SKILLS_PROMPT
 
             messages = prompt.invoke({"job_description": description})
-            raw_result = structured_model.invoke(messages)
+            raw_result = structured_model.invoke(
+                messages,
+                config={"run_name": "Extract Must-Have Skills"},
+            )
             result = raw_result if isinstance(raw_result, SkillsExtraction) else None
 
             skills = (result.skills or []) if result is not None else []
 
-            print(f"  Job (ID: {job_id}): Extracted {len(skills)} skills")
+            # Count total individual skills across all groups for logging
+            total_skills = sum(len(group) for group in skills)
+            print(f"  Job (ID: {job_id}): Extracted {total_skills} skills in {len(skills)} groups")
             if skills:
-                print(f"    Skills: {', '.join(skills)}\n")
+                # Format 2D skills: show OR groups with " or " and AND groups with ", "
+                formatted = ", ".join(
+                    " or ".join(group) if len(group) > 1 else group[0] for group in skills if group
+                )
+                print(f"    Skills: {formatted}\n")
 
         except Exception as e:
             print(f"  Job (ID: {job_id}): Error extracting skills - {e}")

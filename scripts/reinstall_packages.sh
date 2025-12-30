@@ -50,5 +50,13 @@ done
 
 echo ""
 echo "=================================="
+echo "Installing root project dependencies..."
+echo "=================================="
+
+# Install root project with dev dependencies
+pip install -e "$PROJECT_ROOT[dev]"
+
+echo ""
+echo "=================================="
 echo "Done! All packages reinstalled."
 echo "=================================="

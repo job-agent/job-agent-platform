@@ -3,12 +3,15 @@
 This module provides the public API for running the PII removal workflow.
 """
 
+import logging
 import os
 from typing import Optional
 
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 from .pii_removal import create_pii_removal_workflow
 from .state import PIIRemovalState
+
+logger = logging.getLogger(__name__)
 
 
 def run_pii_removal(
@@ -43,8 +46,8 @@ def run_pii_removal(
     project_name = os.getenv("LANGSMITH_PROJECT", "default")
 
     if tracing_enabled:
-        print(f"LangSmith tracing enabled - Project: {project_name}")
-        print("   View traces at: https://smith.langchain.com/\n")
+        logger.info("LangSmith tracing enabled - Project: %s", project_name)
+        logger.info("View traces at: https://smith.langchain.com/")
 
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
@@ -62,6 +65,6 @@ def run_pii_removal(
 
     final_state = workflow.invoke(initial_state)
 
-    print("PII removal completed successfully")
+    logger.info("PII removal completed successfully")
 
     return final_state["cv_context"]

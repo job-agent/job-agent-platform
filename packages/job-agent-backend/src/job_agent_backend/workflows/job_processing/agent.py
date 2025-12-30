@@ -3,6 +3,7 @@
 This module provides the public API for running the workflows system.
 """
 
+import logging
 import os
 from typing import Callable, Optional, cast
 
@@ -12,9 +13,11 @@ from job_agent_platform_contracts import IJobRepository
 
 from job_scrapper_contracts import JobDict
 
-from job_agent_backend.model_providers import IModelFactory
+from job_agent_backend.contracts import IModelFactory
 from .job_processing import create_workflow
 from .state import AgentState
+
+logger = logging.getLogger(__name__)
 
 
 def run_job_processing(
@@ -58,8 +61,8 @@ def run_job_processing(
     project_name = os.getenv("LANGSMITH_PROJECT", "default")
 
     if tracing_enabled:
-        print(f"LangSmith tracing enabled - Project: {project_name}")
-        print("   View traces at: https://smith.langchain.com/\n")
+        logger.info("LangSmith tracing enabled - Project: %s", project_name)
+        logger.info("View traces at: https://smith.langchain.com/")
 
     if not cv_content:
         raise ValueError("CV content is required but was not provided")
@@ -91,6 +94,6 @@ def run_job_processing(
 
     final_state = cast(AgentState, workflow.invoke(initial_state))
 
-    print(f"Workflow completed with status: {final_state['status']}")
+    logger.info("Workflow completed with status: %s", final_state["status"])
 
     return final_state

@@ -7,12 +7,72 @@ from typing_extensions import TypedDict
 from job_scrapper_contracts import JobDict
 
 
+def _format_2d_skills(skills: list[list[str]], max_skills: int = 10) -> str:
+    """Format 2D skill structure for display.
+
+    Skills within inner lists (OR groups) are joined with " or ".
+    Groups are joined with ", ".
+    Total skill count is limited to max_skills, with remainder shown.
+
+    Args:
+        skills: 2D list where outer list = AND groups, inner lists = OR alternatives
+        max_skills: Maximum number of individual skills to display
+
+    Returns:
+        Formatted string like "JavaScript or Python, React, Docker or Kubernetes"
+    """
+    if not skills:
+        return ""
+
+    # Count total individual skills and format groups
+    total_count = 0
+    formatted_groups = []
+
+    for group in skills:
+        if not group:
+            continue
+
+        # Count skills in this group
+        group_size = len(group)
+        remaining_budget = max_skills - total_count
+
+        if remaining_budget <= 0:
+            break
+
+        if group_size <= remaining_budget:
+            # Include entire group
+            formatted_groups.append(" or ".join(group))
+            total_count += group_size
+        else:
+            # Partial group - take only what fits
+            formatted_groups.append(" or ".join(group[:remaining_budget]))
+            total_count += remaining_budget
+            break
+
+    result = ", ".join(formatted_groups)
+
+    # Calculate total skills across all groups
+    total_all = sum(len(group) for group in skills)
+    if total_all > max_skills:
+        result += f" ... and {total_all - total_count} more"
+
+    return result
+
+
 class JobResultDict(TypedDict, total=False):
-    """Result dictionary containing job data and extracted skills."""
+    """Result dictionary containing job data and extracted skills.
+
+    The skill fields use a 2D list format where:
+    - The outer list represents AND relationships (all groups are required/preferred)
+    - Inner lists represent OR relationships (alternatives within a group)
+
+    Example: [["JavaScript", "Python"], ["React"]] means
+    "(JavaScript OR Python) AND React"
+    """
 
     job: JobDict
-    extracted_must_have_skills: list[str]
-    extracted_nice_to_have_skills: list[str]
+    extracted_must_have_skills: list[list[str]]
+    extracted_nice_to_have_skills: list[list[str]]
 
 
 def format_job_message(result: JobResultDict, job_number: int, total_jobs: int) -> str:
@@ -52,17 +112,13 @@ def format_job_message(result: JobResultDict, job_number: int, total_jobs: int) 
         message += f"⏰ Type: {job['employment_type']}\n"
 
     if must_have_skills:
-        skills_text = ", ".join(must_have_skills[:10])
+        skills_text = _format_2d_skills(must_have_skills)
         message += f"\n🔧 Must-have skills: {skills_text}"
-        if len(must_have_skills) > 10:
-            message += f" ... and {len(must_have_skills) - 10} more"
         message += "\n"
 
     if nice_to_have_skills:
-        skills_text = ", ".join(nice_to_have_skills[:10])
+        skills_text = _format_2d_skills(nice_to_have_skills)
         message += f"\n✨ Nice-to-have skills: {skills_text}"
-        if len(nice_to_have_skills) > 10:
-            message += f" ... and {len(nice_to_have_skills) - 10} more"
         message += "\n"
 
     message += f"\n🔗 URL: {job.get('url', 'N/A')}"

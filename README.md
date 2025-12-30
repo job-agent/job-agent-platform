@@ -51,8 +51,9 @@ git clone <this-repo>
 cd job-agent-platform
 cp .env.example .env  # Edit with your API keys
 
-# 2. Start infrastructure
-docker compose up -d postgres rabbitmq
+# 2. Start infrastructure (from the infrastructure repository)
+cd ../infrastructure
+docker compose up -d
 
 # 3. Start mock scrapper service
 cd ../scrappers-mock
@@ -81,15 +82,17 @@ Copy or rename `.env.example` to `.env` and populate it with the required variab
 
 ### 2. Start Infrastructure Services
 
-Start PostgreSQL and RabbitMQ using Docker Compose:
+Start PostgreSQL, RabbitMQ, and Ollama from the infrastructure repository:
 
 ```bash
-docker compose up -d postgres rabbitmq
+cd ../infrastructure
+docker compose up -d
 ```
 
 This will start:
-- PostgreSQL on port 5432
+- PostgreSQL on port 5432 (using pgvector/pgvector:pg16 for vector support)
 - RabbitMQ on port 5672 (AMQP) and 15672 (Management UI)
+- Ollama on port 11434 (for local LLM inference)
 
 ### 3. Choose and Start a Scrapper Service
 
@@ -245,7 +248,7 @@ LANGSMITH_API_KEY=ls__...
 - `packages/telegram_bot` — Async Telegram client that guides users through uploading CVs, triggering searches, and reviewing relevant jobs.
 - `packages/db-core` — Shared database infrastructure providing `BaseRepository`, session management, and transaction handling.
 - `packages/jobs-repository` — Job persistence layer built on db-core with Alembic migrations.
-- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`.
+- `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`. Essays automatically receive AI-generated embeddings and keywords via background threads; essays are immediately searchable via full-text after creation.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
 
@@ -297,9 +300,10 @@ ruff check packages/*/src
 
 ### Managing Services
 
-**Start all infrastructure services:**
+**Start all infrastructure services (from infrastructure repository):**
 ```bash
-docker compose up -d postgres rabbitmq
+cd ../infrastructure
+docker compose up -d
 ```
 
 **View logs:**
@@ -307,8 +311,8 @@ docker compose up -d postgres rabbitmq
 # Platform services
 docker compose logs telegram_bot -f
 
-# RabbitMQ
-docker compose logs rabbitmq -f
+# RabbitMQ (from infrastructure directory)
+cd ../infrastructure && docker compose logs rabbitmq -f
 
 # Mock scrapper service (from scrappers-mock directory)
 cd scrappers-mock && docker compose logs scrapper_service_mock -f
@@ -376,10 +380,10 @@ If you see `ACCESS_REFUSED - Login was refused using authentication mechanism PL
 
 If services can't connect to RabbitMQ:
 
-1. Verify RabbitMQ is running: `docker compose ps rabbitmq`
-2. Check RabbitMQ logs: `docker compose logs rabbitmq`
+1. Verify RabbitMQ is running (from infrastructure directory): `docker compose ps rabbitmq`
+2. Check RabbitMQ logs (from infrastructure directory): `docker compose logs rabbitmq`
 3. Verify the network: `docker network ls | grep job-agent-network`
-4. Ensure all services are on the same network in docker-compose.yml
+4. Ensure all services are on the same Docker network (job-agent-network)
 
 ### Database Migration Errors
 
