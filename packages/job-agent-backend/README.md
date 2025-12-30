@@ -104,9 +104,9 @@ clean_cv = run_pii_removal(raw_cv_text)
 result = run_job_processing(job_dict, clean_cv)
 ```
 
-### Essay Keyword Generation
+### Essay Creation and Background Processing
 
-When essays are created through `EssaySearchService`, keywords are automatically generated in the background using an LLM. The `KeywordGenerator` service extracts up to 10 keywords spanning hard skills, soft skills, and contextual labels:
+When essays are created or updated through `EssaySearchService`, several background operations run asynchronously in daemon threads, allowing the methods to return immediately:
 
 ```python
 from job_agent_backend.container import get_essay_search_service
@@ -118,10 +118,15 @@ essay = search_service.create({
     "question": "Describe your leadership experience",
     "answer": "I led a team of 5 engineers to deliver a Python microservice..."
 })
-# Essay is returned immediately; keywords are generated asynchronously in a background thread
+# Essay is returned immediately; embedding and keywords are generated in background threads
 ```
 
-Keywords are only generated on essay creation, not on updates. The background generation uses the pre-configured `"keyword-extraction"` model (Ollama phi3:mini).
+**Background processing includes:**
+
+- **Embedding generation** (create and update): Vector embeddings are generated asynchronously using the `"embedding"` model. Essays are immediately searchable via full-text search after creation; vector search becomes available once embedding generation completes.
+- **Keyword generation** (create only): Up to 10 keywords (hard skills, soft skills, contextual labels) are extracted using the `"keyword-extraction"` model (Ollama phi3:mini).
+
+Both processes handle failures gracefully: if embedding or keyword generation fails, the essay persists with NULL values for those fields, a warning is logged, and no exception propagates to the caller.
 
 ## Development
 
