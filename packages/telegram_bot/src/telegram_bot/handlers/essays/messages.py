@@ -20,3 +20,20 @@ BTN_NEXT = "Next"
 # Boundary messages for disabled buttons
 MSG_FIRST_PAGE = "You are on the first page."
 MSG_LAST_PAGE = "You are on the last page."
+
+# Delete button label
+BTN_DELETE = "Delete"
+
+# Delete confirmation prompt
+CONFIRM_DELETE_PROMPT = "Are you sure you want to delete this essay?\n\nID: {essay_id}"
+
+# Confirmation buttons
+BTN_CONFIRM_DELETE = "Yes, Delete"
+BTN_CANCEL_DELETE = "Cancel"
+
+# Success message
+MSG_ESSAY_DELETED = "Essay deleted successfully."
+
+# Error messages
+MSG_ESSAY_NOT_FOUND = "Essay not found. It may have already been deleted."
+MSG_DELETE_FAILED = "Failed to delete essay. Please try again."

@@ -11,6 +11,7 @@ These tests verify:
 import threading
 from unittest.mock import MagicMock, patch
 
+import pytest
 
 from job_agent_backend.services.essay_search_service import EssaySearchService
 
@@ -900,3 +901,110 @@ class TestEssaySearchServiceImmediateSearchability:
         assert result.embedding is None
         assert result.question == "Test question?"
         assert result.answer == "Test answer."
+
+
+class TestEssaySearchServiceDelete:
+    """Tests for EssaySearchService.delete method."""
+
+    def test_delete_delegates_to_repository(self):
+        """Service delete() calls repository.delete() with the essay ID."""
+        mock_repository = _create_mock_repository()
+        mock_repository.delete.return_value = True
+        mock_factory = _create_mock_model_factory()
+        mock_keyword_generator = _create_mock_keyword_generator()
+
+        service = EssaySearchService(
+            repository=mock_repository,
+            model_factory=mock_factory,
+            keyword_generator=mock_keyword_generator,
+        )
+
+        service.delete(42)
+
+        mock_repository.delete.assert_called_once_with(42)
+
+    def test_delete_returns_true_when_essay_exists(self):
+        """Service delete() returns True when repository successfully deletes essay."""
+        mock_repository = _create_mock_repository()
+        mock_repository.delete.return_value = True
+        mock_factory = _create_mock_model_factory()
+        mock_keyword_generator = _create_mock_keyword_generator()
+
+        service = EssaySearchService(
+            repository=mock_repository,
+            model_factory=mock_factory,
+            keyword_generator=mock_keyword_generator,
+        )
+
+        result = service.delete(42)
+
+        assert result is True
+
+    def test_delete_returns_false_when_essay_not_exists(self):
+        """Service delete() returns False when essay does not exist."""
+        mock_repository = _create_mock_repository()
+        mock_repository.delete.return_value = False
+        mock_factory = _create_mock_model_factory()
+        mock_keyword_generator = _create_mock_keyword_generator()
+
+        service = EssaySearchService(
+            repository=mock_repository,
+            model_factory=mock_factory,
+            keyword_generator=mock_keyword_generator,
+        )
+
+        result = service.delete(99999)
+
+        assert result is False
+
+    def test_delete_with_zero_id_returns_false(self):
+        """Service delete() with zero ID returns False."""
+        mock_repository = _create_mock_repository()
+        mock_repository.delete.return_value = False
+        mock_factory = _create_mock_model_factory()
+        mock_keyword_generator = _create_mock_keyword_generator()
+
+        service = EssaySearchService(
+            repository=mock_repository,
+            model_factory=mock_factory,
+            keyword_generator=mock_keyword_generator,
+        )
+
+        result = service.delete(0)
+
+        assert result is False
+
+    def test_delete_with_negative_id_returns_false(self):
+        """Service delete() with negative ID returns False."""
+        mock_repository = _create_mock_repository()
+        mock_repository.delete.return_value = False
+        mock_factory = _create_mock_model_factory()
+        mock_keyword_generator = _create_mock_keyword_generator()
+
+        service = EssaySearchService(
+            repository=mock_repository,
+            model_factory=mock_factory,
+            keyword_generator=mock_keyword_generator,
+        )
+
+        result = service.delete(-1)
+
+        assert result is False
+
+    def test_delete_propagates_repository_exception(self):
+        """Service delete() propagates exceptions from repository."""
+        mock_repository = _create_mock_repository()
+        mock_repository.delete.side_effect = Exception("Database connection failed")
+        mock_factory = _create_mock_model_factory()
+        mock_keyword_generator = _create_mock_keyword_generator()
+
+        service = EssaySearchService(
+            repository=mock_repository,
+            model_factory=mock_factory,
+            keyword_generator=mock_keyword_generator,
+        )
+
+        with pytest.raises(Exception) as exc_info:
+            service.delete(42)
+
+        assert "Database connection failed" in str(exc_info.value)

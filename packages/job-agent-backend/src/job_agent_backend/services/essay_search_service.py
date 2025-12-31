@@ -159,6 +159,17 @@ class EssaySearchService(IEssaySearchService):
         """
         return self._repository.get_paginated(page=page, page_size=page_size)
 
+    def delete(self, essay_id: int) -> bool:
+        """Delete an essay by ID.
+
+        Args:
+            essay_id: ID of the essay to delete
+
+        Returns:
+            True if the essay was deleted, False if not found
+        """
+        return self._repository.delete(essay_id)
+
     def backfill_embeddings(self) -> int:
         """Generate embeddings for all essays without one.
 
