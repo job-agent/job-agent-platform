@@ -68,6 +68,7 @@ Thumbs.db
 
 # Project specific
 *.log
+*.session
 
 # Personal data
 data/

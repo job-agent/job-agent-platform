@@ -2,51 +2,20 @@
 
 These tests verify the migration-specific behavior after essay-repository
 is refactored to use db-core. They focus on:
-1. Import verification - packages can import from db-core after migration
-2. Repository inheritance - EssayRepository properly inherits BaseRepository
-3. Exception mapping - correct db-core exceptions are raised
-4. Session management - _session_scope still works after inheriting from BaseRepository
+1. Repository inheritance - EssayRepository properly inherits BaseRepository
+2. Exception mapping - correct db-core exceptions are raised
+3. Session management - _session_scope still works after inheriting from BaseRepository
 
 These tests are designed to FAIL before the migration is complete (RED phase).
 Existing repository functionality tests should NOT be duplicated here.
+
+Note: Import verification tests were removed as they test implementation details
+(whether something can be imported) rather than observable behavior.
 """
 
 import pytest
 from unittest.mock import MagicMock, patch
 from sqlalchemy.orm import Session
-
-
-class TestDbCoreImports:
-    """Verify that db-core imports work correctly after migration."""
-
-    def test_can_import_base_repository_from_db_core(self):
-        """Verify BaseRepository can be imported from db-core.
-
-        After migration, essay-repository should be able to import
-        BaseRepository from db-core for inheritance.
-        """
-        from db_core import BaseRepository
-
-        assert BaseRepository is not None
-
-    def test_can_import_transaction_error_from_db_core(self):
-        """Verify TransactionError can be imported from db-core."""
-        from db_core import TransactionError
-
-        assert TransactionError is not None
-
-    def test_can_import_database_error_from_db_core(self):
-        """Verify DatabaseError base class can be imported from db-core."""
-        from db_core import DatabaseError
-
-        assert DatabaseError is not None
-
-    def test_can_import_get_session_factory_from_db_core(self):
-        """Verify get_session_factory can be imported from db-core."""
-        from db_core import get_session_factory
-
-        assert get_session_factory is not None
-        assert callable(get_session_factory)
 
 
 class TestEssayRepositoryInheritance:
