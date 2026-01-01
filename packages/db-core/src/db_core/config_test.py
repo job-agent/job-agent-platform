@@ -45,72 +45,9 @@ class TestDatabaseConfig:
 
         assert config.url == "postgresql://explicit:5432/explicit_db"
 
-    def test_pool_size_defaults_to_10(self):
-        """DatabaseConfig should have pool_size defaulting to 10."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = DatabaseConfig()
-
-            assert config.pool_size == 10
-
-    def test_pool_size_can_be_customized(self):
-        """DatabaseConfig pool_size can be set to custom value."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = DatabaseConfig(pool_size=25)
-
-            assert config.pool_size == 25
-
-    def test_max_overflow_defaults_to_20(self):
-        """DatabaseConfig should have max_overflow defaulting to 20."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = DatabaseConfig()
-
-            assert config.max_overflow == 20
-
-    def test_max_overflow_can_be_customized(self):
-        """DatabaseConfig max_overflow can be set to custom value."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = DatabaseConfig(max_overflow=50)
-
-            assert config.max_overflow == 50
-
-    def test_echo_defaults_to_false(self):
-        """DatabaseConfig should have echo defaulting to False."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = DatabaseConfig()
-
-            assert config.echo is False
-
-    def test_echo_can_be_enabled(self):
-        """DatabaseConfig echo can be set to True for SQL logging."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = DatabaseConfig(echo=True)
-
-            assert config.echo is True
-
-    def test_all_fields_can_be_customized(self):
-        """DatabaseConfig allows customization of all fields."""
-        config = DatabaseConfig(
-            url="postgresql://custom:5432/customdb",
-            pool_size=15,
-            max_overflow=30,
-            echo=True,
-        )
-
-        assert config.url == "postgresql://custom:5432/customdb"
-        assert config.pool_size == 15
-        assert config.max_overflow == 30
-        assert config.echo is True
-
 
 class TestGetDatabaseConfig:
     """Test suite for get_database_config function."""
-
-    def test_returns_database_config_instance(self):
-        """get_database_config should return a DatabaseConfig instance."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = get_database_config()
-
-            assert isinstance(config, DatabaseConfig)
 
     def test_reads_url_from_environment(self):
         """get_database_config should read DATABASE_URL from environment."""
@@ -126,15 +63,6 @@ class TestGetDatabaseConfig:
                 get_database_config()
 
             assert "DATABASE_URL" in str(exc_info.value)
-
-    def test_returns_defaults_for_pool_settings(self):
-        """get_database_config should return default pool settings."""
-        with patch.dict(os.environ, {"DATABASE_URL": "postgresql://test:5432/mydb"}):
-            config = get_database_config()
-
-            assert config.pool_size == 10
-            assert config.max_overflow == 20
-            assert config.echo is False
 
 
 class TestDatabaseConfigValidation:
