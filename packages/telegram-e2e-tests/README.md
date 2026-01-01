@@ -1,15 +1,15 @@
-# Telegram QA Service
+# Telegram E2E Tests
 
 End-to-end testing service for the Job Agent Telegram bot using Telethon.
 
 ## Overview
 
-This package provides a QA client that communicates with the Telegram bot as a real user, enabling automated E2E smoke tests. It uses the Telethon library to interact with the Telegram API.
+This package provides a E2E client that communicates with the Telegram bot as a real user, enabling automated E2E tests. It uses the Telethon library to interact with the Telegram API.
 
 ## Installation
 
 ```bash
-cd packages/telegram-qa-service
+cd packages/telegram-e2e-tests
 pip install -e .[dev]
 ```
 
@@ -55,7 +55,7 @@ On first run, Telethon will prompt for your phone number and a verification code
 
 ```python
 import asyncio
-from telegram_qa_service import TelegramQAClient
+from telegram_e2e_tests import TelegramQAClient
 
 async def main():
     async with TelegramQAClient() as client:
@@ -69,8 +69,8 @@ asyncio.run(main())
 ## Architecture
 
 ```
-telegram-qa-service/
-├── src/telegram_qa_service/
+telegram-e2e-tests/
+├── src/telegram_e2e_tests/
 │   ├── __init__.py         # Public exports
 │   ├── client.py           # TelegramQAClient implementation
 │   ├── client_test.py      # Unit tests (co-located)
@@ -79,9 +79,17 @@ telegram-qa-service/
 │   ├── exceptions.py       # Custom exceptions
 │   ├── exceptions_test.py  # Unit tests (co-located)
 │   ├── conftest.py         # Shared pytest fixtures
-│   └── smoke_tests/        # E2E test scenarios
-│       ├── test_start_command.py
-│       └── test_help_command.py
+│   └── e2e/        # E2E test scenarios
+│       ├── helpers.py              # Test utilities (essay ID extraction)
+│       ├── helpers_test.py         # Unit tests for helpers
+│       ├── test_start_command.py   # /start command
+│       ├── test_help_command.py    # /help command
+│       ├── test_status_command.py  # /status command
+│       ├── test_cancel_command.py  # /cancel command
+│       ├── test_cv_command.py      # /cv command
+│       ├── test_search_command.py  # /search command
+│       ├── test_add_essay_command.py  # /add_essay command
+│       └── test_essays_command.py  # /essays command
 ├── pyproject.toml
 ├── .env.example
 └── README.md
@@ -102,7 +110,7 @@ telegram-qa-service/
 Tests are co-located with production code following the `*_test.py` naming convention:
 
 ```
-src/telegram_qa_service/
+src/telegram_e2e_tests/
 ├── client.py              # Production code
 ├── client_test.py         # Unit tests for client
 ├── config.py              # Production code
@@ -110,19 +118,27 @@ src/telegram_qa_service/
 ├── exceptions.py          # Production code
 ├── exceptions_test.py     # Unit tests for exceptions
 ├── conftest.py            # Shared pytest fixtures
-└── smoke_tests/           # E2E smoke tests
-    ├── test_start_command.py
-    └── test_help_command.py
+└── e2e/           # E2E tests
+    ├── helpers.py              # Test utilities
+    ├── helpers_test.py         # Unit tests for helpers
+    ├── test_start_command.py   # /start command
+    ├── test_help_command.py    # /help command
+    ├── test_status_command.py  # /status command
+    ├── test_cancel_command.py  # /cancel command
+    ├── test_cv_command.py      # /cv command
+    ├── test_search_command.py  # /search command
+    ├── test_add_essay_command.py  # /add_essay command
+    └── test_essays_command.py  # /essays command
 ```
 
 ### Test Categories
 
-- **Unit tests** (40 tests): Test configuration loading, error handling, and client behavior with mocked Telethon. No credentials required.
-- **E2E tests** (2 tests): Marked with `@pytest.mark.e2e`, require actual bot running and credentials configured.
+- **Unit tests** (41 tests): Test configuration loading, error handling, client behavior with mocked Telethon, and helper utilities. No credentials required.
+- **E2E tests** (16 tests): Marked with `@pytest.mark.e2e`, require actual bot running and credentials configured. Cover all 8 bot commands: `/start`, `/help`, `/status`, `/cancel`, `/cv`, `/search`, `/add_essay`, `/essays`.
 
 ### Fixtures
 
-Shared fixtures are defined in `src/telegram_qa_service/conftest.py`:
+Shared fixtures are defined in `src/telegram_e2e_tests/conftest.py`:
 
 | Fixture | Scope | Description |
 |---------|-------|-------------|
@@ -133,19 +149,36 @@ Shared fixtures are defined in `src/telegram_qa_service/conftest.py`:
 
 ```bash
 # All tests (unit + E2E)
-pytest packages/telegram-qa-service
+pytest packages/telegram-e2e-tests
 
 # Unit tests only (no credentials required)
-pytest packages/telegram-qa-service -m "not e2e"
+pytest packages/telegram-e2e-tests -m "not e2e"
 
 # E2E tests only (requires credentials and running bot)
-pytest packages/telegram-qa-service -m e2e
+pytest packages/telegram-e2e-tests -m e2e
 
 # Verbose output
-pytest packages/telegram-qa-service -v
+pytest packages/telegram-e2e-tests -v
 ```
 
 E2E tests are skipped automatically if `TELEGRAM_API_ID` is not configured.
+
+### E2E Test Coverage
+
+The E2E tests verify bot command responses:
+
+| Command | Test File | Scenarios |
+|---------|-----------|-----------|
+| `/start` | `test_start_command.py` | Welcome message response |
+| `/help` | `test_help_command.py` | Lists all available commands |
+| `/status` | `test_status_command.py` | "No active searches" when idle |
+| `/cancel` | `test_cancel_command.py` | "No active search to cancel" when idle |
+| `/cv` | `test_cv_command.py` | "No CV found" when not uploaded |
+| `/search` | `test_search_command.py` | CV prerequisite error, invalid parameters, deprecated parameters |
+| `/add_essay` | `test_add_essay_command.py` | Instructions, format errors, empty answer, successful creation |
+| `/essays` | `test_essays_command.py` | Empty list message, pagination with data |
+
+Tests use case-insensitive keyword matching for response validation, making them resilient to minor text changes in bot messages.
 
 ### Test Conventions
 

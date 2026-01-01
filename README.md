@@ -251,7 +251,7 @@ LANGSMITH_API_KEY=ls__...
 - `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`. Essays automatically receive AI-generated embeddings and keywords via background threads; essays are immediately searchable via full-text after creation.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
-- `packages/telegram-qa-service` — E2E testing service using Telethon to interact with the Telegram bot as a real user. Provides smoke tests for `/start` and `/help` commands.
+- `packages/telegram-e2e-tests` — E2E testing service using Telethon to interact with the Telegram bot as a real user. Provides smoke tests for `/start` and `/help` commands.
 
 ## Prerequisites
 
@@ -275,7 +275,7 @@ job-agent-platform/
 │   ├── essay-repository/         # Depends on db-core
 │   ├── cvs-repository/
 │   ├── job-agent-platform-contracts/
-│   └── telegram-qa-service/       # E2E testing with Telethon
+│   └── telegram-e2e-tests/       # E2E testing with Telethon
 ├── docker-compose.yml
 ├── docker-start.sh
 ├── pyproject.toml
@@ -291,12 +291,12 @@ cd packages/job-agent-backend && pytest
 cd packages/telegram_bot && pytest
 cd packages/jobs-repository && pytest
 cd packages/essay-repository && pytest
-cd packages/telegram-qa-service && pytest -m "not e2e"
+cd packages/telegram-e2e-tests && pytest -m "not e2e"
 ```
 
 ### Running E2E Tests
 
-The `telegram-qa-service` package provides E2E smoke tests that interact with the Telegram bot as a real user.
+The `telegram-e2e-tests` package provides E2E smoke tests that interact with the Telegram bot as a real user.
 
 **Prerequisites:**
 1. Telegram API credentials from https://my.telegram.org
@@ -304,7 +304,7 @@ The `telegram-qa-service` package provides E2E smoke tests that interact with th
 
 **Setup:**
 ```bash
-cd packages/telegram-qa-service
+cd packages/telegram-e2e-tests
 cp .env.example .env
 # Edit .env with your TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_QA_BOT_USERNAME
 ```
@@ -314,7 +314,7 @@ On first run, Telethon prompts for your phone number and verification code. This
 
 **Run E2E tests:**
 ```bash
-cd packages/telegram-qa-service && pytest -m e2e
+cd packages/telegram-e2e-tests && pytest -m e2e
 ```
 
 Tests are automatically skipped if credentials are not configured.

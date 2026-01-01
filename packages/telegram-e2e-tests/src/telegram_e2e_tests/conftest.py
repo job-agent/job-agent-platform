@@ -7,9 +7,9 @@ import pytest
 from dotenv import load_dotenv
 
 # Load .env file from package root if it exists
-# conftest.py is at: src/telegram_qa_service/conftest.py
+# conftest.py is at: src/telegram_e2e_tests/conftest.py
 # .env is at: .env (package root)
-# So we need to go up 3 levels: telegram_qa_service/ -> src/ -> telegram-qa-service/
+# So we need to go up 3 levels: telegram_e2e_tests/ -> src/ -> telegram-qa-service/
 _env_path = Path(__file__).parent.parent.parent / ".env"
 if _env_path.exists():
     load_dotenv(_env_path)
@@ -45,7 +45,7 @@ async def telegram_qa_client(skip_if_no_credentials):
             response = await telegram_qa_client.send_and_wait("/start")
             assert "Welcome" in response
     """
-    from telegram_qa_service.client import TelegramQAClient
+    from telegram_e2e_tests.client import TelegramQAClient
 
     client = TelegramQAClient()
     async with client:

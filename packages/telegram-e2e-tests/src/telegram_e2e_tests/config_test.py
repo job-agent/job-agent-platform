@@ -11,7 +11,7 @@ class TestLoadConfig:
 
     def test_loads_all_config_from_environment(self):
         """Config should load all fields from environment variables."""
-        from telegram_qa_service.config import load_config
+        from telegram_e2e_tests.config import load_config
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -35,8 +35,8 @@ class TestLoadConfigMissingRequired:
 
     def test_raises_error_when_api_id_missing(self):
         """Config should raise ConfigurationError when TELEGRAM_API_ID is missing."""
-        from telegram_qa_service.config import load_config
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.config import load_config
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         env = {
             "TELEGRAM_API_HASH": "abcdef1234567890",
@@ -50,8 +50,8 @@ class TestLoadConfigMissingRequired:
 
     def test_raises_error_when_api_hash_missing(self):
         """Config should raise ConfigurationError when TELEGRAM_API_HASH is missing."""
-        from telegram_qa_service.config import load_config
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.config import load_config
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -65,8 +65,8 @@ class TestLoadConfigMissingRequired:
 
     def test_raises_error_when_bot_username_missing(self):
         """Config should raise ConfigurationError when TELEGRAM_QA_BOT_USERNAME is missing."""
-        from telegram_qa_service.config import load_config
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.config import load_config
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -84,8 +84,8 @@ class TestLoadConfigInvalidValues:
 
     def test_raises_error_when_api_id_not_numeric(self):
         """Config should raise ConfigurationError when TELEGRAM_API_ID is not a valid integer."""
-        from telegram_qa_service.config import load_config
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.config import load_config
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         env = {
             "TELEGRAM_API_ID": "not_a_number",
@@ -100,8 +100,8 @@ class TestLoadConfigInvalidValues:
 
     def test_raises_error_when_timeout_not_numeric(self):
         """Config should raise ConfigurationError when TELEGRAM_QA_TIMEOUT is not a valid integer."""
-        from telegram_qa_service.config import load_config
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.config import load_config
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -121,7 +121,7 @@ class TestQAConfig:
 
     def test_config_is_immutable(self):
         """QAConfig should be immutable (frozen dataclass)."""
-        from telegram_qa_service.config import QAConfig
+        from telegram_e2e_tests.config import QAConfig
 
         config = QAConfig(
             api_id=12345678,

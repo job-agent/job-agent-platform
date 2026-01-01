@@ -22,7 +22,7 @@ PACKAGES=(
     "essay-repository"
     "job-agent-backend"
     "telegram_bot"
-    "telegram-qa-service"
+    "telegram-e2e-tests"
 )
 
 # Uninstall all packages

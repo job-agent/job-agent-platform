@@ -8,7 +8,7 @@ class TestTelegramQAError:
 
     def test_is_base_exception_class(self):
         """TelegramQAError should be a base exception that other errors inherit from."""
-        from telegram_qa_service.exceptions import TelegramQAError
+        from telegram_e2e_tests.exceptions import TelegramQAError
 
         error = TelegramQAError("test error")
 
@@ -17,7 +17,7 @@ class TestTelegramQAError:
 
     def test_can_be_raised_and_caught(self):
         """TelegramQAError can be raised and caught."""
-        from telegram_qa_service.exceptions import TelegramQAError
+        from telegram_e2e_tests.exceptions import TelegramQAError
 
         with pytest.raises(TelegramQAError) as exc_info:
             raise TelegramQAError("base telegram qa error")
@@ -30,7 +30,7 @@ class TestConfigurationError:
 
     def test_inherits_from_telegram_qa_error(self):
         """ConfigurationError should inherit from TelegramQAError."""
-        from telegram_qa_service.exceptions import ConfigurationError, TelegramQAError
+        from telegram_e2e_tests.exceptions import ConfigurationError, TelegramQAError
 
         error = ConfigurationError("missing api key")
 
@@ -39,7 +39,7 @@ class TestConfigurationError:
 
     def test_can_be_raised_with_message(self):
         """ConfigurationError can be raised with a descriptive message."""
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         with pytest.raises(ConfigurationError) as exc_info:
             raise ConfigurationError("TELEGRAM_API_ID environment variable is required")
@@ -49,7 +49,7 @@ class TestConfigurationError:
 
     def test_can_be_caught_as_telegram_qa_error(self):
         """ConfigurationError can be caught as TelegramQAError."""
-        from telegram_qa_service.exceptions import ConfigurationError, TelegramQAError
+        from telegram_e2e_tests.exceptions import ConfigurationError, TelegramQAError
 
         with pytest.raises(TelegramQAError):
             raise ConfigurationError("config error")
@@ -60,7 +60,7 @@ class TestConnectionError:
 
     def test_inherits_from_telegram_qa_error(self):
         """ConnectionError should inherit from TelegramQAError."""
-        from telegram_qa_service.exceptions import ConnectionError, TelegramQAError
+        from telegram_e2e_tests.exceptions import ConnectionError, TelegramQAError
 
         error = ConnectionError("failed to connect")
 
@@ -69,7 +69,7 @@ class TestConnectionError:
 
     def test_can_be_raised_with_message(self):
         """ConnectionError can be raised with a descriptive message."""
-        from telegram_qa_service.exceptions import ConnectionError
+        from telegram_e2e_tests.exceptions import ConnectionError
 
         with pytest.raises(ConnectionError) as exc_info:
             raise ConnectionError("Failed to connect to Telegram: network unavailable")
@@ -79,14 +79,14 @@ class TestConnectionError:
 
     def test_can_be_caught_as_telegram_qa_error(self):
         """ConnectionError can be caught as TelegramQAError."""
-        from telegram_qa_service.exceptions import ConnectionError, TelegramQAError
+        from telegram_e2e_tests.exceptions import ConnectionError, TelegramQAError
 
         with pytest.raises(TelegramQAError):
             raise ConnectionError("connection failed")
 
     def test_preserves_original_exception_chain(self):
         """ConnectionError preserves exception chain when raised from another error."""
-        from telegram_qa_service.exceptions import ConnectionError
+        from telegram_e2e_tests.exceptions import ConnectionError
 
         original = Exception("original error")
 
@@ -104,7 +104,7 @@ class TestResponseTimeoutError:
 
     def test_inherits_from_telegram_qa_error(self):
         """ResponseTimeoutError should inherit from TelegramQAError."""
-        from telegram_qa_service.exceptions import ResponseTimeoutError, TelegramQAError
+        from telegram_e2e_tests.exceptions import ResponseTimeoutError, TelegramQAError
 
         error = ResponseTimeoutError("timeout waiting for response")
 
@@ -113,7 +113,7 @@ class TestResponseTimeoutError:
 
     def test_can_be_raised_with_message(self):
         """ResponseTimeoutError can be raised with a descriptive message."""
-        from telegram_qa_service.exceptions import ResponseTimeoutError
+        from telegram_e2e_tests.exceptions import ResponseTimeoutError
 
         with pytest.raises(ResponseTimeoutError) as exc_info:
             raise ResponseTimeoutError(
@@ -126,7 +126,7 @@ class TestResponseTimeoutError:
 
     def test_can_be_caught_as_telegram_qa_error(self):
         """ResponseTimeoutError can be caught as TelegramQAError."""
-        from telegram_qa_service.exceptions import ResponseTimeoutError, TelegramQAError
+        from telegram_e2e_tests.exceptions import ResponseTimeoutError, TelegramQAError
 
         with pytest.raises(TelegramQAError):
             raise ResponseTimeoutError("timeout")
@@ -137,7 +137,7 @@ class TestExceptionHierarchy:
 
     def test_all_errors_share_common_base(self):
         """All error types share TelegramQAError as common base."""
-        from telegram_qa_service.exceptions import (
+        from telegram_e2e_tests.exceptions import (
             ConfigurationError,
             ConnectionError,
             ResponseTimeoutError,

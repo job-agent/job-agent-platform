@@ -1,4 +1,4 @@
-"""Smoke tests for /start command."""
+"""E2E tests for /start command."""
 
 import pytest
 
@@ -15,7 +15,7 @@ class TestStartCommand:
         - The bot is responsive and processes the /start command
         - The response contains either "Job Agent" or "welcome" (case-insensitive)
 
-        This is a smoke test to verify basic bot functionality.
+        This is an E2E test to verify basic bot functionality.
         """
         response = await telegram_qa_client.send_and_wait("/start")
 

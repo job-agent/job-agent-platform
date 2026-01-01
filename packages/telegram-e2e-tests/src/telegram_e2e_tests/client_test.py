@@ -11,8 +11,8 @@ class TestTelegramQAClientConstruction:
 
     def test_loads_config_on_construction(self):
         """Client should load configuration when constructed."""
-        from telegram_qa_service.client import TelegramQAClient
-        from telegram_qa_service.config import QAConfig
+        from telegram_e2e_tests.client import TelegramQAClient
+        from telegram_e2e_tests.config import QAConfig
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -27,8 +27,8 @@ class TestTelegramQAClientConstruction:
 
     def test_raises_configuration_error_when_config_invalid(self):
         """Client should raise ConfigurationError when environment is incomplete."""
-        from telegram_qa_service.client import TelegramQAClient
-        from telegram_qa_service.exceptions import ConfigurationError
+        from telegram_e2e_tests.client import TelegramQAClient
+        from telegram_e2e_tests.exceptions import ConfigurationError
 
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ConfigurationError):
@@ -40,7 +40,7 @@ class TestTelegramQAClientContextManager:
 
     async def test_connects_on_enter(self):
         """Client should connect to Telegram when entering context."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -53,7 +53,7 @@ class TestTelegramQAClientContextManager:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -62,7 +62,7 @@ class TestTelegramQAClientContextManager:
 
     async def test_disconnects_on_exit(self):
         """Client should disconnect from Telegram when exiting context."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -76,7 +76,7 @@ class TestTelegramQAClientContextManager:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -86,7 +86,7 @@ class TestTelegramQAClientContextManager:
 
     async def test_disconnects_on_exception(self):
         """Client should disconnect even when exception occurs in context."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -100,7 +100,7 @@ class TestTelegramQAClientContextManager:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -112,8 +112,8 @@ class TestTelegramQAClientContextManager:
 
     async def test_raises_connection_error_on_connect_failure(self):
         """Client should raise ConnectionError when Telegram connection fails."""
-        from telegram_qa_service.client import TelegramQAClient
-        from telegram_qa_service.exceptions import ConnectionError
+        from telegram_e2e_tests.client import TelegramQAClient
+        from telegram_e2e_tests.exceptions import ConnectionError
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -125,7 +125,7 @@ class TestTelegramQAClientContextManager:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -141,7 +141,7 @@ class TestTelegramQAClientSendCommand:
 
     async def test_sends_message_to_bot(self):
         """send_command should send message to configured bot username."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -156,7 +156,7 @@ class TestTelegramQAClientSendCommand:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -167,7 +167,7 @@ class TestTelegramQAClientSendCommand:
 
     async def test_sends_command_with_arguments(self):
         """send_command should send command with arguments as-is."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -182,7 +182,7 @@ class TestTelegramQAClientSendCommand:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -199,7 +199,7 @@ class TestTelegramQAClientWaitForResponse:
 
     async def test_returns_response_text_from_bot(self):
         """wait_for_response should return text from bot response message."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -227,7 +227,7 @@ class TestTelegramQAClientWaitForResponse:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -239,7 +239,7 @@ class TestTelegramQAClientWaitForResponse:
 
     async def test_uses_custom_timeout_when_provided(self):
         """wait_for_response should use provided timeout over config default."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -262,7 +262,7 @@ class TestTelegramQAClientWaitForResponse:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -274,8 +274,8 @@ class TestTelegramQAClientWaitForResponse:
 
     async def test_raises_timeout_error_when_no_response(self):
         """wait_for_response should raise ResponseTimeoutError when timeout expires."""
-        from telegram_qa_service.client import TelegramQAClient
-        from telegram_qa_service.exceptions import ResponseTimeoutError
+        from telegram_e2e_tests.client import TelegramQAClient
+        from telegram_e2e_tests.exceptions import ResponseTimeoutError
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -297,7 +297,7 @@ class TestTelegramQAClientWaitForResponse:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -309,7 +309,7 @@ class TestTelegramQAClientWaitForResponse:
 
     async def test_filters_messages_to_only_target_bot(self):
         """wait_for_response should only return messages from the target bot."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -340,7 +340,7 @@ class TestTelegramQAClientWaitForResponse:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -356,7 +356,7 @@ class TestTelegramQAClientSendAndWait:
 
     async def test_sends_command_and_returns_response(self):
         """send_and_wait should send command and return bot response."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -388,7 +388,7 @@ class TestTelegramQAClientSendAndWait:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -400,7 +400,7 @@ class TestTelegramQAClientSendAndWait:
 
     async def test_passes_timeout_to_wait_for_response(self):
         """send_and_wait should pass timeout_seconds to wait_for_response."""
-        from telegram_qa_service.client import TelegramQAClient
+        from telegram_e2e_tests.client import TelegramQAClient
 
         env = {
             "TELEGRAM_API_ID": "12345678",
@@ -431,7 +431,7 @@ class TestTelegramQAClientSendAndWait:
 
         with patch.dict(os.environ, env, clear=True):
             with patch(
-                "telegram_qa_service.client.TelegramClient",
+                "telegram_e2e_tests.client.TelegramClient",
                 return_value=mock_telethon_client,
             ):
                 client = TelegramQAClient()
@@ -440,3 +440,154 @@ class TestTelegramQAClientSendAndWait:
                     response = await client.send_and_wait("/start", timeout_seconds=120)
 
                 assert response == "Response"
+
+
+class TestTelegramQAClientSendAndWaitFinal:
+    """Tests for TelegramQAClient.send_and_wait_final method."""
+
+    async def test_returns_last_message_after_stability_period(self):
+        """send_and_wait_final should return last message after no new messages arrive."""
+        from telegram_e2e_tests.client import TelegramQAClient
+
+        env = {
+            "TELEGRAM_API_ID": "12345678",
+            "TELEGRAM_API_HASH": "abcdef1234567890",
+            "TELEGRAM_QA_BOT_USERNAME": "@test_bot",
+        }
+        old_message = MagicMock()
+        old_message.id = 1
+        old_message.text = "Old message"
+        old_message.sender_id = 999
+
+        processing_message = MagicMock()
+        processing_message.id = 2
+        processing_message.text = "Processing..."
+        processing_message.sender_id = 999
+
+        final_message = MagicMock()
+        final_message.id = 3
+        final_message.text = "Essay saved successfully!"
+        final_message.sender_id = 999
+
+        mock_telethon_client = AsyncMock()
+        mock_telethon_client.connect = AsyncMock()
+        mock_telethon_client.disconnect = AsyncMock()
+        mock_telethon_client.is_user_authorized = AsyncMock(return_value=True)
+        mock_telethon_client.send_message = AsyncMock()
+        # Simulate: old message, then processing, then final, then final stabilizes
+        mock_telethon_client.get_messages = AsyncMock(
+            side_effect=[
+                [old_message],  # Initial check for last message ID
+                [processing_message],  # First poll: processing message
+                [final_message],  # Second poll: final message
+                [final_message],  # Third+ polls: same final message (stable)
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+                [final_message],
+            ]
+        )
+
+        mock_bot_entity = MagicMock()
+        mock_bot_entity.id = 999
+        mock_telethon_client.get_entity = AsyncMock(return_value=mock_bot_entity)
+
+        with patch.dict(os.environ, env, clear=True):
+            with patch(
+                "telegram_e2e_tests.client.TelegramClient",
+                return_value=mock_telethon_client,
+            ):
+                client = TelegramQAClient()
+                async with client:
+                    response = await client.send_and_wait_final(
+                        "/add_essay Answer: test", stable_seconds=0.2
+                    )
+
+                assert response == "Essay saved successfully!"
+
+    async def test_waits_for_new_messages_to_arrive(self):
+        """send_and_wait_final should wait for newer messages than cutoff."""
+        from telegram_e2e_tests.client import TelegramQAClient
+
+        env = {
+            "TELEGRAM_API_ID": "12345678",
+            "TELEGRAM_API_HASH": "abcdef1234567890",
+            "TELEGRAM_QA_BOT_USERNAME": "@test_bot",
+        }
+        old_message = MagicMock()
+        old_message.id = 5
+        old_message.text = "Old message"
+        old_message.sender_id = 999
+
+        new_message = MagicMock()
+        new_message.id = 6
+        new_message.text = "Final response"
+        new_message.sender_id = 999
+
+        mock_telethon_client = AsyncMock()
+        mock_telethon_client.connect = AsyncMock()
+        mock_telethon_client.disconnect = AsyncMock()
+        mock_telethon_client.is_user_authorized = AsyncMock(return_value=True)
+        mock_telethon_client.send_message = AsyncMock()
+        # Simulate messages with new message arriving
+        mock_telethon_client.get_messages = AsyncMock(
+            side_effect=[
+                [old_message],  # Initial check
+                [new_message],  # New message arrives
+                [new_message],  # Stable
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+                [new_message],
+            ]
+        )
+
+        mock_bot_entity = MagicMock()
+        mock_bot_entity.id = 999
+        mock_telethon_client.get_entity = AsyncMock(return_value=mock_bot_entity)
+
+        with patch.dict(os.environ, env, clear=True):
+            with patch(
+                "telegram_e2e_tests.client.TelegramClient",
+                return_value=mock_telethon_client,
+            ):
+                client = TelegramQAClient()
+                async with client:
+                    response = await client.send_and_wait_final("/test", stable_seconds=0.2)
+
+                assert response == "Final response"

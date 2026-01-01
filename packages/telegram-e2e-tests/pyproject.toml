@@ -3,7 +3,7 @@ requires = ["setuptools>=80.9.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "telegram-qa-service"
+name = "telegram-e2e-tests"
 version = "0.1.0"
 description = "E2E testing service for Telegram bot using Telethon"
 readme = "README.md"
@@ -17,6 +17,7 @@ dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
+    "python-dotenv>=1.1.0",
     "ruff>=0.14.10",
 ]
 

@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass
 
-from telegram_qa_service.exceptions import ConfigurationError
+from telegram_e2e_tests.exceptions import ConfigurationError
 
 
 @dataclass(frozen=True)

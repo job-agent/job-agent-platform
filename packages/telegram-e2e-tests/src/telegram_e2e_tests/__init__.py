@@ -4,16 +4,16 @@ This package provides a client for testing Telegram bots by acting as a real
 Telegram user. It allows sending commands to bots and verifying their responses.
 
 Example usage:
-    from telegram_qa_service import TelegramQAClient
+    from telegram_e2e_tests import TelegramQAClient
 
     async with TelegramQAClient() as client:
         response = await client.send_and_wait("/start")
         assert "Welcome" in response
 """
 
-from telegram_qa_service.client import TelegramQAClient
-from telegram_qa_service.config import QAConfig, load_config
-from telegram_qa_service.exceptions import (
+from telegram_e2e_tests.client import TelegramQAClient
+from telegram_e2e_tests.config import QAConfig, load_config
+from telegram_e2e_tests.exceptions import (
     ConfigurationError,
     ConnectionError,
     ResponseTimeoutError,
