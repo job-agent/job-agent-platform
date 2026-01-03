@@ -20,7 +20,7 @@ jobs:
     name: Lint & Format Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -65,7 +65,7 @@ jobs:
       OPENAI_API_KEY: test-key
       RABBITMQ_URL: amqp://guest:guest@localhost:5672/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -95,7 +95,7 @@ jobs:
       run:
         working-directory: packages/cvs-repository
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -139,7 +139,7 @@ jobs:
       POSTGRES_DB: test_db
       POSTGRES_PORT: 5432
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -186,7 +186,7 @@ jobs:
       OPENAI_API_KEY: test-key
       RABBITMQ_URL: amqp://guest:guest@localhost:5672/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -237,7 +237,7 @@ jobs:
       JOB_AGENT_BOT_TOKEN: test-token
       RABBITMQ_URL: amqp://guest:guest@localhost:5672/
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -266,7 +266,7 @@ jobs:
       run:
         working-directory: packages/telegram-e2e-tests
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -295,7 +295,7 @@ jobs:
       TELEGRAM_QA_BOT_USERNAME: ${{ secrets.TELEGRAM_QA_BOT_USERNAME }}
       TELEGRAM_QA_SESSION_PATH: ${{ secrets.TELEGRAM_QA_SESSION_PATH }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -323,7 +323,7 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           docker system prune -af
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
