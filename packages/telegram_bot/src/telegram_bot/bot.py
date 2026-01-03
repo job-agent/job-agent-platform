@@ -15,6 +15,9 @@ from telegram_bot.handlers import (
     cancel_handler,
     cv_handler,
     essays_callback_handler,
+    essays_delete_callback_handler,
+    essays_delete_cancel_callback_handler,
+    essays_delete_confirm_callback_handler,
     essays_handler,
     help_handler,
     search_jobs_handler,
@@ -73,6 +76,23 @@ class JobAgentBot:
 
         self.application.add_handler(
             CallbackQueryHandler(require_access(essays_callback_handler), pattern="^essays_")
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                require_access(essays_delete_confirm_callback_handler),
+                pattern="^essay_delete_confirm_",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                require_access(essays_delete_cancel_callback_handler),
+                pattern="^essay_delete_cancel$",
+            )
+        )
+        self.application.add_handler(
+            CallbackQueryHandler(
+                require_access(essays_delete_callback_handler), pattern="^essay_delete_"
+            )
         )
 
         self.application.add_handler(

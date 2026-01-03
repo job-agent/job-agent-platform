@@ -1,72 +1,39 @@
-"""Tests for declarative Base export."""
+"""Tests for declarative Base.
+
+Note: Tests for import paths and module exports have been removed
+as they test implementation details rather than observable behavior.
+The remaining tests verify actual functionality that affects runtime behavior.
+"""
+
+from sqlalchemy import Column, Integer, String
 
 from db_core.base import Base
 
 
-class TestBase:
-    """Test suite for declarative Base."""
+class TestBaseDeclarativeMapping:
+    """Test suite for declarative Base functionality."""
 
-    def test_base_is_exported(self):
-        """Base is exported from db_core.base."""
-        assert Base is not None
+    def test_base_can_define_model_with_table(self):
+        """Base can be used to define model classes with table mapping."""
 
-    def test_base_has_metadata(self):
-        """Base has metadata attribute for table definitions."""
-        assert hasattr(Base, "metadata")
-        assert Base.metadata is not None
-
-    def test_base_can_be_used_as_declarative_base(self):
-        """Base can be used to define model classes."""
-        from sqlalchemy import Column, Integer, String
-
-        # Define a test model using the Base
         class TestModel(Base):
-            __tablename__ = "test_table"
+            __tablename__ = "test_table_for_mapping"
             id = Column(Integer, primary_key=True)
             name = Column(String(50))
 
-        # Verify the model is properly registered
-        assert "test_table" in Base.metadata.tables
-        assert TestModel.__tablename__ == "test_table"
+        # Verify the model is properly registered and usable
+        assert "test_table_for_mapping" in Base.metadata.tables
+        assert TestModel.__tablename__ == "test_table_for_mapping"
 
-    def test_base_metadata_tracks_tables(self):
-        """Base.metadata tracks all defined tables."""
-        from sqlalchemy import Column, Integer, String
+    def test_model_columns_are_mapped_correctly(self):
+        """Model columns defined via Base are properly mapped."""
 
-        initial_table_count = len(Base.metadata.tables)
-
-        class AnotherTestModel(Base):
-            __tablename__ = "another_test_table"
+        class ColumnTestModel(Base):
+            __tablename__ = "column_test_table"
             id = Column(Integer, primary_key=True)
             value = Column(String(100))
 
-        assert len(Base.metadata.tables) == initial_table_count + 1
-        assert "another_test_table" in Base.metadata.tables
-
-    def test_base_has_registry(self):
-        """Base has registry for mapper configuration."""
-        # SQLAlchemy 2.0 uses registry
-        assert hasattr(Base, "registry")
-
-
-class TestBaseImportability:
-    """Test that Base can be imported from various locations."""
-
-    def test_import_from_base_module(self):
-        """Base can be imported from db_core.base."""
-        from db_core.base import Base as BaseFromModule
-
-        assert BaseFromModule is not None
-
-    def test_import_from_package(self):
-        """Base can be imported from db_core package root."""
-        from db_core import Base as BaseFromPackage
-
-        assert BaseFromPackage is not None
-
-    def test_both_imports_return_same_base(self):
-        """Importing Base from different locations returns the same object."""
-        from db_core.base import Base as BaseFromModule
-        from db_core import Base as BaseFromPackage
-
-        assert BaseFromModule is BaseFromPackage
+        table = Base.metadata.tables["column_test_table"]
+        column_names = [c.name for c in table.columns]
+        assert "id" in column_names
+        assert "value" in column_names

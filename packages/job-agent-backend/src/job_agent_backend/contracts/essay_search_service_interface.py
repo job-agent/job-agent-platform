@@ -45,3 +45,14 @@ class IEssaySearchService(Protocol):
             Tuple of (list of essays for the page, total count of all essays)
         """
         ...
+
+    def delete(self, essay_id: int) -> bool:
+        """Delete an essay by ID.
+
+        Args:
+            essay_id: ID of the essay to delete
+
+        Returns:
+            True if the essay was deleted, False if not found
+        """
+        ...

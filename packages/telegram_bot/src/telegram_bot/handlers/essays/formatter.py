@@ -4,7 +4,7 @@ This module provides formatting functions for displaying essays
 in a paginated list format.
 """
 
-from typing import List
+from typing import List, Optional
 
 from telegram import InlineKeyboardButton
 
@@ -14,6 +14,7 @@ from telegram_bot.handlers.essays.messages import (
     EMPTY_LIST,
     BTN_PREVIOUS,
     BTN_NEXT,
+    BTN_DELETE,
 )
 
 
@@ -70,18 +71,31 @@ def format_essays_page(essays: List[Essay], page: int, total_pages: int) -> str:
     return header + "\n\n" + "\n\n".join(formatted_essays)
 
 
-def build_navigation_keyboard(page: int, total_pages: int) -> List[List[InlineKeyboardButton]]:
-    """Build inline keyboard for pagination navigation.
+def build_navigation_keyboard(
+    page: int, total_pages: int, essays: Optional[List[Essay]] = None
+) -> List[List[InlineKeyboardButton]]:
+    """Build inline keyboard for pagination navigation and delete buttons.
 
     Args:
         page: Current page number (1-based)
         total_pages: Total number of pages
+        essays: Optional list of essays to add delete buttons for
 
     Returns:
         List of button rows for InlineKeyboardMarkup
     """
     buttons = []
 
+    # Add delete buttons for each essay
+    if essays:
+        for idx, essay in enumerate(essays, start=1):
+            delete_button = InlineKeyboardButton(
+                text=f"{BTN_DELETE} #{idx}",
+                callback_data=f"essay_delete_{essay.id}",
+            )
+            buttons.append([delete_button])
+
+    # Add navigation buttons
     if page > 1:
         prev_button = InlineKeyboardButton(
             text=f"< {BTN_PREVIOUS}",

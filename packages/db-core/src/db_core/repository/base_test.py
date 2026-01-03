@@ -282,34 +282,3 @@ class TestBaseRepositoryInheritance:
 
         assert repo.extra_param == "value"
         assert repo._close_session is False
-
-
-class TestBaseRepositoryExport:
-    """Test that BaseRepository is properly exported."""
-
-    def test_import_from_repository_module(self):
-        """BaseRepository can be imported from db_core.repository.base."""
-        from db_core.repository.base import BaseRepository as FromModule
-
-        assert FromModule is not None
-
-    def test_import_from_repository_package(self):
-        """BaseRepository can be imported from db_core.repository."""
-        from db_core.repository import BaseRepository as FromPackage
-
-        assert FromPackage is not None
-
-    def test_import_from_db_core_package(self):
-        """BaseRepository can be imported from db_core package root."""
-        from db_core import BaseRepository as FromRoot
-
-        assert FromRoot is not None
-
-    def test_all_imports_return_same_class(self):
-        """All import paths return the same BaseRepository class."""
-        from db_core.repository.base import BaseRepository as FromModule
-        from db_core.repository import BaseRepository as FromPackage
-        from db_core import BaseRepository as FromRoot
-
-        assert FromModule is FromPackage
-        assert FromPackage is FromRoot
