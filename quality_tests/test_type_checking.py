@@ -1,4 +1,4 @@
-"""Smoke tests for type checking validation.
+"""Quality tests for type checking validation.
 
 These tests verify that mypy type checking passes for all packages
 in job-agent-platform.
@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 
-pytestmark = pytest.mark.smoke
+pytestmark = pytest.mark.quality
 
 
 class TestTypeChecking:
@@ -104,7 +104,7 @@ class TestTypeChecking:
         if not mypy_available:
             pytest.fail(
                 "mypy not available. Install with: pip install mypy\n"
-                "Hint: mypy is required for type checking smoke tests."
+                "Hint: mypy is required for type checking quality tests."
             )
 
         source_dir = packages_dir / package_dir_name / "src" / source_subdir
