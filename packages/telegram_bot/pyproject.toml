@@ -13,7 +13,7 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "job-agent-backend >=0.1.0",
     "job-agent-platform-contracts>=0.1.0",
-    "telemetry @ git+https://github.com/job-agent/shared.git@main#subdirectory=telemetry",
+    "telemetry @ git+https://github.com/job-agent/shared.git@main#subdirectory=packages/telemetry",
 ]
 
 [project.optional-dependencies]

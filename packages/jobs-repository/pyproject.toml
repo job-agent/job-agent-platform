@@ -16,7 +16,7 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "python-dateutil>=2.9.0",
     "dependency-injector>=4.48.3",
-    "job-scrapper-contracts @ git+https://github.com/job-agent/shared.git@main#subdirectory=job-scrapper-contracts",
+    "job-scrapper-contracts @ git+https://github.com/job-agent/shared.git@main#subdirectory=packages/job-scrapper-contracts",
     "job-agent-platform-contracts>=0.1.0",
     "db-core>=0.1.0"
 ]

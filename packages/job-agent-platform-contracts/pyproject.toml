@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "pydantic>=2.12.5",
-    "job-scrapper-contracts @ git+https://github.com/job-agent/shared.git@main#subdirectory=job-scrapper-contracts",
+    "job-scrapper-contracts @ git+https://github.com/job-agent/shared.git@main#subdirectory=packages/job-scrapper-contracts",
 ]
 
 [project.optional-dependencies]
