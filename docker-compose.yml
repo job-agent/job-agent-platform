@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
 
   ollama-puller:
-    image: ollama/ollama:0.5.4
+    image: ollama/ollama:0.13.5
     container_name: job-agent-ollama-puller
     entrypoint: /bin/sh
     command: "-c 'sleep 5; ollama pull phi3:mini'"
