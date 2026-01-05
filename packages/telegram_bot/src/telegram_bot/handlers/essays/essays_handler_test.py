@@ -460,3 +460,410 @@ class TestEssaysHandlerEdgeCases:
 
         all_messages = setup.message._reply_texts
         assert len(all_messages) >= 1
+
+
+class TestEssayDeleteCallback:
+    """Tests for essay delete button callback handler."""
+
+    @pytest.fixture
+    def delete_callback_setup_factory(self):
+        """Factory for creating delete callback handler test setups."""
+
+        def factory(
+            mock_essay_service: MagicMock,
+            callback_data: str,
+            user_id: int = 12345,
+        ):
+            user = MockUser(id=user_id)
+
+            callback_query = MagicMock()
+            callback_query.data = callback_data
+            callback_query.from_user = user
+            callback_query.answer = AsyncMock()
+            callback_query.edit_message_text = AsyncMock()
+
+            message = MockMessage(
+                text="Essays list content",
+                user=user,
+                enable_shared_tracking=True,
+            )
+            callback_query.message = message
+
+            update = MagicMock()
+            update.callback_query = callback_query
+            update.effective_user = user
+
+            orchestrator_factory = MagicMock()
+            cv_repository_factory = MagicMock()
+            essay_service_factory = MagicMock(return_value=mock_essay_service)
+
+            dependencies = MockBotDependencies(
+                orchestrator_factory=orchestrator_factory,
+                cv_repository_factory=cv_repository_factory,
+                essay_service_factory=essay_service_factory,
+            )
+
+            context = MockContext(dependencies=dependencies)
+
+            return {
+                "update": update,
+                "context": context,
+                "callback_query": callback_query,
+                "essay_service": mock_essay_service,
+                "message": message,
+            }
+
+        return factory
+
+    async def test_delete_button_shows_confirmation_prompt(self, delete_callback_setup_factory):
+        """Clicking Delete button should show confirmation with Confirm/Cancel buttons."""
+        from telegram_bot.handlers.essays import essays_delete_callback_handler
+
+        service = MagicMock()
+        setup = delete_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_42",
+        )
+
+        await essays_delete_callback_handler(setup["update"], setup["context"])
+
+        # Should answer callback
+        setup["callback_query"].answer.assert_called()
+
+        # Should edit message to show confirmation prompt
+        setup["callback_query"].edit_message_text.assert_called()
+        call_args = setup["callback_query"].edit_message_text.call_args
+
+        # Message should mention confirmation/delete
+        message_text = call_args[0][0] if call_args[0] else call_args[1].get("text", "")
+        assert (
+            "confirm" in message_text.lower()
+            or "delete" in message_text.lower()
+            or "sure" in message_text.lower()
+        )
+
+    async def test_delete_button_shows_confirm_and_cancel_buttons(
+        self, delete_callback_setup_factory
+    ):
+        """Confirmation prompt should include Confirm and Cancel buttons."""
+        from telegram_bot.handlers.essays import essays_delete_callback_handler
+
+        service = MagicMock()
+        setup = delete_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_42",
+        )
+
+        await essays_delete_callback_handler(setup["update"], setup["context"])
+
+        # Should have reply_markup with confirm/cancel buttons
+        call_args = setup["callback_query"].edit_message_text.call_args
+        reply_markup = call_args[1].get("reply_markup") if call_args[1] else None
+
+        assert reply_markup is not None, "Expected reply_markup with buttons"
+
+    async def test_delete_button_with_invalid_id_format_answers_error(
+        self, delete_callback_setup_factory
+    ):
+        """Delete button with invalid ID format should answer with error."""
+        from telegram_bot.handlers.essays import essays_delete_callback_handler
+
+        service = MagicMock()
+        setup = delete_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_invalid",
+        )
+
+        await essays_delete_callback_handler(setup["update"], setup["context"])
+
+        # Should answer callback (to clear loading state)
+        setup["callback_query"].answer.assert_called()
+
+        # Should not call delete on service
+        service.delete.assert_not_called()
+
+
+class TestEssayDeleteConfirmCallback:
+    """Tests for essay delete confirmation callback handler."""
+
+    @pytest.fixture
+    def confirm_callback_setup_factory(self):
+        """Factory for creating confirm/cancel callback handler test setups."""
+
+        def factory(
+            mock_essay_service: MagicMock,
+            callback_data: str,
+            user_id: int = 12345,
+        ):
+            user = MockUser(id=user_id)
+
+            callback_query = MagicMock()
+            callback_query.data = callback_data
+            callback_query.from_user = user
+            callback_query.answer = AsyncMock()
+            callback_query.edit_message_text = AsyncMock()
+
+            message = MockMessage(
+                text="Confirm deletion?",
+                user=user,
+                enable_shared_tracking=True,
+            )
+            callback_query.message = message
+
+            update = MagicMock()
+            update.callback_query = callback_query
+            update.effective_user = user
+
+            orchestrator_factory = MagicMock()
+            cv_repository_factory = MagicMock()
+            essay_service_factory = MagicMock(return_value=mock_essay_service)
+
+            dependencies = MockBotDependencies(
+                orchestrator_factory=orchestrator_factory,
+                cv_repository_factory=cv_repository_factory,
+                essay_service_factory=essay_service_factory,
+            )
+
+            context = MockContext(dependencies=dependencies)
+
+            return {
+                "update": update,
+                "context": context,
+                "callback_query": callback_query,
+                "essay_service": mock_essay_service,
+                "message": message,
+            }
+
+        return factory
+
+    async def test_confirm_delete_calls_service_delete(self, confirm_callback_setup_factory):
+        """Confirm button should call essay service delete with the essay ID."""
+        from telegram_bot.handlers.essays import essays_delete_confirm_callback_handler
+
+        service = MagicMock()
+        service.delete.return_value = True
+        service.get_paginated.return_value = ([], 0)
+
+        setup = confirm_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_confirm_42",
+        )
+
+        await essays_delete_confirm_callback_handler(setup["update"], setup["context"])
+
+        service.delete.assert_called_once_with(42)
+
+    async def test_confirm_delete_shows_success_message_when_deleted(
+        self, confirm_callback_setup_factory
+    ):
+        """Confirm delete should show success message when essay is deleted."""
+        from telegram_bot.handlers.essays import essays_delete_confirm_callback_handler
+
+        service = MagicMock()
+        service.delete.return_value = True
+        service.get_paginated.return_value = ([], 0)
+
+        setup = confirm_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_confirm_42",
+        )
+
+        await essays_delete_confirm_callback_handler(setup["update"], setup["context"])
+
+        # Should answer callback with success message
+        setup["callback_query"].answer.assert_called()
+        answer_call = setup["callback_query"].answer.call_args
+        if answer_call and answer_call[0]:
+            answer_text = answer_call[0][0]
+            assert (
+                "deleted" in answer_text.lower()
+                or "success" in answer_text.lower()
+                or "removed" in answer_text.lower()
+            )
+
+    async def test_confirm_delete_refreshes_essay_list(self, confirm_callback_setup_factory):
+        """After successful deletion, should refresh the essay list display."""
+        from telegram_bot.handlers.essays import essays_delete_confirm_callback_handler
+
+        essays = _create_mock_essays(3)
+        service = MagicMock()
+        service.delete.return_value = True
+        service.get_paginated.return_value = (essays, 3)
+
+        setup = confirm_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_confirm_42",
+        )
+
+        await essays_delete_confirm_callback_handler(setup["update"], setup["context"])
+
+        # Should have called get_paginated to refresh the list
+        service.get_paginated.assert_called()
+
+        # Should have edited message to show updated list
+        setup["callback_query"].edit_message_text.assert_called()
+
+    async def test_confirm_delete_shows_not_found_when_essay_missing(
+        self, confirm_callback_setup_factory
+    ):
+        """Confirm delete should show not found message when essay does not exist."""
+        from telegram_bot.handlers.essays import essays_delete_confirm_callback_handler
+
+        service = MagicMock()
+        service.delete.return_value = False
+
+        setup = confirm_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_confirm_999",
+        )
+
+        await essays_delete_confirm_callback_handler(setup["update"], setup["context"])
+
+        # Should answer callback indicating not found
+        setup["callback_query"].answer.assert_called()
+        answer_call = setup["callback_query"].answer.call_args
+        if answer_call and answer_call[0]:
+            answer_text = answer_call[0][0]
+            assert (
+                "not found" in answer_text.lower()
+                or "already" in answer_text.lower()
+                or "doesn't exist" in answer_text.lower()
+            )
+
+    async def test_confirm_delete_handles_service_error(self, confirm_callback_setup_factory):
+        """Confirm delete should show error message when service raises exception."""
+        from telegram_bot.handlers.essays import essays_delete_confirm_callback_handler
+
+        service = MagicMock()
+        service.delete.side_effect = Exception("Database connection failed")
+
+        setup = confirm_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_confirm_42",
+        )
+
+        await essays_delete_confirm_callback_handler(setup["update"], setup["context"])
+
+        # Should answer callback with error message
+        setup["callback_query"].answer.assert_called()
+        answer_call = setup["callback_query"].answer.call_args
+        if answer_call and answer_call[0]:
+            answer_text = answer_call[0][0]
+            assert (
+                "error" in answer_text.lower()
+                or "failed" in answer_text.lower()
+                or "try again" in answer_text.lower()
+            )
+
+        # Should not expose internal error details
+        if answer_call and answer_call[0]:
+            assert "Database connection" not in answer_call[0][0]
+
+
+class TestEssayDeleteCancelCallback:
+    """Tests for essay delete cancel callback handler."""
+
+    @pytest.fixture
+    def cancel_callback_setup_factory(self):
+        """Factory for creating cancel callback handler test setups."""
+
+        def factory(
+            mock_essay_service: MagicMock,
+            callback_data: str,
+            user_id: int = 12345,
+        ):
+            user = MockUser(id=user_id)
+
+            callback_query = MagicMock()
+            callback_query.data = callback_data
+            callback_query.from_user = user
+            callback_query.answer = AsyncMock()
+            callback_query.edit_message_text = AsyncMock()
+
+            message = MockMessage(
+                text="Confirm deletion?",
+                user=user,
+                enable_shared_tracking=True,
+            )
+            callback_query.message = message
+
+            update = MagicMock()
+            update.callback_query = callback_query
+            update.effective_user = user
+
+            orchestrator_factory = MagicMock()
+            cv_repository_factory = MagicMock()
+            essay_service_factory = MagicMock(return_value=mock_essay_service)
+
+            dependencies = MockBotDependencies(
+                orchestrator_factory=orchestrator_factory,
+                cv_repository_factory=cv_repository_factory,
+                essay_service_factory=essay_service_factory,
+            )
+
+            context = MockContext(dependencies=dependencies)
+
+            return {
+                "update": update,
+                "context": context,
+                "callback_query": callback_query,
+                "essay_service": mock_essay_service,
+                "message": message,
+            }
+
+        return factory
+
+    async def test_cancel_does_not_call_service_delete(self, cancel_callback_setup_factory):
+        """Cancel button should not call essay service delete."""
+        from telegram_bot.handlers.essays import essays_delete_cancel_callback_handler
+
+        essays = _create_mock_essays(3)
+        service = MagicMock()
+        service.get_paginated.return_value = (essays, 3)
+
+        setup = cancel_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_cancel",
+        )
+
+        await essays_delete_cancel_callback_handler(setup["update"], setup["context"])
+
+        service.delete.assert_not_called()
+
+    async def test_cancel_returns_to_essay_list(self, cancel_callback_setup_factory):
+        """Cancel button should return to the essay list view."""
+        from telegram_bot.handlers.essays import essays_delete_cancel_callback_handler
+
+        essays = _create_mock_essays(3)
+        service = MagicMock()
+        service.get_paginated.return_value = (essays, 3)
+
+        setup = cancel_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_cancel",
+        )
+
+        await essays_delete_cancel_callback_handler(setup["update"], setup["context"])
+
+        # Should have called get_paginated to refresh the list
+        service.get_paginated.assert_called()
+
+        # Should have edited message to show the list
+        setup["callback_query"].edit_message_text.assert_called()
+
+    async def test_cancel_answers_callback_query(self, cancel_callback_setup_factory):
+        """Cancel should answer the callback query."""
+        from telegram_bot.handlers.essays import essays_delete_cancel_callback_handler
+
+        essays = _create_mock_essays(3)
+        service = MagicMock()
+        service.get_paginated.return_value = (essays, 3)
+
+        setup = cancel_callback_setup_factory(
+            mock_essay_service=service,
+            callback_data="essay_delete_cancel",
+        )
+
+        await essays_delete_cancel_callback_handler(setup["update"], setup["context"])
+
+        setup["callback_query"].answer.assert_called()
