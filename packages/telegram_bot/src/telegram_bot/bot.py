@@ -95,7 +95,8 @@ class JobAgentBot:
         )
         self.application.add_handler(
             CallbackQueryHandler(
-                require_access(essays_delete_callback_handler), pattern="^essay_delete_"
+                require_access(essays_delete_callback_handler),
+                pattern="^essay_delete_(?!confirm_)(?!cancel)",
             )
         )
 
