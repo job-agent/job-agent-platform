@@ -48,7 +48,9 @@ class TelegramQAClient:
             ConnectionError: If connection to Telegram fails
         """
         try:
-            await self._client.connect()
+            # Use start() instead of connect() to handle authentication
+            # On first run, this will prompt for phone number and verification code
+            await self._client.start()
             logger.info("Connected to Telegram")
 
             # Pre-fetch bot entity to validate username and cache ID

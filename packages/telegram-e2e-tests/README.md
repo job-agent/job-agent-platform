@@ -89,7 +89,8 @@ telegram-e2e-tests/
 │       ├── test_cv_command.py      # /cv command
 │       ├── test_search_command.py  # /search command
 │       ├── test_add_essay_command.py  # /add_essay command
-│       └── test_essays_command.py  # /essays command
+│       ├── test_essays_command.py  # /essays command
+│       └── test_search_essays_command.py  # /search_essays command
 ├── pyproject.toml
 ├── .env.example
 └── README.md
@@ -128,13 +129,14 @@ src/telegram_e2e_tests/
     ├── test_cv_command.py      # /cv command
     ├── test_search_command.py  # /search command
     ├── test_add_essay_command.py  # /add_essay command
-    └── test_essays_command.py  # /essays command
+    ├── test_essays_command.py  # /essays command
+    └── test_search_essays_command.py  # /search_essays command
 ```
 
 ### Test Categories
 
-- **Unit tests** (41 tests): Test configuration loading, error handling, client behavior with mocked Telethon, and helper utilities. No credentials required.
-- **E2E tests** (16 tests): Marked with `@pytest.mark.e2e`, require actual bot running and credentials configured. Cover all 8 bot commands: `/start`, `/help`, `/status`, `/cancel`, `/cv`, `/search`, `/add_essay`, `/essays`.
+- **Unit tests** (43 tests): Test configuration loading, error handling, client behavior with mocked Telethon, and helper utilities. No credentials required.
+- **E2E tests** (26 tests): Marked with `@pytest.mark.e2e`, require actual bot running and credentials configured. Cover all 9 bot commands: `/start`, `/help`, `/status`, `/cancel`, `/cv`, `/search`, `/add_essay`, `/essays`, `/search_essays`.
 
 ### Fixtures
 
@@ -177,6 +179,7 @@ The E2E tests verify bot command responses:
 | `/search` | `test_search_command.py` | CV prerequisite error, invalid parameters, deprecated parameters |
 | `/add_essay` | `test_add_essay_command.py` | Instructions, format errors, empty answer, successful creation |
 | `/essays` | `test_essays_command.py` | Empty list message, pagination with data |
+| `/search_essays` | `test_search_essays_command.py` | Usage instructions, invalid limit (zero, negative), valid query, custom limit, multi-word query, result formatting (Answer, Keywords sections), numeric-only query |
 
 Tests use case-insensitive keyword matching for response validation, making them resilient to minor text changes in bot messages.
 

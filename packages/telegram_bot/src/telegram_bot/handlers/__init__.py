@@ -16,6 +16,7 @@ from .essays.handler import (
 )
 from .help.handler import help_handler
 from .search.handler import search_jobs_handler
+from .search_essays.handler import search_essays_handler
 from .start.handler import start_handler
 from .status.handler import status_handler
 from .upload_cv.handler import upload_cv_handler
@@ -30,6 +31,7 @@ __all__ = [
     "essays_delete_confirm_callback_handler",
     "essays_delete_cancel_callback_handler",
     "help_handler",
+    "search_essays_handler",
     "search_jobs_handler",
     "start_handler",
     "status_handler",

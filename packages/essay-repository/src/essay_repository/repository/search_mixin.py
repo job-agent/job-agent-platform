@@ -61,15 +61,20 @@ class EssaySearchMixin:
         with self._session_scope(commit=False) as session:
             # Use pgvector cosine distance operator (<=>)
             # cosine_distance = 1 - cosine_similarity, so ORDER BY ASC gives highest similarity
+            # Convert embedding list to pgvector string format: '[val1,val2,...]'
+            vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
+
+            # Format vector directly into SQL since SQLAlchemy text() doesn't handle ::vector cast properly
+            # This is safe because vector_str is constructed from float values only (no SQL injection)
             query = text(
-                """
+                f"""
                 SELECT id FROM essays.essays
                 WHERE embedding IS NOT NULL
-                ORDER BY embedding::vector <=> :query_embedding::vector
+                ORDER BY embedding <=> '{vector_str}'::vector
                 LIMIT :limit
             """
             )
-            result = session.execute(query, {"query_embedding": embedding, "limit": limit})
+            result = session.execute(query, {"limit": limit})
             essay_ids = [row.id for row in result]
 
             if not essay_ids:
@@ -211,11 +216,11 @@ class EssaySearchMixin:
         text_results = self.search_by_text(text_query, candidate_limit)
 
         # Fuse results using RRF
-        return (
-            self._rrf(
-                vector_results=vector_results,
-                text_results=text_results,
-                vector_weight=vector_weight,
-            )
-            or []
+        fused_results = self._rrf(
+            vector_results=vector_results,
+            text_results=text_results,
+            vector_weight=vector_weight,
         )
+
+        # Apply the requested limit to final results
+        return fused_results[:limit] if fused_results else []

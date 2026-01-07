@@ -20,6 +20,7 @@ from telegram_bot.handlers import (
     essays_delete_confirm_callback_handler,
     essays_handler,
     help_handler,
+    search_essays_handler,
     search_jobs_handler,
     start_handler,
     status_handler,
@@ -73,6 +74,9 @@ class JobAgentBot:
         self.application.add_handler(CommandHandler("cv", require_access(cv_handler)))
         self.application.add_handler(CommandHandler("add_essay", require_access(add_essay_handler)))
         self.application.add_handler(CommandHandler("essays", require_access(essays_handler)))
+        self.application.add_handler(
+            CommandHandler("search_essays", require_access(search_essays_handler))
+        )
 
         self.application.add_handler(
             CallbackQueryHandler(require_access(essays_callback_handler), pattern="^essays_")
@@ -112,6 +116,7 @@ class JobAgentBot:
                 ("cv", "View your current CV content"),
                 ("add_essay", "Add an essay to the database"),
                 ("essays", "List all essays with pagination"),
+                ("search_essays", "Search essays by query"),
             ]
         )
 

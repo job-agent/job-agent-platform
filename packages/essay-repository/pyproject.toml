@@ -16,7 +16,8 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "dependency-injector>=4.48.3",
     "job-agent-platform-contracts>=0.1.0",
-    "db-core>=0.1.0"
+    "db-core>=0.1.0",
+    "pgvector>=0.3.6"
 ]
 
 [project.optional-dependencies]

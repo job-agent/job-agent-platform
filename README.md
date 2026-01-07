@@ -251,7 +251,7 @@ LANGSMITH_API_KEY=ls__...
 - `packages/essay-repository` — Essay Q&A persistence layer built on db-core with Alembic migrations. Includes hybrid search (pgvector + full-text) via `EssaySearchService`. Essays automatically receive AI-generated embeddings and keywords via background threads; essays are immediately searchable via full-text after creation.
 - `packages/cvs-repository` — Lightweight filesystem repository for sanitized CV storage.
 - `packages/job-agent-platform-contracts` — Shared Pydantic models and interfaces consumed across services.
-- `packages/telegram-e2e-tests` — E2E testing service using Telethon to interact with the Telegram bot as a real user. Provides smoke tests for `/start` and `/help` commands.
+- `packages/telegram-e2e-tests` — E2E testing service using Telethon to interact with the Telegram bot as a real user. Provides smoke tests for all bot commands including `/start`, `/help`, `/status`, `/cancel`, `/cv`, `/search`, `/add_essay`, `/essays`, and `/search_essays`.
 
 ## Prerequisites
 

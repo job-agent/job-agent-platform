@@ -39,12 +39,19 @@ Your CV will be stored securely and used to match you with relevant job opportun
 
 /essays - View all your essays with pagination
 /add_essay - Add an essay (question/answer pair) to your profile
+/search_essays - Search your essays using hybrid search
 
 Examples:
 
 /add_essay Question: Tell me about a time you led a team Answer: I led a team of 5 engineers to deliver a microservices migration on schedule, improving system reliability by 40%.
 
 /add_essay Answer: I have 5 years of experience with Python, TypeScript, and cloud infrastructure including AWS and GCP.
+
+/search_essays leadership experience
+  → Search essays matching "leadership experience" (default limit: 10)
+
+/search_essays teamwork 5
+  → Search essays matching "teamwork" with limit of 5 results
 
 Essays help personalize job matching and application responses.
 

@@ -64,3 +64,7 @@ class TestHelpText:
         assert "employment_location" in HELP_TEXT
         assert "days" in HELP_TEXT
         assert "timeout" in HELP_TEXT
+
+    def test_lists_search_essays_command(self):
+        """Help text should list the /search_essays command."""
+        assert "/search_essays" in HELP_TEXT

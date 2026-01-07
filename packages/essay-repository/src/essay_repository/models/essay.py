@@ -3,9 +3,10 @@
 from datetime import datetime, UTC
 from typing import Any, Optional
 
-from sqlalchemy import Float, Text
+from sqlalchemy import Text
 from sqlalchemy.dialects.postgresql import ARRAY, VARCHAR, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
+from pgvector.sqlalchemy import Vector
 
 from essay_repository.models.base import Base
 
@@ -21,7 +22,7 @@ class Essay(Base):
     question: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     keywords: Mapped[Optional[list[str]]] = mapped_column(ARRAY(VARCHAR), nullable=True)
-    embedding: Mapped[Optional[list[float]]] = mapped_column(ARRAY(Float), nullable=True)
+    embedding: Mapped[Optional[list[float]]] = mapped_column(Vector(512), nullable=True)
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(UTC), nullable=False)
